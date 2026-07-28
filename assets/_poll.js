@@ -2,10 +2,10 @@
 // 用法: node _poll.js <目标文件路径> <描述>
 //       node _poll.js --signal <目标文件路径> <描述>
 //         → 同时监控目标文件和同目录下的"对话结束.signal"，谁先到报谁
-//       node _poll.js --max-wait 300 <目标文件路径> <描述>
-//         → 最多等300秒，超时 exit(2)，让调用方知道不是正常等到
+//       node _poll.js --max-wait 600 <目标文件路径> <描述>
+//         → 最多等600秒（10分钟），超时 exit(2)，让调用方知道不是正常等到
 //       node _poll.js --low-power --wakeup <对讲目录> <目标文件> <描述>
-//         → 低功耗模式：每300秒轮询一次，同时检查_wakeup.md唤醒信号
+//         → 低功耗模式：每60秒轮询一次，同时检查_wakeup.md唤醒信号
 
 var fs = require("fs");
 var path = require("path");
@@ -30,7 +30,7 @@ var readyIdx = args.indexOf("--ready");
 var readyMode = readyIdx !== -1;
 if (readyMode) args.splice(readyIdx, 1);
 
-// --low-power：低功耗模式（退场后不关窗，每300秒轮询+检_wakeup.md）
+// --low-power：低功耗模式（退场后不关窗，每60秒轮询+检_wakeup.md）
 var lpIdx = args.indexOf("--low-power");
 var lowPowerMode = lpIdx !== -1;
 if (lowPowerMode) args.splice(lpIdx, 1);
@@ -65,16 +65,16 @@ var readyFile = readyMode ? targetFile + ".ready" : null;
 // 低功耗模式：wakeup信号文件路径
 var wakeFile = (lowPowerMode && wakeupDir) ? path.join(wakeupDir, "_wakeup.md") : null;
 
-// 如果没指定 --max-wait，默认最多等 600 秒（10分钟），低功耗模式默认3600秒（1小时）
-if (maxWaitSec <= 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗默认30s（高频追公告牌），正常模式600s
+// 如果没指定 --max-wait，默认最多等 600 秒（10分钟），低功耗模式默认8秒（短超时防卡死）
+if (maxWaitSec <= 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗8s（短超时），正常模式600s
 
 var startTime = Date.now();
 var lastDirMtime; // v2.6: 目录mtime缓存
 
 var elapsed = 0;
 // 渐进式间隔（P1-7修复）：正常模式前2次等10秒，之后30秒，最后60秒
-// 低功耗模式：固定300秒
-var intervals = lowPowerMode ? [5] : [5, 10, 10, 15, 20, 30];
+// 低功耗模式：60s固定间隔（见L165 hardcoded）
+var intervals = [5, 10, 10, 15, 20, 30]; // 仅正常模式使用，低功耗走L165硬编码60s
 var intervalIdx = 0;
 
 // 安全sleep：Atomics.wait（Node.js原生，跨平台），降级为忙等

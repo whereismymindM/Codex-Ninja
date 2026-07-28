@@ -57,41 +57,78 @@
 
 - **待命** → 这轮没你的事，不用签字。**待命不是下班！不许说「告退」「再见」「done」，不许关窗口。** 唯一该做的事：在 REPL 中跑下面这个 while(true) 循环。执行以下**真实可执行代码**（不是伪代码，直接复制粘贴运行）：
 ```js
-// 待命轮询——60s间隔等新公告牌。内联检查，无闭包陷阱
+// 待命轮询——60s间隔等新公告牌。N从文件系统扫描，REPL超时重启也不丢进度。
+// 恢复机制：REPL超时后重跑这段代码即可——N从文件系统扫，进度自动接上
 while (true) {
   var _fs = await import("node:fs");
   var _path = await import("node:path");
-  // ⚠️ N 每次循环实时读取，不用闭包函数
-  var _board = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "公告牌_" + String(N).padStart(3,"0") + ".md");
-  var _wake = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
-  if (_fs.default.existsSync(_board)) break;  // 新公告牌到了
+  var _world = "D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界";
+  // 从文件系统扫出当前最新公告牌编号，不依赖内存 N
+  var _files = _fs.default.readdirSync(_world).filter(function(f) { return f.startsWith("公告牌_") && f.endsWith(".md"); });
+  var _maxN = 0;
+  _files.forEach(function(f) { var _n = parseInt(f.replace("公告牌_","").replace(".md","")); if (_n > _maxN) _maxN = _n; });
+  // 等下一张公告牌：当前最大编号 + 1
+  var _nextBoard = _path.default.join(_world, "公告牌_" + String(_maxN + 1).padStart(3,"0") + ".md");
+  var _wake = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  if (_fs.default.existsSync(_nextBoard)) break;  // 新公告牌到了
   if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }  // 大鱼唤醒
   await new Promise(function(r) { setTimeout(r, 60000); });
 }
-// 循环结束 = 新公告牌或唤醒 → 读公告牌继续干活
+// 循环结束 = 新公告牌或唤醒 → 读最新公告牌（maxN+1），按状态行事
 ```
 > 🚨 **这不是伪代码。直接复制粘贴到REPL运行。** while(true) 不遇到 break 绝不停。公告牌出现前一直60s循环，公告牌出现后 break 跳出，切活跃干活。
 - **退场** → 🚨 **退场不是收工！退场 = 挂机休眠等下一轮公告牌，不是下班！** 只有公告牌写「模式：收工」才是真终点。退场后唯一该做的事：跑 while(true) 高频 poll——等收工轮或唤醒，循环到底。
   分三步，按顺序：
   1. **先写流水账**：在 `../我的世界/{{ROLE_NAME}}_大鱼对讲/{{ROLE_NAME}}_流水账.md` **追加**你这轮操作的全过程——**用英文写**（REPL直写零编码税），`fs.appendFileSync` 追加，别覆盖历史——时间线格式：T+0分干了什么、等了哪个文件多久、求助几次、产出写到了哪里。用时间线格式（T+0分/T+5分/...），像记日记一样。写完后用 `fs.statSync` 确认文件 > 100 字节。
   2. **再写退场文件**：在对讲目录下创建 `{{ROLE_NAME}}已退场_NNN`（NNN=当前轮次号，不加 .md 后缀！）。每次遇到退场状态都写一份——如果之前退过又被唤醒、再退一次，写新的轮次号。收工轮是终局退场。
-  3. **切高频轮询——这是你退场后唯一的任务！记得先 N++ 再跑 while，去等下一轮公告牌。**
+  3. **切高频轮询——这是你退场后唯一的任务！N 从文件系统自动扫描，无需手动++。**
   在 REPL 中执行以下真实可执行代码（不是伪代码，直接复制粘贴运行）：
 
 ```js
-// 退场高频轮询——5s间隔等收工轮或唤醒。内联检查，无闭包陷阱。这不是伪代码，直接跑！
-N = N + 1;  // ⚠️ 关键！++之后检查下一轮公告牌
+// 退场高频轮询——5s间隔等收工轮或唤醒。N从文件系统扫描，REPL超时重启也不丢进度
+var _pollCount = 0;
+var _totalStart = Date.now();
+var _stateFile = "D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界/{{ROLE_NAME}}_大鱼对讲/.poll_state.json";
+// REPL超时恢复：加载上次的 totalStart，30分钟计时器不重置
+try {
+  var _saved = JSON.parse(require("fs").readFileSync(_stateFile, "utf8"));
+  if (_saved.totalStart) _totalStart = _saved.totalStart;
+  if (_saved.pollCount) _pollCount = _saved.pollCount;
+} catch(e) {}
+
 while (true) {
   var _fs = await import("node:fs");
   var _path = await import("node:path");
-  // ⚠️ N 每次循环实时读取，不用闭包函数
-  var _board = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "公告牌_" + String(N).padStart(3,"0") + ".md");
-  var _wake = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
-  if (_fs.default.existsSync(_board)) break;  // 新公告牌→收工轮就创建退场文件下线，否则干活
-  if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }  // 大鱼唤醒
+  var _world = "D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界";
+  
+  // 30分钟上限——totalStart 跨 REPL 重启不丢
+  if ((Date.now() - _totalStart) / 60000 > 30) {
+    _fs.default.appendFileSync(_path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲", "{{ROLE_NAME}}_流水账.md"), "poll timeout 30min\n", "utf8");
+    break;
+  }
+  
+  // 心跳检查（每10次）——大鱼离线则下线
+  _pollCount++;
+  if (_pollCount % 10 === 0) {
+    var _hb = _path.default.join(_world, "大鱼心跳.md");
+    if (_fs.default.existsSync(_hb) && (Date.now() - _fs.default.statSync(_hb).mtimeMs) / 1000 > 300) break;
+  }
+  
+  // 从文件系统扫出当前最新公告牌编号
+  var _files = _fs.default.readdirSync(_world).filter(function(f) { return f.startsWith("公告牌_") && f.endsWith(".md"); });
+  var _maxN = 0;
+  _files.forEach(function(f) { var _n = parseInt(f.replace("公告牌_","").replace(".md","")); if (_n > _maxN) _maxN = _n; });
+  var _nextBoard = _path.default.join(_world, "公告牌_" + String(_maxN + 1).padStart(3,"0") + ".md");
+  var _wake = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  
+  // 持久化状态——REPL超时重启后 totalStart 不丢
+  _fs.default.writeFileSync(_stateFile, JSON.stringify({totalStart: _totalStart, pollCount: _pollCount}), "utf8");
+  
+  if (_fs.default.existsSync(_nextBoard)) break;
+  if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }
   await new Promise(function(r) { setTimeout(r, 5000); });
+  nodeRepl.write("poll...");
 }
-// 循环结束 = 收工轮或唤醒 → 读公告牌按状态行事
 ```
 > 🚨 **这不是伪代码。直接复制粘贴到REPL运行。** 退场后唯一的工作就是跑这个while(true)循环——收工轮不到，循环不停。写完流水账和退场文件后立刻跑，不要等、不要停。
 

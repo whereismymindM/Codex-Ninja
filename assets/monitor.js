@@ -139,15 +139,17 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         var allExist = true;
         var missing = [];
         fileNames.forEach(function(fn) {
-            var fp = outDirPath + "/" + fn.trim();
+            // P1-3: 检查 .ready 文件而非内容文件——.ready 写入在内容完成之后，无竞态
+            var fp = outDirPath + "/" + fn.trim() + ".ready";
             if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
         });
         ready = allExist;
         if (!ready) console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
         else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
     } else {
-        var realFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return !f.startsWith(".") && !f.endsWith(".tmp"); }) : [];
-        ready = realFiles.length > 0;
+        // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
+        var readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : [];
+        ready = readyFiles.length > 0;
         console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717"));
     }
     if (!ready) allOutputReady = false;
