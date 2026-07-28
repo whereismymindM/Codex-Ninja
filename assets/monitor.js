@@ -46,8 +46,8 @@ while (true) {
                 var roleName = retireMatch[1].trim();
                 // 过滤非角色行（模式、任务、产出等字段）
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
-                var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
-    var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
+                var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + Npad;
+    var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
                 if (!fs.existsSync(retireFile)) { allDone = false; break; }
             }
         }

@@ -56,6 +56,10 @@ if (isFishMode) {
     fs.writeFileSync(fishDir + "/AGENTS.md", fishContent, "utf8");
     console.log("OK: 火影-大鱼/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
 
+    // 大鱼→老渣对讲目录，收工时写审计报告用
+    fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
+    console.log("OK: 我的世界/大鱼_老渣对讲/");
+
     // monitor.js
     var monitorPath = projectDir + "/monitor.js";
     fs.copyFileSync(assetDir + "/monitor.js", monitorPath);
@@ -73,7 +77,14 @@ if (isFishMode) {
 // 创建基础目录（add 模式跳过——这些目录已存在）
 if (!isAddMode) {
     fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
+        // 部署团队须知到项目父级目录（我的世界/），所有角色窗口共享
+    var teamNotice = path.resolve(assetDir, "..", "团队须知/AGENTS.md");
+    var parentDir = path.resolve(projectDir, "..");
+    fs.copyFileSync(teamNotice, parentDir + "/AGENTS.md");
+    console.log("OK: 团队须知/AGENTS.md → " + parentDir);
+
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
+    fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
 } else {
     console.log("SKIP: 我的世界/ (add 模式不重建)");
 }

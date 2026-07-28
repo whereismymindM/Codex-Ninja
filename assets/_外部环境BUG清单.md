@@ -190,29 +190,6 @@ console.log(content.substring(content.length - 2000));
 ---
 ---
 
-## BUG 8：单窗口模式 Node REPL 写入中文内容不稳定 [v1.4 新增]
-
-适用范围：仅单窗口模式（spawn_agent）。经典多窗口模式不受影响。
-
-现象：sub-agent 在 Node REPL 中写中文文件时，可能出现以下任意一种：
-- 文件只写了开头一小段（如 34 字节）后面全丢
-- REPL 报错 Unexpected token，模板字符串被截断
-- 文件存在但内容不完整，后半段是空的
-
-根本原因：Node REPL 不是完整 Node.js 环境——模板字符串中的特殊 Unicode 字符（中文引号、破折号等）会触发 REPL 解析器边界问题。REPL 的 shell 超时阈值（默认 30 秒）也可能在写入完成前 kill 进程。
-
-经典表现：sub-agent 写了临时 _write_t5.js 文件，里面模板字符串完整，但执行 node _write_t5.js 后目标文件只得到 34 字节"测试写入"。
-
-解法：
-- 写任何中文长内容到文件：走 .tmp → rename 原子写入
-- 写入后立即用 fs.statSync 验证文件大小 > 20 字节
-- 如果大小不对：重试，最多 3 次
-- 大鱼的 AGENTS.md 铁律：所有"写了给别人读"的文件都走原子写入
-
-核心原则：单窗口模式下，REPL 写中文文件不可靠——永远验证写入结果，别信 exit code。
-
----
-
 ## BUG 9：Node REPL 变量名冲突 [v1.4 新增]
 
 适用范围：仅单窗口模式。
