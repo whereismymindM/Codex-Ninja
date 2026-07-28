@@ -30,7 +30,7 @@ var readyIdx = args.indexOf("--ready");
 var readyMode = readyIdx !== -1;
 if (readyMode) args.splice(readyIdx, 1);
 
-// --low-power：低功耗模式（退场后不关窗，每60秒轮询+检_wakeup.md）
+// --low-power：低功耗模式（休眠后不关窗，每60秒轮询+检_wakeup.md）
 var lpIdx = args.indexOf("--low-power");
 var lowPowerMode = lpIdx !== -1;
 if (lowPowerMode) args.splice(lpIdx, 1);
@@ -96,7 +96,7 @@ function safeSleep(seconds) {
 }
 if (lowPowerMode) console.log("高频轮询启动——每5秒检查一次公告牌和唤醒信号（最多等" + maxWaitSec + "秒超时）");
 
-// P2: 随机初始抖动（0-1.5秒）——多角色同时退场时错开轮询相位，避免文件系统请求尖峰
+// P2: 随机初始抖动（0-1.5秒）——多角色同时休眠时错开轮询相位，避免文件系统请求尖峰
 if (lowPowerMode) {
     var jitterMs = Math.floor(Math.random() * 1500);
     safeSleep(jitterMs / 1000);

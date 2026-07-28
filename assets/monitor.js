@@ -35,7 +35,7 @@ while (true) {
     });
     allDone = hasActive ? (signedCount >= actCount) : true; // 非活跃轮不看签字
     // P2-10: 收工轮特殊处理——公告牌格式为「角色 → 退场」，没有「状态：活跃」
-    // 正则匹配不到活跃角色时，检查是否为收工轮，是则验退场文件
+    // 正则匹配不到活跃角色时，检查是否为收工轮，是则验退场文件（v2.15: 休眠角色写已休眠_NNN，收工轮写已退场_NNN，monitor两者都验）
     if (!hasActive && allDone) {
         var isRetire = /模式[：:]\s*收工/.test(boardContent) || /·\s*收工/.test(boardContent);
         if (isRetire) {
@@ -47,6 +47,7 @@ while (true) {
                 // 过滤非角色行（模式、任务、产出等字段）
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
                 var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
+    var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(retireFile)) { allDone = false; break; }
             }
         }
@@ -70,6 +71,7 @@ if (!fs.existsSync(boardFile)) {
                 var roleName = retireMatch[1].trim();
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
                 var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
+    var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(rf)) { allRetired = false; break; }
             }
             if (allRetired) { console.log("DONE N=" + prevN); process.exit(0); }
@@ -93,15 +95,16 @@ var am;
 while ((m = re.exec(board)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
 while ((am = allRe.exec(board)) !== null) { var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); allRoles.push(arn); }
 
-// 1. 签字 & 退场检查
+// 1. 签字 & 休眠/退场检查
 var allSigned = true;
-var allRetired = true; // 收工轮用：所有角色是否都写了退场文件
+var allRetired = true; // 收工轮用：所有角色是否都写了退场文件（或休眠文件，v2.15两者都验）
 if (activeRoles.length === 0) {
-    // 收工轮：全员退场，逐个检查退场文件是否到位
+    // 收工轮：全员退场，逐个检查退场文件（或休眠文件，v2.15两者都验）是否到位
     console.log("SIGN [收工]");
     allRoles.forEach(function(role) {
         var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
-        if (fs.existsSync(retireFile)) { console.log("RETIRE " + role + " OK"); }
+      var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
+        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile)) { console.log("RETIRE " + role + " OK"); }
         else { console.log("RETIRE " + role + " MISS"); allRetired = false; }
     });
 } else {
