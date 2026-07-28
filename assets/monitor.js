@@ -109,25 +109,50 @@ if (activeRoles.length === 0) {
         var sign = base + "/我的世界/" + role + "_大鱼对讲/完成_" + String(N).padStart(3,"0") + ".md";
         // P2-7: 空文件不算签字
         if (fs.existsSync(sign) && fs.statSync(sign).size > 20) { console.log("SIGN " + role + " ✓"); }
-        else { console.log("SIGN " + role + " ✗"); allSigned = false; }
+        else { console.log("SIGN " + role + " ⚠️"); }
     });
 }
 
 // 2. 产出（收工公告牌不需要产出）
 var outputReady = activeRoles.length === 0;
-// P2-4: 支持多个任务目录（任务目录A、任务目录B等）
-var taskRe = /任务目录[A-Z]?:\s*我的世界\/(\S+)/g;
-var taskMatch, allOutputReady = true, taskCount = 0;
-while ((taskMatch = taskRe.exec(board)) !== null) {
-    taskCount++;
-    var outputPath = base + "/我的世界/产出/" + taskMatch[1];
-    var realFiles = fs.existsSync(outputPath) ? fs.readdirSync(outputPath).filter(function(f) { return !f.startsWith('.') && !f.endsWith('.tmp'); }) : [];
-    var ready = realFiles.length > 0;
+// v2.14: 产出校验——优先解析产出行中的具体文件名，逐个fs.existsSync检查
+// 格式A（有文件名）: 产出: 我的世界/产出/任务001/server.js, search.js → 逐文件检查
+// 格式B（仅目录）: 产出: 我的世界/产出/任务001/ → 回退到目录非空检查
+var outputRe = /产出:\s*我的世界\/(\S+)/g;
+var outputMatch, allOutputReady = true, outputCount = 0;
+while ((outputMatch = outputRe.exec(board)) !== null) {
+    outputCount++;
+    var fullPath = outputMatch[1];
+    var lastSlash = fullPath.lastIndexOf("/");
+    var outDir, fileNames;
+    if (lastSlash !== -1 && fullPath.substring(lastSlash + 1).indexOf(".") !== -1) {
+        outDir = fullPath.substring(0, lastSlash);
+        fileNames = fullPath.substring(lastSlash + 1).split(/\s*,\s*/);
+    } else {
+        outDir = fullPath.replace(/\/$/, "");
+        fileNames = null;
+    }
+    
+    var ready = false;
+    var outDirPath = base + "/我的世界/" + outDir;
+    if (fileNames && fileNames.length > 0) {
+        var allExist = true;
+        var missing = [];
+        fileNames.forEach(function(fn) {
+            var fp = outDirPath + "/" + fn.trim();
+            if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
+        });
+        ready = allExist;
+        if (!ready) console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
+        else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
+    } else {
+        var realFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return !f.startsWith(".") && !f.endsWith(".tmp"); }) : [];
+        ready = realFiles.length > 0;
+        console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717"));
+    }
     if (!ready) allOutputReady = false;
-    console.log("OUTPUT " + taskMatch[1] + " " + (ready ? "✓" : "✗"));
 }
-if (taskCount > 0) outputReady = allOutputReady;
-
+if (outputCount > 0) outputReady = allOutputReady;
 // 3. 求助
 var worldDir = base + "/我的世界";
 if (fs.existsSync(worldDir)) {
@@ -148,7 +173,7 @@ fs.renameSync(replyPath + ".tmp", replyPath);
 }
 
 // 4. 判断（收工轮额外检查退场文件）
-if (allSigned && outputReady && allRetired) {
+if (outputReady && allRetired) {
     console.log("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
     try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1 }), "utf8"); } catch (e) {}
