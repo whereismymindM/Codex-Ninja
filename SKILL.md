@@ -55,9 +55,9 @@ description: |
 > 💡 修改流程：改通用规则 → 改 `团队须知/AGENTS.md`；改角色行为 → 改 `角色_AGENTS模板.md`。别改错了文件。
 
 
-## 🎯 三种运行模式
+## 🎯 两种运行模式
 
-大鱼支持两种调度方式，根据场景灵活选择：
+大鱼只有一种调度方式，根据场景灵活选择：
 
 ### 🥇 经典模式（多窗口）
 
@@ -66,23 +66,6 @@ description: |
 - **优点**：角色完全自治，poll 稳定，大鱼只需 monitor
 - **缺点**：需要开 N 个窗口，窗口管理有成本
 - **适用**：角色 ≥ 3、任务重、追求全自动
-
-### 🥈 单窗口模式（spawn_agent）
-
-所有角色由大鱼在后台用 `spawn_agent` 创建为 sub-agent。大鱼本人就是对话窗口，调度、翻篇、催促进度全在一个窗口完成。
-
-- **优点**：只需一个窗口，轻量快捷
-- **缺点**：sub-agent 干完一件事会「睡着」，poll 容易卡住，大鱼需要频繁用 `send_input` + `interrupt: true` 踹醒角色
-- **适用**：角色 ≤ 3、快速原型、演示场景
-- **关键操作**：
-  - `spawn_agent` 创建角色 → 传入完整的 AGENTS.md 内容作为 message
-  - `send_input` + `interrupt: true` 踹醒卡住的角色
-  - `wait_agent` 等角色完成当前任务
-  - `close_agent` 退场后关闭 sub-agent
-
-> ⚠️ 单窗口模式下，**大鱼不能只靠 monitor.js**。必须主动观察文件变化，发现角色卡在 poll 就手动踹醒。
-
----
 
 ### 🥉 Multi-pass solo 模式（v2.8 新增）
 
@@ -453,7 +436,7 @@ Shell 版 node ../monitor.js 作为备用——仅在 REPL 不可用时使用。
 - **新增 `assets/_Multi-pass_solo.md`**——一个窗口顺序换帽子，N-1专家pass+1终审pass
 - **零依赖**——不需要大鱼、公告牌、poll、锁、心跳。用户直接在当前窗口给任务即可执行
 - **终审交叉验证**——最后一个pass逐条验证前序结论，修正误判。这是组团模式没有的能力
-- **SKILL.md 模式扩展**——从两种运行模式扩展为三种（经典多窗口 / 单窗口spawn / Multi-pass solo）
+- **SKILL.md 模式扩展**——从两种运行模式扩展为两种（经典多窗口 / Multi-pass solo）
 
 **验证数据**（代码审查实战）：
 | 指标 | 组团（辩论） | Multi-pass solo |

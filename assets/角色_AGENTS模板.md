@@ -57,95 +57,43 @@
 
 - **待命** → 这轮没你的事，不用签字。**待命不是下班！不许说「告退」「再见」「done」，不许关窗口。** 唯一该做的事：在 REPL 中跑下面这个 while(true) 循环。执行以下**真实可执行代码**（不是伪代码，直接复制粘贴运行）：
 ```js
-// 待命轮询——60s间隔等新公告牌
+// 待命轮询——60s间隔等新公告牌。内联检查，无闭包陷阱
 while (true) {
-  var result = await pollFn();
-  if (result === "BOARD" || result === "WOKEN") break;  // 新公告牌或大鱼唤醒
+  var _fs = await import("node:fs");
+  var _path = await import("node:path");
+  // ⚠️ N 每次循环实时读取，不用闭包函数
+  var _board = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "公告牌_" + String(N).padStart(3,"0") + ".md");
+  var _wake = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  if (_fs.default.existsSync(_board)) break;  // 新公告牌到了
+  if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }  // 大鱼唤醒
   await new Promise(function(r) { setTimeout(r, 60000); });
 }
-// 循环结束 = 新公告牌已到 → 切回活跃状态，读公告牌继续干活
+// 循环结束 = 新公告牌或唤醒 → 读公告牌继续干活
 ```
 > 🚨 **这不是伪代码。直接复制粘贴到REPL运行。** while(true) 不遇到 break 绝不停。公告牌出现前一直60s循环，公告牌出现后 break 跳出，切活跃干活。
-- **退场** → 分三步，按顺序：
+- **退场** → 🚨 **退场不是收工！退场 = 挂机休眠等下一轮公告牌，不是下班！** 只有公告牌写「模式：收工」才是真终点。退场后唯一该做的事：跑 while(true) 高频 poll——等收工轮或唤醒，循环到底。
+  分三步，按顺序：
   1. **先写流水账**：在 `../我的世界/{{ROLE_NAME}}_大鱼对讲/{{ROLE_NAME}}_流水账.md` **追加**你这轮操作的全过程——**用英文写**（REPL直写零编码税），`fs.appendFileSync` 追加，别覆盖历史——时间线格式：T+0分干了什么、等了哪个文件多久、求助几次、产出写到了哪里。用时间线格式（T+0分/T+5分/...），像记日记一样。写完后用 `fs.statSync` 确认文件 > 100 字节。
   2. **再写退场文件**：在对讲目录下创建 `{{ROLE_NAME}}已退场_NNN`（NNN=当前轮次号，不加 .md 后缀！）。每次遇到退场状态都写一份——如果之前退过又被唤醒、再退一次，写新的轮次号。收工轮是终局退场。
-  3. **切高频轮询——这是你退场后唯一的任务！记得先 N++ 再跑 while，让 pollFn 去等下一轮公告牌。**
+  3. **切高频轮询——这是你退场后唯一的任务！记得先 N++ 再跑 while，去等下一轮公告牌。**
   在 REPL 中执行以下真实可执行代码（不是伪代码，直接复制粘贴运行）：
 
 ```js
-// 退场高频轮询——5s间隔等收工轮或唤醒。这不是伪代码，直接跑！
-N = N + 1;  // ⚠️ 关键！让 pollFn 去等下一轮公告牌，不是重复查当前轮
+// 退场高频轮询——5s间隔等收工轮或唤醒。内联检查，无闭包陷阱。这不是伪代码，直接跑！
+N = N + 1;  // ⚠️ 关键！++之后检查下一轮公告牌
 while (true) {
-  var result = await pollFn();
-  if (result === "BOARD") {
-    // 新公告牌出现了 → 读它。如果是收工轮→创建{{ROLE_NAME}}已退场_NNN→真正下线
-    // 如果不是收工轮→读公告牌里的状态，该干活干活
-    break;
-  }
-  if (result === "WOKEN") { break; }  // 被大鱼唤醒，切回活跃
+  var _fs = await import("node:fs");
+  var _path = await import("node:path");
+  // ⚠️ N 每次循环实时读取，不用闭包函数
+  var _board = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "公告牌_" + String(N).padStart(3,"0") + ".md");
+  var _wake = _path.default.join("D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界", "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  if (_fs.default.existsSync(_board)) break;  // 新公告牌→收工轮就创建退场文件下线，否则干活
+  if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }  // 大鱼唤醒
   await new Promise(function(r) { setTimeout(r, 5000); });
 }
-// 循环结束 = 收工轮到了或大鱼唤醒了 → 读当前公告牌，按状态行事
+// 循环结束 = 收工轮或唤醒 → 读公告牌按状态行事
 ```
 > 🚨 **这不是伪代码。直接复制粘贴到REPL运行。** 退场后唯一的工作就是跑这个while(true)循环——收工轮不到，循环不停。写完流水账和退场文件后立刻跑，不要等、不要停。
-
-**REPL 轮询函数**（先定义 pollFn，然后跑上面的while循环）（定义一次，反复调用——每次0.1-0.5秒）：
-```javascript
-// 在 REPL 里定义 pollFn（只需定义一次，后续反复调用 await pollFn()）
-var pollState = { totalStart: Date.now(), pollCount: 0 };
-var pollFn = async function() {
-  const fs = await import("node:fs");
-  const path = await import("node:path");
-  var worldDir = "D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部/我的世界";
-  var boardFile = path.default.join(worldDir, "公告牌_" + String(N).padStart(3,"0") + ".md");
-  var wakeDir = path.default.join(worldDir, "{{ROLE_NAME}}_大鱼对讲");
-  var wakeFile = path.default.join(wakeDir, "_wakeup.md");
-
-  // P1-1: 30分钟上限
-  if ((Date.now() - pollState.totalStart) / 60000 > 30) {
-    fs.default.appendFileSync(path.default.join(wakeDir, "{{ROLE_NAME}}_流水账.md"), "轮询超30分钟\n", "utf8");
-    return "TIMEOUT";
-  }
-
-  // P1-2: 心跳（每10次）
-  pollState.pollCount++;
-  if (pollState.pollCount % 10 === 0) {
-    var hb = path.default.join(worldDir, "大鱼心跳.md");
-    if(fs.default.existsSync(hb) && (Date.now()-fs.default.statSync(hb).mtimeMs)/1000 > 300) {
-      return "HEARTBEAT";
-    }
-  }
-
-  // 检查公告牌
-  if(fs.default.existsSync(boardFile)) return "BOARD";
-  // 检查唤醒
-  if(fs.default.existsSync(wakeFile)) { fs.default.unlinkSync(wakeFile); return "WOKEN"; }
-  return "WAIT";
-};
-```
-
-**循环调用——退场后唯一要做的事，刻在脑子里！**
-```javascript
-// 退场后反复跑，直到收工或超时——不要只调一次！
-N = N + 1;  // ⚠️ 关键：让 pollFn 查下一轮公告牌，不是重复查当前轮
-while (true) {
-  var result = await pollFn();
-  if (result === "BOARD") {
-    // 读公告牌——收工轮→创建{{ROLE_NAME}}已退场_NNN→真正下线
-    // 非收工轮→切回活跃干活
-    break;
-  } else if (result === "WOKEN") {
-    // 被大鱼唤醒→删掉_wakeup.md（pollFn已自动删了）→切回活跃
-    break;
-  } else if (result === "TIMEOUT" || result === "HEARTBEAT") {
-    // 超时或大鱼离线→写求助→下线
-    break;
-  }
-  // WAIT——等5秒再跑
-  await new Promise(r => setTimeout(r, 5000));
-  nodeRepl.write("poll...");  // 心跳输出，证明还活着
-}
-```
 
 > **Shell 备用**（REPL 挂时才用）：`node _poll.js --low-power --wakeup ...`
 
