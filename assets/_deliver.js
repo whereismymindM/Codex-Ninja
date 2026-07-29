@@ -80,9 +80,12 @@ if (content.length < 10) {
     process.exit(1);
 }
 
-fs.writeFileSync(outputFile + ".tmp", content, "utf8");
-fs.renameSync(outputFile + ".tmp", outputFile);
-
-fs.writeFileSync(outputFile + ".ready", "OK " + new Date().toISOString(), "utf8");
+// try-finally：内容写入后必须生成 .ready，中断也不漏
+try {
+  fs.writeFileSync(outputFile + ".tmp", content, "utf8");
+  fs.renameSync(outputFile + ".tmp", outputFile);
+} finally {
+  fs.writeFileSync(outputFile + ".ready", "OK " + new Date().toISOString(), "utf8");
+}
 console.log("SIGNAL: " + outputFile + ".ready 已就绪");
 console.log("DELIVERED: " + outputFile + " (" + content.length + " 字节)");

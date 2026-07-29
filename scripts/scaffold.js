@@ -7,6 +7,15 @@ var fs = require("fs");
 var path = require("path");
 
 var projectDir = process.argv[2];
+
+// 防呆：projectDir 不能以 "我的世界" 结尾——角色会被生成到我的世界里面而不是同级
+// 正确：projectDir 是 我的世界/ 的上级目录（如 一号舱室-软件开发部）
+if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/我的世界")) {
+    console.error("ERROR: projectDir 不能是我的世界目录！角色会生成到我的世界里面。");
+    console.error("请用我的世界的上级目录（如 一号舱室-软件开发部）作为 projectDir。");
+    process.exit(1);
+}
+
 var assetDir = path.resolve(__dirname, "..", "assets");
 
 // 解析运行模式：第二个参数是 "fish" 则直接走鱼模式，否则第三个参数是 roles.json

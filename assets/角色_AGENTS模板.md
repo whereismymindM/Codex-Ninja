@@ -135,16 +135,39 @@ var deliver = async function(filename, taskDirName) {
 };
 // 用法: 1.fs.writeFileSync(outPath, content) 写内容 -> 2.await deliver("报告.md", "任务001_XXX")
 
-var lock = async function(op) {
+var lock = async function(op, lockName) {
   const fs = await import("node:fs");
-  var lockFile = "../我的世界/写锁.lock";
+  var name = lockName || "写锁";
+  var lockFile = "../我的世界/写锁_" + name + ".lock";
+  var LOCK_STALE_SEC = 600;  // 10分钟过期——持有进程可能崩溃
+  var WAIT_TIMEOUT = 180;     // 最多等3分钟
   if(op === "acquire") {
-    while(fs.default.existsSync(lockFile)) { await new Promise(r=>setTimeout(r,200)); }
-    fs.default.writeFileSync(lockFile, String(Date.now()), "utf8");
+    var start = Date.now();
+    while(true) {
+      try {
+        // wx 标志：文件不存在才创建——操作系统级原子，不抢到手不罢休
+        fs.default.writeFileSync(lockFile, String(Date.now()), { flag: "wx" });
+        return "LOCKED";
+      } catch(e) {
+        if(e.code !== "EEXIST") throw e;
+        // 锁被占用——检查是否过期（持有进程可能崩溃了）
+        try {
+          var stat = fs.default.statSync(lockFile);
+          var age = (Date.now() - stat.mtimeMs) / 1000;
+          if(age > LOCK_STALE_SEC) {
+            fs.default.unlinkSync(lockFile);  // 过期锁，强制回收
+            continue;
+          }
+        } catch(_) {}
+        // 超时检查
+        if((Date.now() - start) / 1000 > WAIT_TIMEOUT) return "LOCK_TIMEOUT";
+        await new Promise(r=>setTimeout(r,5000));
+      }
+    }
   } else {
     if(fs.default.existsSync(lockFile)) fs.default.unlinkSync(lockFile);
+    return "UNLOCKED";
   }
-  return op === "acquire" ? "LOCKED" : "UNLOCKED";
 };
 ```
 

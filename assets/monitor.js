@@ -15,6 +15,8 @@ if (fs.existsSync(stateFile)) {
         if (state.N && typeof state.N === "number") N = state.N;
     } catch (e) { /* 状态文件损坏，从1开始 */ }
 }
+// 顶层 try-catch：monitor 自身异常不盲飞
+try {
 // 自检：从N开始逐轮找第一个未完成的
 while (true) {
     var bf = base + "/我的世界/公告牌_" + String(N).padStart(3, "0") + ".md";
@@ -22,7 +24,10 @@ while (true) {
     // 检查该轮是否已完成（所有活跃角色签字 + 产出就位）
     var boardContent = fs.readFileSync(bf, "utf8");
         // Count active roles from bulletin (regex just to count, not to build paths)
-    var actCount = (boardContent.match(/- .+?[（(].*状态[:：]活跃/g) || []).length;
+    // 只扫公告牌头部（任务: 之前的角色声明区），避免任务描述里的"状态：活跃"文本被误匹配
+    var headerPart = boardContent.split(/
+- 任务[:：]/)[0];
+    var actCount = (headerPart.match(/- .+?[（(].*状态[:：]活跃/g) || []).length;
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
     // Scan MyWorld for sign-off files - no Chinese path construction!
@@ -88,12 +93,14 @@ catch (e) { console.log("READ_ERR " + boardFile + ": " + e.message); process.exi
 var activeRoles = [];
 // 解析所有角色——收工轮检查退场文件用
 var allRoles = [];
+var headerPart = board.split(/
+- 任务[:：]/)[0];
 var re = /- (.+?)[（(].*状态[:：]\s*活跃/g; // P1-2: 同时匹配全角和半角括号
 var allRe = /- (.+?)（/g;
 var m;
 var am;
-while ((m = re.exec(board)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
-while ((am = allRe.exec(board)) !== null) { var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); allRoles.push(arn); }
+while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
+while ((am = allRe.exec(headerPart)) !== null) { var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); allRoles.push(arn); }
 
 // 1. 签字 & 休眠/退场检查
 var allSigned = true;
@@ -104,7 +111,16 @@ if (activeRoles.length === 0) {
     allRoles.forEach(function(role) {
         var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
       var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
-        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile)) { console.log("RETIRE " + role + " OK"); }
+        // 收工轮强制退场：心跳超时角色视为已退场
+        var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
+        var hbForce = false;
+        try {
+          if (fs.existsSync(hbFile3)) {
+            var hbT3 = parseInt(fs.readFileSync(hbFile3, "utf8").trim());
+            if (!isNaN(hbT3) && Date.now() - hbT3 > 2 * 60 * 1000) hbForce = true;
+          }
+        } catch(_e4) {}
+        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile) || hbForce) { console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : "")); }
         else { console.log("RETIRE " + role + " MISS"); allRetired = false; }
     });
 } else {
@@ -177,6 +193,65 @@ fs.renameSync(replyPath + ".tmp", replyPath);
     });
 }
 
+
+// 3.5 心跳检测（v2.16）：检查所有角色心跳文件，超时自动唤醒
+var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
+if (fs.existsSync(worldDir)) {
+    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
+        var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";
+        if (!fs.existsSync(hbFile)) return;
+        try {
+            var hbTime = parseInt(fs.readFileSync(hbFile, "utf8").trim());
+            if (isNaN(hbTime)) return;
+            var hbAge = Date.now() - hbTime;
+            if (hbAge > HEARTBEAT_TIMEOUT_MS) {
+                var roleName = dir.replace("_大鱼对讲", "");
+                console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale)");
+                var wakeFile = worldDir + "/" + dir + "/_wakeup.md";
+                // 防竞争：写 _wakeup.md 前重读心跳——角色可能刚好恢复
+                try {
+                    var hbNow = parseInt(fs.readFileSync(hbFile, "utf8").trim());
+                    if (!isNaN(hbNow) && Date.now() - hbNow < 30000) {
+                        console.log("SKIP " + roleName + " (just recovered)");
+                        return; // 角色刚恢复，不写唤醒文件
+                    }
+                } catch(_e2) {}
+                fs.writeFileSync(wakeFile, "auto-wakeup: heartbeat timeout " + Math.round(hbAge/1000) + "s", "utf8");
+                console.log("WAKE " + roleName + " -> _wakeup.md");
+            }
+        } catch(_e) { /* heartbeat corrupt, skip */ }
+        // v2.17: 死锁检测——角色超时写了_deadlock.md -> 读公告牌找搭档 -> 唤醒搭档
+        var __dlFile = worldDir + "/" + dir + "/_deadlock.md";
+        if (fs.existsSync(__dlFile)) {
+          try {
+            var __role = dir.replace("_大鱼对讲", "");
+            console.log("DEADLOCK " + __role);
+            var __bf = base + "/我的世界/公告牌_" + String(N).padStart(3,"0") + ".md";
+            if (fs.existsSync(__bf)) {
+              var __bc = fs.readFileSync(__bf, "utf8");
+              // 找搭档：搜索角色名所在行，提取"搭档：XXX"
+              var __lines = __bc.split("\r\n");
+              for (var __i = 0; __i < __lines.length; __i++) {
+                var __l = __lines[__i];
+                if (__l.indexOf(__role) !== -1 && __l.indexOf("搭档") !== -1) {
+                  var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)[，,;；\)）]/);
+                  if (__m && __m[1]) {
+                    var __partner = __m[1].trim();
+                    console.log("DEADLOCK partner=" + __partner);
+                    var __pw = worldDir + "/" + __partner + "_大鱼对讲/_wakeup.md";
+                    fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8");
+                    console.log("WAKE " + __partner + " (deadlock)");
+                  }
+                  break;
+                }
+              }
+            }
+            fs.unlinkSync(__dlFile);
+          } catch(__e6) {}
+        }
+
+    });
+}
 // 4. 判断（收工轮额外检查退场文件）
 if (outputReady && allRetired) {
     console.log("DONE N=" + N);
@@ -184,4 +259,9 @@ if (outputReady && allRetired) {
     try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1 }), "utf8"); } catch (e) {}
 } else {
     console.log("WAIT N=" + N);
+}
+
+} catch(e) {
+  console.log("CRASH " + e.message);
+  process.exit(1);
 }
