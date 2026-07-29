@@ -79,9 +79,9 @@ if (!isAddMode) {
     fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
         // 部署团队须知到项目父级目录（我的世界/），所有角色窗口共享
     var teamNotice = path.resolve(assetDir, "..", "团队须知/AGENTS.md");
-    var parentDir = path.resolve(projectDir, "..");
-    fs.copyFileSync(teamNotice, parentDir + "/AGENTS.md");
-    console.log("OK: 团队须知/AGENTS.md → " + parentDir);
+    // 团队须知放到项目根目录，跟我的世界/同级，角色用 ../我的世界/ 引用
+    fs.copyFileSync(teamNotice, path.resolve(projectDir, "..") + "/AGENTS.md");
+    console.log("OK: 团队须知/AGENTS.md → " + path.resolve(projectDir, ".."));
 
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
     fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
