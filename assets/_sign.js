@@ -16,13 +16,13 @@ var roleName = "{{ROLE_NAME}}";
 var signDir = path.resolve(__dirname, "..", "我的世界", roleName + "_大鱼对讲");
 fs.mkdirSync(signDir, { recursive: true });
 
+var signFile = signDir + "/完成_" + String(N).padStart(3, "0") + ".md";
 
 // 快速路径：签字文件已存在且非空 → 直接跳过
 if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
     console.log("SIGNED (已存在): " + signFile + " (" + fs.statSync(signFile).size + " 字节)");
     process.exit(0);
 }
-var signFile = signDir + "/完成_" + String(N).padStart(3, "0") + ".md";
 var content = "# " + roleName + " · 第" + N + "轮签字\n\n" + (msg || "已完成。") + "\n";
 
 // 原子写入 + 重试（最多3次，应对 shell 超时假阴性）

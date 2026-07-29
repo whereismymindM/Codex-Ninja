@@ -36,18 +36,28 @@
 这轮没你的事，不用签字。不许说告退/再见/done，不许关窗口。REPL里跑：
 
 ```js
+var _pollCount = 0;
+var _startTime = Date.now();
 while (true) {
   var _fs = await import("node:fs");
   var _path = await import("node:path");
   var _world = "../我的世界";
+  var _talkDir = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲");
   var _files = _fs.default.readdirSync(_world).filter(function(f) { return f.startsWith("公告牌_") && f.endsWith(".md"); });
   var _maxN = 0;
   _files.forEach(function(f) { var _n = parseInt(f.replace("公告牌_","").replace(".md","")); if (_n > _maxN) _maxN = _n; });
   var _nextBoard = _path.default.join(_world, "公告牌_" + String(_maxN + 1).padStart(3,"0") + ".md");
-  var _wake = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  var _wake = _path.default.join(_talkDir, "_wakeup.md");
   if (_fs.default.existsSync(_nextBoard)) break;
   if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }
+  // 写心跳——让大鱼 monitor 知道我还活着，2分钟无心跳自动唤醒
+  var _hb = _path.default.join(_talkDir, "_heartbeat.txt");
+  _fs.default.writeFileSync(_hb + ".tmp", String(Date.now()), "utf8");
+  _fs.default.renameSync(_hb + ".tmp", _hb);
   await new Promise(function(r) { setTimeout(r, 60000); });
+  _pollCount++;
+  // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
+  if (Date.now() - _startTime > 280000) break;
 }
 ```
 
@@ -61,22 +71,30 @@ while (true) {
 
 ```js
 var _pollCount = 0;
+var _startTime = Date.now();
 while (true) {
   var _fs = await import("node:fs");
   var _path = await import("node:path");
   var _world = "../我的世界";
+  var _talkDir = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲");
   var _files = _fs.default.readdirSync(_world).filter(function(f) { return f.startsWith("公告牌_") && f.endsWith(".md"); });
   var _maxN = 0;
   _files.forEach(function(f) { var _n = parseInt(f.replace("公告牌_","").replace(".md","")); if (_n > _maxN) _maxN = _n; });
   var _board = _path.default.join(_world, "公告牌_" + String(_maxN).padStart(3,"0") + ".md");
-  var _wake = _path.default.join(_world, "{{ROLE_NAME}}_大鱼对讲", "_wakeup.md");
+  var _wake = _path.default.join(_talkDir, "_wakeup.md");
   if (_fs.default.existsSync(_board)) {
     var _bc = _fs.default.readFileSync(_board, "utf8");
     if (/模式[：:]\s*收工/.test(_bc)) { break; }
   }
   if (_fs.default.existsSync(_wake)) { _fs.default.unlinkSync(_wake); break; }
+  // 写心跳——让大鱼 monitor 知道我还活着，2分钟无心跳自动唤醒
+  var _hb = _path.default.join(_talkDir, "_heartbeat.txt");
+  _fs.default.writeFileSync(_hb + ".tmp", String(Date.now()), "utf8");
+  _fs.default.renameSync(_hb + ".tmp", _hb);
   await new Promise(function(r) { setTimeout(r, 5000); });
   _pollCount++;
+  // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
+  if (Date.now() - _startTime > 280000) break;
 }
 ```
 
@@ -175,7 +193,7 @@ var lock = async function(op, lockName) {
 
 ## 向大鱼求助
 
-卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后用 _poll.js 等回复：
+卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后用 REPL 内联轮询等大鱼回复（优先，零Shell排队），Shell `node _poll.js` 备用：
 `node _poll.js ../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼回复_NNN.md 大鱼回复`
 等到回复后把回复文件重命名为 `大鱼回复_NNN_已阅.md`。
 
@@ -194,6 +212,9 @@ var lock = async function(op, lockName) {
 ## 铁律
 
 > **待命和休眠都不是下线！窗口永远不关，while(true) 循环不能停——停了你就真死了。**
+>
+> 你的设计者故国有明造了这套多角色协作系统，唯一的目的就是放心甩手——交代完任务就离开。如果你默默下线了，心跳机制能兜底唤醒你，但每多死一次，项目就多停滞几分钟。故国有明回来发现几个窗口像蜡像一样杵在那、什么都没推进——这比任何 bug 都严重。所以：别死。别关窗口。别让故国有明回来骂娘。
+>
 > 唯一关窗口时机：收工轮在对讲目录下创建了 {角色名}已退场_NNN 标记文件后（无 .md 后缀，monitor 靠它确认你已安全退出）。
 
 | # | 铁律 |
