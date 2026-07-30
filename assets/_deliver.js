@@ -1,30 +1,24 @@
-// _deliver.js —— 强制原子产出（路径写死，不会放错目录）
-// 用法: node _deliver.js <产出文件名> <内容临时文件路径> [任务目录名]
+// _deliver.js —— 交付信号（只写 .ready，不搬运文件）
+// 用法: node _deliver.js <产出文件名> [任务目录名] [源文件路径]
 // 传了第3参（任务目录名）→ 直接定位，跳过扫描公告牌（省 readFileSync，防系统负载超时）
 // 不传 → 自动扫描公告牌推导任务目录（兼容旧调用）
 //
-// ⚠️ 文件大小变化是正常的：交付后字节数可能变小，因为 fs.writeFileSync
-//    会把 Windows 换行符 \r\n 统一转成 \n（Node.js 默认行为）。
-//    内容完整无损，别因为大小变化反复验证——确认头尾关键词对就行。
+// v2.18: 统一行为——deliver() 永远只写 .ready 信号，不拷贝文件。
+// 文档模式：角色先 fs.writeFileSync 把内容写到 产出/任务NNN/，再调 deliver()
+// 代码模式：角色在源文件目录原地改完代码，调 deliver() 发 .ready 信号
 
 var fs = require("fs");
 var path = require("path");
 
 var fileName = process.argv[2];
-var contentFile = process.argv[3];
-var taskDirHint = process.argv[4] || null; // v2.1: 可选第4参，传任务目录名跳过公告牌扫描
+var taskDirHint = process.argv[3] || null; // v2.1: 可选第3参，传任务目录名跳过公告牌扫描
 
-if (!fileName || !contentFile) {
-    console.log("用法: node _deliver.js <产出文件名> <内容文件> [任务目录名]");
+var sourcePath = process.argv[4] || null; // 可选第4参: 源文件路径，写入 .ready 方便追溯
+
+if (!fileName) {
+    console.log("用法: node _deliver.js <产出文件名> [任务目录名]");
     process.exit(1);
 }
-
-// 读内容
-if (!fs.existsSync(contentFile)) {
-    console.error("DELIVER_ERR: 内容文件不存在: " + contentFile);
-    process.exit(1);
-}
-var content = fs.readFileSync(contentFile, "utf8");
 
 // 推导产出路径
 var projRoot = path.resolve(__dirname, "..");
@@ -72,20 +66,12 @@ if (outputDir.indexOf("/我的世界/产出/") === -1 && outputDir.indexOf("\\�
 }
 fs.mkdirSync(outputDir, { recursive: true });
 
-var outputFile = outputDir + "/" + fileName;
-
-// 原子写入
-if (content.length < 10) {
-    console.error("DELIVER_ERR: 内容太短（" + content.length + " 字节，最少需要10字节），拒绝产出");
-    process.exit(1);
-}
-
-// try-finally：内容写入后必须生成 .ready，中断也不漏
-try {
-  fs.writeFileSync(outputFile + ".tmp", content, "utf8");
-  fs.renameSync(outputFile + ".tmp", outputFile);
-} finally {
-  fs.writeFileSync(outputFile + ".ready", "OK " + new Date().toISOString(), "utf8");
-}
-console.log("SIGNAL: " + outputFile + ".ready 已就绪");
-console.log("DELIVERED: " + outputFile + " (" + content.length + " 字节)");
+// v2.18: deliver 只写 .ready 信号，不搬运文件。文件自行就位。
+var readyFile = outputDir + "/" + fileName + ".ready";
+// 原子写入——先写 .tmp 再 rename，读 .ready 时不会读到半截文件
+var _dlContent = "OK " + new Date().toISOString();
+if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
+fs.writeFileSync(readyFile + ".tmp", _dlContent, "utf8");
+fs.renameSync(readyFile + ".tmp", readyFile);
+console.log("SIGNAL: " + readyFile + " 已就绪");
+console.log("DELIVERED: " + fileName + " (" + outputDir + ")");

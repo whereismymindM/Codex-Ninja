@@ -165,8 +165,23 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
         });
         ready = allExist;
-        if (!ready) console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
-        else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
+        if (!ready) {
+            // v2.18 fallback: 老渣可能把产出路径错写成源文件目录（如 soulforge/）
+            // 实际 .ready 在 产出/ 子目录下——扫描兜底
+            var outBase = base + "/我的世界/产出";
+            if (fs.existsSync(outBase)) {
+                try {
+                    var outDirs = fs.readdirSync(outBase).filter(function(d2) { return fs.statSync(outBase + "/" + d2).isDirectory(); });
+                    var fbOk = missing.every(function(fn) {
+                        return outDirs.some(function(d2) {
+                            return fs.existsSync(outBase + "/" + d2 + "/" + fn + ".ready");
+                        });
+                    });
+                    if (fbOk) { ready = true; console.log("OUTPUT " + outDir + " \u2713 (fallback: 产出/)"); }
+                    else console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
+                } catch(_e5) { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
+            } else { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
+        } else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
     } else {
         // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
         var readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : [];

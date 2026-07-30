@@ -54,6 +54,7 @@ while (true) {
   var _hb = _path.default.join(_talkDir, "_heartbeat.txt");
   _fs.default.writeFileSync(_hb + ".tmp", String(Date.now()), "utf8");
   _fs.default.renameSync(_hb + ".tmp", _hb);
+  console.log("[待命轮询] " + new Date().toISOString() + " | 当前最新公告牌N=" + _maxN);
   await new Promise(function(r) { setTimeout(r, 60000); });
   _pollCount++;
   // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
@@ -91,6 +92,7 @@ while (true) {
   var _hb = _path.default.join(_talkDir, "_heartbeat.txt");
   _fs.default.writeFileSync(_hb + ".tmp", String(Date.now()), "utf8");
   _fs.default.renameSync(_hb + ".tmp", _hb);
+  if (_pollCount % 12 === 0) console.log("[休眠轮询] " + new Date().toISOString() + " | 当前最新公告牌N=" + _maxN);
   await new Promise(function(r) { setTimeout(r, 5000); });
   _pollCount++;
   // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
@@ -140,7 +142,7 @@ var sign = async function(roundN) {
   return "SIGN_FAIL";
 };
 
-var deliver = async function(filename, taskDirName) {
+var deliver = async function(filename, taskDirName, sourcePath) {
   const fs = await import("node:fs");
   const path = await import("node:path");
   var worldDir = "../我的世界";
@@ -148,10 +150,15 @@ var deliver = async function(filename, taskDirName) {
   if(!fs.default.existsSync(outDir)) fs.default.mkdirSync(outDir, {recursive: true});
   var outPath = path.default.join(outDir, filename);
   var readyPath = outPath + ".ready";
-  fs.default.writeFileSync(readyPath, new Date().toISOString(), "utf8");
+  // 原子写入——先 .tmp 再 rename，monitor 不会读到半截文件
+  var _dlContent = new Date().toISOString();
+  if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
+  fs.default.writeFileSync(readyPath + ".tmp", _dlContent, "utf8");
+  fs.default.renameSync(readyPath + ".tmp", readyPath);
   return "DELIVERED to " + outPath;
 };
-// 用法: 1.fs.writeFileSync(outPath, content) 写内容 -> 2.await deliver("报告.md", "任务001_XXX")
+// 文档模式: fs.writeFileSync(outPath, content) 写内容 -> await deliver("报告.md", "任务001")
+// 代码模式: 源文件原地改完 -> await deliver("源文件名.js", "任务001", "../soulforge/源文件名.js")  // 可选传 sourcePath，写入 .ready 方便追溯
 
 var lock = async function(op, lockName) {
   const fs = await import("node:fs");
