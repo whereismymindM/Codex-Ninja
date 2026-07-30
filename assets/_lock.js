@@ -3,7 +3,7 @@
 //       node _lock.js release [lockName]
 // lockName默认"写锁"。Shell版命名=lockName+".lock"（如 任务001.lock），REPL版= "写锁_"+name+".lock"（如 写锁_任务001.lock）——两者不同，混用互斥失效
 //
-// v1.5: lockName统一在argv[3]，release也能拿到
+// lockName统一在argv[3]，release也能拿到
 
 var fs = require("fs");
 var path = require("path");
@@ -61,7 +61,7 @@ while (true) {
             var waitUntil = Date.now() + 5000;
             while (Date.now() < waitUntil) { /* 忙等5秒 */ }
         } else {
-            console.error("LOCK_ERROR: " + e.message);
+            console.log("LOCK_ERROR: " + e.message);
             process.exit(1);
         }
     }

@@ -3,7 +3,7 @@
 // 传了第3参（任务目录名）→ 直接定位，跳过扫描公告牌（省 readFileSync，防系统负载超时）
 // 不传 → 自动扫描公告牌推导任务目录（兼容旧调用）
 //
-// v2.18: 统一行为——deliver() 永远只写 .ready 信号，不拷贝文件。
+// 统一行为——deliver() 永远只写 .ready 信号，不拷贝文件。
 // 文档模式：角色先 fs.writeFileSync 把内容写到 产出/任务NNN/，再调 deliver()
 // 代码模式：角色在源文件目录原地改完代码，调 deliver() 发 .ready 信号
 
@@ -11,7 +11,7 @@ var fs = require("fs");
 var path = require("path");
 
 var fileName = process.argv[2];
-var taskDirHint = process.argv[3] || null; // v2.1: 可选第3参，传任务目录名跳过公告牌扫描
+var taskDirHint = process.argv[3] || null; // 可选第3参，传任务目录名跳过公告牌扫描
 
 var sourcePath = process.argv[4] || null; // 可选第4参: 源文件路径，写入 .ready 方便追溯
 
@@ -36,7 +36,7 @@ if (taskDirHint) {
     boardFiles.forEach(function(f) {
       var num = parseInt(f.match(/公告牌_(\d+)\.md/)[1], 10);
       var boardContent = fs.readFileSync(worldDir + "/" + f, "utf8");
-      if (boardContent.indexOf("模式: 收工") !== -1 || boardContent.indexOf("· 收工") !== -1) return;
+      if (boardContent.indexOf("模式: 收工") !== -1 || boardContent.indexOf("模式：收工") !== -1 || boardContent.indexOf("· 收工") !== -1) return;
       if (num > N) N = num;
     });
 
@@ -66,7 +66,7 @@ if (outputDir.indexOf("/我的世界/产出/") === -1 && outputDir.indexOf("\\�
 }
 fs.mkdirSync(outputDir, { recursive: true });
 
-// v2.18: deliver 只写 .ready 信号，不搬运文件。文件自行就位。
+// deliver 只写 .ready 信号，不搬运文件。文件自行就位。
 var readyFile = outputDir + "/" + fileName + ".ready";
 // 原子写入——先写 .tmp 再 rename，读 .ready 时不会读到半截文件
 var _dlContent = "OK " + new Date().toISOString();

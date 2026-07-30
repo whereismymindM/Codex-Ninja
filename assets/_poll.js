@@ -44,7 +44,7 @@ if (wuIdx !== -1) {
 }
 
 
-// --phase <ms>：初始相位偏移，多角色错开轮询（v2.6）
+// --phase <ms>：初始相位偏移，多角色错开轮询
 var phaseMs = 0;
 var phIdx = args.indexOf("--phase");
 if (phIdx !== -1) {
@@ -69,12 +69,12 @@ var wakeFile = (lowPowerMode && wakeupDir) ? path.join(wakeupDir, "_wakeup.md") 
 if (maxWaitSec <= 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗8s（短超时），正常模式600s
 
 var startTime = Date.now();
-var lastDirMtime; // v2.6: 目录mtime缓存
+var lastDirMtime; // 目录mtime缓存
 
 var elapsed = 0;
-// 渐进式间隔（P1-7修复）：正常模式前2次等10秒，之后30秒，最后60秒
-// 低功耗模式：60s固定间隔（见L165 hardcoded）
-var intervals = [5, 10, 10, 15, 20, 30]; // 仅正常模式使用，低功耗走L165硬编码60s
+// 渐进式间隔：首轮快速响应，逐步放缓
+// 低功耗模式：硬编码固定间隔
+var intervals = [3, 5, 8, 12, 20, 30]; // 首轮3s，逐步放缓
 var intervalIdx = 0;
 
 // 安全sleep：Atomics.wait（Node.js原生，跨平台），降级为忙等
@@ -94,7 +94,7 @@ function safeSleep(seconds) {
         }
     }
 }
-if (lowPowerMode) console.log("高频轮询启动——每5秒检查一次公告牌和唤醒信号（最多等" + maxWaitSec + "秒超时）");
+if (lowPowerMode) console.log("高频轮询启动——每3秒检查一次公告牌和唤醒信号（最多等" + maxWaitSec + "秒超时，提速）");
 
 // P2: 随机初始抖动（0-1.5秒）——多角色同时休眠时错开轮询相位，避免文件系统请求尖峰
 if (lowPowerMode) {
@@ -103,7 +103,7 @@ if (lowPowerMode) {
 }
 
 
-// v2.6: 应用相位偏移（--phase参数传入）
+// 应用相位偏移（--phase参数传入）
 if (phaseMs > 0) {
     safeSleep(phaseMs / 1000);
 }
@@ -128,7 +128,7 @@ while (true) {
     }
 
     
-    // v2.6: 目录mtimeMs预检——公告牌目录无变更则跳过文件扫描
+    // 目录mtimeMs预检——公告牌目录无变更则跳过文件扫描
     var targetDir = path.dirname(targetFile);
     var dirChanged = true;
     try {
@@ -162,7 +162,7 @@ if (fs.existsSync(targetFile)) {
         process.exit(0);
     }
 
-    var waitSec = lowPowerMode ? 60 : intervals[Math.min(intervalIdx, intervals.length - 1)];
+    var waitSec = lowPowerMode ? 3 : intervals[Math.min(intervalIdx, intervals.length - 1)]; // 低功耗60s→3s
     if (!lowPowerMode || elapsed % 120 === 0) {
         console.log("等 " + desc + " 中...（已等 " + elapsed + "s / " + maxWaitSec + "s，下次 " + waitSec + "s 后检查）");
     }

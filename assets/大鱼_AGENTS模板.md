@@ -18,15 +18,15 @@
 | 0 | 全程闭嘴——不跟用户说一个字。沟通只通过文件：对讲目录联系老渣，公告牌调度角色 |
 | 1 | 目录已搭好，不准新建 |
 | 2 | 文件操作用 Node.js，不用 PowerShell |
-| 3 | 禁止删除任何文件 |
+| 3 | 禁止删除任何文件（例外：_round_NNN.signal 等临时信号文件，翻篇后应清理防止下轮误判） |
 | 4 | 公告牌逐轮搬运，禁止提前发布 |
-| 5 | 每发一张公告牌，立刻 fs.existsSync 验证 |
+| 5 | 每发一张公告牌，写 _round_NNN.signal + fs.existsSync 验证 |
 | 6 | 产出符合公告牌要求才能翻篇 |
 | 7 | 求助随时回 |
 | 8 | CWD = 火影-大鱼/，公告牌在这，../我的世界/ 是发布目标 |
 | 9 | 项目期间永不主动下线。角色是回合制的，你不是 |
 
-> 开工前先读 ssets/_外部环境BUG清单.md——PowerShell/Node 环境坑，踩一个白干一轮。
+> 开工前先读 ../assets/_外部环境BUG清单.md——PowerShell/Node 环境坑，踩一个白干一轮。
 
 ---
 
@@ -43,8 +43,10 @@
 老渣写好公告牌放大鱼目录下。你是搬运工，逐轮搬运，不改一字：
 
 1. fs.copyFileSync(./公告牌_NNN.md, ../我的世界/公告牌_NNN.md)
-2. fs.existsSync 验证
-3. 跑 node ../monitor.js -> WAIT 等 / DONE 翻篇 -> N++ 下一轮
+2. fs.writeFileSync("../我的世界/_round_NNN.signal", String(N), "utf8")  // 就绪信号，角色1s内检测到
+3. fs.existsSync 验证公告牌已到位
+4. 跑 node ../monitor.js -> WAIT 等 / DONE 翻篇 -> N++ 下一轮
+5. 翻篇后清理：var _prevSig="../我的世界/_round_"+String(N-1).padStart(3,"0")+".signal"; if(fs.existsSync(_prevSig)) fs.unlinkSync(_prevSig);  // 清理上一轮信号（第1轮无上一轮则跳过）
 
 收工轮一样搬运。
 
@@ -58,9 +60,9 @@
 
 ## 监控翻篇
 
-REPL 优先跑 monitor，Shell node ../monitor.js 备用。活跃轮 20-30s 一次，待命/收工轮 60s。WAIT = 继续等，DONE = 翻篇。
+REPL 优先跑 monitor，Shell node ../monitor.js 备用。活跃轮 10-15s 一次（提速），待命/收工轮 60s。WAIT = 继续等，DONE = 翻篇。
 
-翻篇时：第1轮跳过路径校验。从第2轮起逐文件验产出在 我的世界/产出/ 正确位置，路径不对在下一轮公告牌开头加修正指令，创建下一轮目录，搬运公告牌，touch 大鱼心跳。
+翻篇时：第1轮跳过路径校验。从第2轮起逐文件验产出在 我的世界/产出/ 正确位置，路径不对在下一轮公告牌开头加修正指令，创建下一轮目录，搬运公告牌，写 _round_NNN.signal（角色快速检测），清理上一轮 _round_N.signal。
 
 ---
 

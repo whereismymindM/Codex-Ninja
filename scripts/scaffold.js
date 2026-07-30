@@ -126,7 +126,7 @@ roles.forEach(function(r) {
     fs.mkdirSync(projectDir + "/我的世界/" + r.name + "_大鱼对讲", { recursive: true });
 
     // 复制协作模式文件
-    ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
+    ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md", "_轮询片段.md"].forEach(function(mf) {
         fs.copyFileSync(assetDir + "/" + mf, rd + "/" + mf);
     });
 
@@ -144,7 +144,7 @@ roles.forEach(function(r) {
 
 // 大鱼 AGENTS.md —— add 模式跳过（追加角色不需要重建大鱼）
 if (!isAddMode) {
-// 大鱼 AGENTS.md —— 写到火影-大鱼/目录下，纯模板无灵魂// 大鱼 AGENTS.md —— 写到火影-大鱼/目录下，不是项目根目录！
+// 大鱼 AGENTS.md —— 写到火影-大鱼/目录下，不是项目根目录！
 // 检查是否已存在，不覆盖已有文件（角色不动项目动）
 var fishDir = projectDir + "/火影-大鱼";
 fs.mkdirSync(fishDir, { recursive: true });

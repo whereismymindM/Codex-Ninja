@@ -53,7 +53,7 @@ sequenceDiagram
         alt DONE (产出就位)
             大鱼->>我的世界: 搬运下一轮公告牌
         else WAIT
-            大鱼->>大鱼: 继续等待，30s 后再跑 monitor
+            大鱼->>大鱼: 继续等待，10-15s 后再跑 monitor
         end
     end
 
@@ -78,15 +78,15 @@ stateDiagram-v2
     退场 --> [*] : 写 已退场_NNN，关窗口
 
     note right of 休眠
-        低功耗轮询 (每5s)
+        低功耗轮询 (每3s)
         写 _heartbeat.txt
-        280s 自愈 break
+        240s 自愈 break
     end note
 
     note right of 待命
-        间歇轮询 (每60s)
+        间歇轮询 (每15s)
         写 _heartbeat.txt
-        280s 自愈 break
+        240s 自愈 break
     end note
 ```
 
@@ -94,7 +94,7 @@ stateDiagram-v2
 
 - **休眠只写一次**（除非被唤醒）。002 轮休眠写 `已休眠_002`，后续轮延续休眠不再重复写。
 - **本轮后和下一轮状态必须对齐**。老渣先画状态矩阵，再逐轮翻译成公告牌。
-- **待命 ≠ 休眠**。待命 = 随时接棒（60s poll），休眠 = 只等唤醒或收工（5s poll）。
+- **待命 ≠ 休眠**。待命 = 随时接棒（15s poll），休眠 = 只等唤醒或收工（3s poll）。
 
 ## 四、各模式流程
 
@@ -247,11 +247,11 @@ sequenceDiagram
         角色->>对讲目录: writeFileSync _heartbeat.txt.tmp → rename
     end
 
-    loop 大鱼端：每30s扫一次
+    loop 大鱼端：每10-15s扫一次（活跃轮）
         大鱼->>对讲目录: readFileSync _heartbeat.txt
         alt 心跳时间 > 2分钟
             大鱼->>对讲目录: 重读心跳 (double-check)
-            alt 仍超时 > 30s
+            alt 仍超时 > 10s
                 大鱼->>对讲目录: 写 _wakeup.md
                 角色->>对讲目录: poll 到 _wakeup.md → 切活跃
             else 刚好恢复
@@ -261,7 +261,7 @@ sequenceDiagram
     end
 ```
 
-**关键参数**：角色心跳超时 2 分钟，monitor 轮询 30 秒。角色心跳用原子写入（`.tmp → rename`），monitor 读不到文件就跳过——不会误判。
+**关键参数**：角色心跳超时 2 分钟，monitor 轮询 10-15 秒（活跃轮）。角色心跳用原子写入（`.tmp → rename`），monitor 读不到文件就跳过——不会误判。
 
 ### 5.2 死锁检测与并行恢复
 
@@ -273,14 +273,14 @@ sequenceDiagram
 
 **死锁并行策略**：写 `_deadlock` 是给 monitor 一个「尝试唤醒搭档」的信号，但角色自己不卡等——独立步骤继续，缺失标注清楚，最终签字。两条恢复路径同时跑。
 
-### 5.3 REPL 280 秒自愈机制
+### 5.3 REPL 240 秒自愈机制
 
 ```mermaid
 flowchart TD
     A[角色进入休眠/待命] --> B[REPL js() 启动轮询循环]
-    B --> C{280秒到了?}
+    B --> C{240秒到了?}
     C -->|否| D[检查公告牌 + 唤醒信号 + 写心跳]
-    D --> E{sleep 5s/60s}
+    D --> E{sleep 3s/15s}
     E --> C
     C -->|是| F[主动 break 退出循环]
     F --> G[控制权还给 AI 模型]
@@ -291,7 +291,7 @@ flowchart TD
     style H fill:#4a9,stroke:#333,color:#fff
 ```
 
-**为什么是 280 秒**：REPL `js()` 的硬上限是 300 秒。留 20 秒缓冲让 break、退出、模型重发全部完成，不会被刽子手砍头。不需要外部 `/goal` 踹窗口。
+**为什么是 240 秒**：REPL `js()` 的硬上限是 300 秒。留 60 秒缓冲让 break、退出、模型重发全部完成，不会被刽子手砍头。不需要外部 `/goal` 踹窗口。
 
 ### 5.4 三层容错总览
 
@@ -377,10 +377,11 @@ flowchart TD
 | 参数 | 值 | 定义位置 |
 |------|-----|----------|
 | 角色心跳超时 | 2 分钟 | `monitor.js` `HEARTBEAT_TIMEOUT_MS` |
-| monitor 轮询间隔 | 30 秒 | 大鱼 AGENTS 模板 |
-| 休眠 poll 间隔 | 5 秒 | 角色模板 / 各模式文件 |
-| 待命 poll 间隔 | 60 秒 | 角色模板 / 各模式文件 |
-| REPL 自愈阈值 | 280 秒 | 角色模板 / 各模式文件轮询循环 |
+| monitor 轮询间隔 | 10-15 秒（活跃）/ 60 秒（待命/收工） | 大鱼 AGENTS 模板（提速） |
+| 休眠 poll 间隔 | 3 秒 | 角色模板 / _轮询片段.md（5s→3s） |
+| 待命 poll 间隔 | 15 秒 | 角色模板 / _轮询片段.md（60s→15s） |
+| 搭档等文件轮询间隔 | 0.5 秒（信号文件） | 各模式文件（信号文件通知） |
+| REPL 自愈阈值 | 240 秒 | 角色模板 / 各模式文件轮询循环 |
 | REPL 硬上限 | 300 秒 | Codex 平台约束 |
 | 等文件超时（辩论） | 20 分钟 | `_辩论模式.md` |
 | 等文件超时（双人/主笔） | 20 分钟 | `_双人对话模式.md` / `_主笔审核模式.md` |
@@ -403,6 +404,7 @@ flowchart TD
 | `assets/_辩论模式.md` | 辩论玩法流程（含裁判） |
 | `assets/_单人输出模式.md` | 单人输出玩法流程 |
 | `assets/monitor.js` | 大鱼翻篇监控 + 心跳检测 + 死锁检测 |
+| `assets/_轮询片段.md` | 轮询代码唯一来源（待命/休眠 REPL 片段） |
 | `assets/_poll.js` | 通用轮询工具（Shell 备用） |
 | `assets/_sign.js` | 签字工具（Shell 备用） |
 | `assets/_lock.js` | 原子文件锁（Shell 备用） |
@@ -414,10 +416,10 @@ flowchart TD
 
 修改本 Skill 后，逐项核对：
 
-- [ ] 角色模板和四个模式文件的签退轮询是否一致？（280s自愈、原子心跳、`_talkDir`、相对路径）
+- [ ] 角色模板和四个模式文件的签退轮询是否一致？（240s自愈、原子心跳、`_talkDir`、相对路径）
 - [ ] 辩论模式通用等文件模板是否写 `_deadlock.md` 且有「辩论不完整也继续推进」？
 - [ ] 双人/主笔模式的等文件超时是否写了 `_deadlock.md` 且有「自己不卡等」的说明？
-- [ ] 所有超时值是否一致？（等文件 20min，心跳 2min，自愈 280s）
+- [ ] 所有超时值是否一致？（等文件 20min，心跳 2min，自愈 240s）
 - [ ] 没有残留绝对路径 `D:/Codex/workspace`？
 - [ ] 没有残留 10 分钟超时？
 - [ ] 团队须知是否包含 REPL 自愈说明？

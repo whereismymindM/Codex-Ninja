@@ -1,6 +1,6 @@
 // _sign.js — 强制正确签字（路径写死，不会签错地方）
 // 用法: node _sign.js <轮次号> [可选消息]
-// v1.4: 增加重试 + 自检验证，应对 shell 超时假阴性
+// 增加重试 + 自检验证，应对 shell 超时假阴性
 
 var fs = require("fs");
 var path = require("path");
