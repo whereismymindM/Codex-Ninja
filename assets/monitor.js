@@ -25,8 +25,7 @@ while (true) {
     var boardContent = fs.readFileSync(bf, "utf8");
         // Count active roles from bulletin (regex just to count, not to build paths)
     // 只扫公告牌头部（任务: 之前的角色声明区），避免任务描述里的"状态：活跃"文本被误匹配
-    var headerPart = boardContent.split(/
-- 任务[:：]/)[0];
+    var headerPart = boardContent.split(/\n- 任务[:：]/)[0];
     var actCount = (headerPart.match(/- .+?[（(].*状态[:：]活跃/g) || []).length;
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
@@ -95,8 +94,7 @@ catch (e) { console.log("READ_ERR " + boardFile + ": " + e.message); process.exi
 var activeRoles = [];
 // 解析所有角色——收工轮检查退场文件用
 var allRoles = [];
-var headerPart = board.split(/
-- 任务[:：]/)[0];
+var headerPart = board.split(/\n- 任务[:：]/)[0];
 var re = /- (.+?)[（(].*状态[:：]\s*活跃/g; // P1-2: 同时匹配全角和半角括号
 var allRe = /- (.+?)（/g;
 var m;

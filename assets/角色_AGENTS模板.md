@@ -58,7 +58,7 @@ while (true) {
   await new Promise(function(r) { setTimeout(r, 60000); });
   _pollCount++;
   // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
-  if (Date.now() - _startTime > 280000) break;
+  if (Date.now() - _startTime > 240000) break;
 }
 ```
 
@@ -96,7 +96,7 @@ while (true) {
   await new Promise(function(r) { setTimeout(r, 5000); });
   _pollCount++;
   // REPL js() 300s 硬上限——提前 20s 主动退出，让模型自然重发续命
-  if (Date.now() - _startTime > 280000) break;
+  if (Date.now() - _startTime > 240000) break;
 }
 ```
 
