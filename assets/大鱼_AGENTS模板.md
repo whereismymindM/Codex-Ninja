@@ -60,7 +60,7 @@
 
 ## 监控翻篇
 
-REPL 优先跑 monitor，Shell node ../monitor.js 备用。活跃轮 10-15s 一次（提速），待命/收工轮 60s。WAIT = 继续等，DONE = 翻篇。
+REPL 优先跑 monitor，Shell node ../monitor.js 备用。活跃轮 10-15s 一次（原 20-30s），待命/收工轮 60s。WAIT = 继续等，DONE = 翻篇。
 
 翻篇时：第1轮跳过路径校验。从第2轮起逐文件验产出在 我的世界/产出/ 正确位置，路径不对在下一轮公告牌开头加修正指令，创建下一轮目录，搬运公告牌，写 _round_NNN.signal（角色快速检测），清理上一轮 _round_N.signal。
 

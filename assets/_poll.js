@@ -123,7 +123,7 @@ while (true) {
         console.log("被大鱼唤醒了！等了 " + elapsed + " 秒");
         console.log("唤醒原因: " + wakeContent.replace(/\n/g, " | "));
         // 删除唤醒文件，确认收到
-        try { fs.unlinkSync(wakeFile); } catch(e) {}
+        try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
         process.exit(3); // exit code 3 = 被唤醒
     }
 
