@@ -5,6 +5,13 @@
 
 ---
 
+           —— 初代 --reasonix 补充 ——
+
+## 2026-08-01（崩溃修复）
+- **忙等崩溃修复 + 有限时间轮询**
+  - _reasonix_poll.js：纯忙等 while(Date.now()<){} → safeSleep()（Atomics.wait 真休眠，CPU 100%→零），降级 100ms 短切片兜底
+  - Reasonix版_角色_AGENTS模板.md：--forever → --max-wait 240（等同 Codex 240s 自愈），bash case 加 TIMEOUT 分支，终端不再永久挂起
+
            —— 初代 --reasonix ——
 
 ## 2026-08-01（Reasnix 适配）

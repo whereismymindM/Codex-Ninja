@@ -41,6 +41,22 @@ function log(msg) {
   } catch(e) {}
 }
 
+function safeSleep(seconds) {
+  try {
+    var sab = new SharedArrayBuffer(4);
+    Atomics.wait(new Int32Array(sab), 0, 0, seconds * 1000);
+  } catch (e) {
+    var end = Date.now() + seconds * 1000;
+    while (Date.now() < end) {
+      var remaining = end - Date.now();
+      if (remaining > 100) {
+        var wu = Date.now() + 100;
+        while (Date.now() < wu) {}
+      }
+    }
+  }
+}
+
 var modeName = isSleep ? "休眠" : "待命";
 if (lastN <= 1) log("=== 新轮次周期 N=" + (lastN || 1) + " ===");
 log("轮询启动（" + modeName + "）N=" + lastN);
@@ -101,9 +117,5 @@ while (true) {
 
   } catch(e) {}
 
-  var waitUntil = Date.now() + pollSec * 1000;
-  while (Date.now() < waitUntil) {
-    var _wu = Date.now() + 100;
-    while (Date.now() < _wu) {}
-  }
+  safeSleep(pollSec);
 }
