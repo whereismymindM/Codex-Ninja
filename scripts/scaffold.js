@@ -51,7 +51,7 @@ if (!Array.isArray(roles) || roles.length === 0) { console.error("ERROR: roles.j
 } // !isFishMode
 
 // 读模板
-var roleTpl = fs.readFileSync(assetDir + "/角色_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
+var roleTpl = fs.readFileSync(assetDir + "/Reasonix版_角色_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
 var fishTpl = fs.readFileSync(assetDir + "/大鱼_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
 
 // 鱼模式：只重建大鱼AGENTS.md（纯模板，不注入灵魂——大鱼不需要人格）和monitor.js
@@ -132,6 +132,7 @@ roles.forEach(function(r) {
 
     // 复制工具文件
     fs.copyFileSync(assetDir + "/_poll.js", rd + "/_poll.js");
+    fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
     var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, r.name); fs.writeFileSync(rd + "/_sign.js", sc, "utf8");
     fs.copyFileSync(assetDir + "/_lock.js", rd + "/_lock.js");
     fs.copyFileSync(assetDir + "/_deliver.js", rd + "/_deliver.js"); // v1.3: 行为约束工具脚本

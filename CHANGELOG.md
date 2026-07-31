@@ -5,6 +5,17 @@
 
 ---
 
+           —— 初代 --reasonix ——
+
+## 2026-08-01（Reasnix 适配）
+- **Reasnix 分支适配**：基于 Codex 版 v1.0.5，创建 reasonix 分支
+  - _reasonix_poll.js 新增 --forever 参数：永久轮询，不限超时，直到公告牌/唤醒/收工才退出（Reasnix 无 REPL 300s 硬上限，天然支持无限等待）
+  - 新增 _reasonix_poll.js：独立 Node 轮询脚本，bash 调用代替 REPL js()
+  - 新增 Reasonix版_角色_AGENTS模板.md：bash while + node 替代 REPL 内联 js()
+  - scaffold.js 适配：模板源切换 + _reasonix_poll.js 加入复制列表
+  - 不动已有文件，协议不变，Codex 版和 Reasnix 版共存
+
+
            —— 初代 --v1.0.5 ——
 
 ## 2026-08-01（第三轮）
