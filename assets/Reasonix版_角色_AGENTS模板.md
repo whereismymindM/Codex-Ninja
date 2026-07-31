@@ -29,7 +29,7 @@
 ```
 while true; do
   # 等待下一轮公告牌 | 被唤醒 | 收工
-  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N> --standby --max-wait 240)
+  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N>)
   code=$?
   
   case $code in
@@ -54,12 +54,12 @@ done
 
 ```bash
 while true; do
-  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N> --standby --max-wait 240)
+  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N>)
   case $? in
     0) break ;;  # 新公告牌就位
     1) break ;;  # 被唤醒
     2) break ;;  # 收工
-    3) ;;       # TIMEOUT 继续循环
+    3) sleep 15 ;; # TIMEOUT 继续循环
   esac
 done
 ```
@@ -74,10 +74,10 @@ done
 
 ```bash
 while true; do
-  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N> --sleep --max-wait 240)
+  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N>)
   case $? in
     0|1|2) break ;;
-    3) ;;       # TIMEOUT 继续循环
+    3) sleep 3 ;; # TIMEOUT 继续循环
   esac
 done
 ```

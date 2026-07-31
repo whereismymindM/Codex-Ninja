@@ -5,12 +5,21 @@
 
 ---
 
+           —— (待提交) ——
+           —— 初代 --reasonix 单次探测 ——
+
+## 2026-08-01（单次探测）
+- **移除内部循环，改为单次探测**
+  - _reasonix_poll.js：砍掉 while(true) + safeSleep，改为单次扫描毫秒退出，循环和休眠上移到 Agent bash while
+  - Reasonix版_角色_AGENTS模板.md：--max-wait 240 → 外置 sleep 15/3，bash case 3 分支由空转变 sleep
+  - 终端不再长时间阻塞，单次调用毫秒级结束，遏制上下文膨胀
+
            —— 初代 --reasonix 补充 ——
 
 ## 2026-08-01（崩溃修复）
-- **忙等崩溃修复 + 有限时间轮询**
-  - _reasonix_poll.js：纯忙等 while(Date.now()<){} → safeSleep()（Atomics.wait 真休眠，CPU 100%→零），降级 100ms 短切片兜底
-  - Reasonix版_角色_AGENTS模板.md：--forever → --max-wait 240（等同 Codex 240s 自愈），bash case 加 TIMEOUT 分支，终端不再永久挂起
+- **忙等崩溃修复 + --forever 模板同步**
+  - _reasonix_poll.js：纯忙等 → safeSleep()（Atomics.wait 真休眠），降级 100ms 短切片兜底
+  - Reasonix版_角色_AGENTS模板.md：bash 示例默认加 --forever + TIMEOUT 分支，一次 node 进程跑到命中
 
            —— 初代 --reasonix ——
 
