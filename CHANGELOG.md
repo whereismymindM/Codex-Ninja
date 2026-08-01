@@ -4,8 +4,19 @@
 > **格式**：每条 - 开头，写改了什么（为什么/影响范围）。同一天的多条按时间从上到下排。简洁，人读。
 
 ---
+           ——  待提交，有新提交写写下面 ——
 
-           —— (待提交) ——
+	
+           ——  初代 --reasonix 单次探测优化 ——
+
+## 2026-08-01（单次探测优化）
+- **心跳批量 + mtime 预检 + 消除冗余 statSync + --standby 参数**
+  - _reasonix_poll.js：心跳写入改为批量（_hb_state.json 记录间隔），休眠 15s / 待命 30s，减少写入量 50-80%
+  - _reasonix_poll.js：新增 mtime 预检（_mtime.txt 缓存目录 mtime），无变化走快路径跳过全量文件检查；快路径保留唤醒检查（_wakeup.md 在子目录不影响 worldDir mtime）
+  - _reasonix_poll.js：信号检测 existsSync → try-catch statSync，复用 stat 结果省去重复 mtime 获取
+  - _reasonix_poll.js：新增 --standby 参数，区分休眠/待命心跳间隔（bash 模板暂不接入，统一 15s）
+  - 单次探测架构不变，不改 bash 模板
+           
            —— 初代 --reasonix 单次探测 ——
 
 ## 2026-08-01（单次探测）
