@@ -1,7 +1,7 @@
 // === 大鱼监控脚本（轮询版）===
 // 用法：在项目根目录下 node monitor.js
 // 每次运行检查一轮状态后退出，stdout 即时可见
-// 大鱼每 30 秒跑一次：WAIT → 等 → DONE → 翻篇
+// 大鱼每 10-15 秒跑一次（活跃轮）：WAIT → 等 → DONE → 翻篇
 var fs = require("fs");
 // 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，我的世界/ 在 monitor.js 同级
 var base = __dirname;
@@ -52,8 +52,9 @@ while (true) {
                 // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不翻篇
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
                 var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + Npad;
-            var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
-                if (!fs.existsSync(retireFile)) { allDone = false; break; }
+                var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
+                // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）
+                if (!fs.existsSync(retireFile) && !fs.existsSync(sleepFile)) { allDone = false; break; }
             }
         }
     }
@@ -77,8 +78,8 @@ if (!fs.existsSync(boardFile)) {
                 // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不翻篇
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
                 var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
-            var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
-                if (!fs.existsSync(rf)) { allRetired = false; break; }
+                var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
+                if (!fs.existsSync(rf) && !fs.existsSync(sf)) { allRetired = false; break; }
             }
             if (allRetired) { console.log("DONE N=" + prevN); process.exit(0); }
         }
@@ -103,7 +104,6 @@ while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*
 while ((am = allRe.exec(headerPart)) !== null) { var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); allRoles.push(arn); }
 
 // 1. 签字 & 休眠/退场检查
-var allSigned = true;
 var allRetired = true; // 收工轮用：所有角色是否都写了退场文件（或休眠文件，两者都验）
 if (activeRoles.length === 0) {
     // 收工轮：全员退场，逐个检查退场文件（或休眠文件，两者都验）是否到位
