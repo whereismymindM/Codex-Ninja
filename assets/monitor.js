@@ -145,7 +145,21 @@ if (activeRoles.length === 0) {
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) hbForce = true;
           }
         } catch(_e4) {}
-        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile) || hbForce) { console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : "")); }
+        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile) || hbForce) {
+            console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : ""));
+            // 2026-08-02 优化：流水账覆盖校验——退场角色应有全程总结（≥2 行：至少一轮 + 退场），
+            // 不足标 ⚠️（不阻塞退场，提醒角色复盘漏写）
+            try {
+                var flowFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "_流水账.md";
+                if (fs.existsSync(flowFile)) {
+                    var flowLines = fs.readFileSync(flowFile, "utf8").split("\n").filter(function(l) { return l.trim().length > 0; }).length;
+                    if (flowLines < 2) console.log("FLOW " + role + " ⚠️ 流水账过简（" + flowLines + " 行，应为全程总结）");
+                    else console.log("FLOW " + role + " OK (" + flowLines + " 行)");
+                } else {
+                    console.log("FLOW " + role + " ⚠️ 无流水账");
+                }
+            } catch(_e6) {}
+        }
         else { console.log("RETIRE " + role + " MISS"); allRetired = false; }
     });
 } else {

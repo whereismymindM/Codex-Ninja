@@ -27,6 +27,9 @@ function log(msg) {
   try {
     var ts = new Date().toISOString().substring(11, 19);
     fs.appendFileSync(path.join(talkDir, roleName + "_轮询日志.md"), "[" + ts + "] " + msg + "\n", "utf8");
+    // 操作日志（2026-08-02 优化：不靠角色自觉，脚本自动写关键动作）
+    // 供老渣/大鱼实时排查"角色卡在哪"，与流水账（角色退场前全程总结）互补
+    fs.appendFileSync(path.join(talkDir, roleName + "_操作日志.md"), "[" + ts + "] " + msg + "\n", "utf8");
   } catch(e) {}
 }
 
