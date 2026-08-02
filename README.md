@@ -78,7 +78,6 @@ codex-ninja/
 ├── assets/                  # 玩法文件 + 模板 + 工具
 │   ├── 公告牌完全指南.md      # 老渣写公告牌的完整参考
 │   ├── 大鱼_AGENTS模板.md     # 大鱼窗口模板
-│   ├── 角色_AGENTS模板.md     # 角色窗口模板（Codex 版）
 │   ├── Reasonix版_角色_AGENTS模板.md
 │   ├── _Multi-pass_solo.md   # 单窗口换帽子模式
 │   ├── _双人对话模式.md       # 玩法流程文件
