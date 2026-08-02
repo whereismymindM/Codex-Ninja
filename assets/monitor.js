@@ -29,21 +29,34 @@ while (true) {
     var actCount = (headerPart.match(/- .+?[（(].*状态[:：]活跃/g) || []).length;
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
-    // Scan MyWorld for sign-off files - no Chinese path construction!
-    var mwDir = base + "/我的世界";
-    var dirs = fs.readdirSync(mwDir).filter(function(d) { return d.endsWith("_大鱼对讲"); });
-    var signedCount = 0;
-    dirs.forEach(function(d) {
-        var sf = mwDir + "/" + d + "/完成_" + Npad + ".md";
-        try { if (fs.existsSync(sf) && fs.statSync(sf).size > 20) signedCount++; } catch(e) {}
-    });
-    allDone = hasActive ? (signedCount >= actCount) : true; // 非活跃轮不看签字
-    // P2-10: 收工轮特殊处理——公告牌格式为「角色 → 退场」，没有「状态：活跃」
-    // 正则匹配不到活跃角色时，检查是否为收工轮，是则验退场文件（休眠角色写已休眠_NNN，收工轮写已退场_NNN，monitor两者都验）
+    // 产出检查（与主判断一致：翻篇只看产出就位，签字降级为建议项，不参与自检判据）
+    var outReSelf = /产出:\s*我的世界\/([^\r\n]+)/g;
+    var omSelf; var hasOutSelf = false; var outOkSelf = true;
+    while ((omSelf = outReSelf.exec(boardContent)) !== null) {
+        hasOutSelf = true;
+        var fpSelf = omSelf[1].trim();
+        var lsSelf = fpSelf.lastIndexOf("/");
+        if (lsSelf !== -1 && fpSelf.substring(lsSelf + 1).indexOf(".") !== -1) {
+            var odSelf = fpSelf.substring(0, lsSelf);
+            var fnsSelf = fpSelf.substring(lsSelf + 1).split(/\s*,\s*/);
+            for (var fiSelf = 0; fiSelf < fnsSelf.length; fiSelf++) {
+                var fnSelf = fnsSelf[fiSelf].trim();
+                if (fnSelf && !fs.existsSync(base + "/我的世界/" + odSelf + "/" + fnSelf + ".ready")) { outOkSelf = false; break; }
+            }
+        } else {
+            var od2Self = fpSelf.replace(/\/$/, "");
+            var dp2Self = base + "/我的世界/" + od2Self;
+            var rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : [];
+            if (rfsSelf.length === 0) { outOkSelf = false; break; }
+        }
+    }
+    if (hasOutSelf && !outOkSelf) allDone = false; // 有产出行但未就位 → 该轮未完成
+    if (hasActive && !hasOutSelf) allDone = false; // 活跃轮漏写产出行 → 视为未完成（与主判断一致，避免自检跳过）
+    // P2-10: 收工轮特殊处理——公告牌格式为「角色（状态：退场）」，正则匹配角色行（角色名后紧跟全角括号，无空格）
     if (!hasActive && allDone) {
         var isRetire = /模式[：:]\s*收工/.test(boardContent) || /·\s*收工/.test(boardContent);
         if (isRetire) {
-            var retireRe = /- (.+?) [（→]/g;
+            var retireRe = /- (.+?)[（→]/g;
             var retireMatch;
             allDone = true;
             while ((retireMatch = retireRe.exec(boardContent)) !== null) {
@@ -71,7 +84,7 @@ if (!fs.existsSync(boardFile)) {
         var prevContent = fs.readFileSync(prevBoard, "utf8");
         if (/模式[：:]\s*收工/.test(prevContent) || /·\s*收工/.test(prevContent)) {
             // 上一轮是收工，检查退场文件
-            var retireRe = /- (.+?) [（→]/g;
+            var retireRe = /- (.+?)[（→]/g;
             var retireMatch, allRetired = true;
             while ((retireMatch = retireRe.exec(prevContent)) !== null) {
                 var roleName = retireMatch[1].trim();
@@ -137,7 +150,7 @@ var outputReady = activeRoles.length === 0;
 // 产出校验——优先解析产出行中的具体文件名，逐个fs.existsSync检查
 // 格式A（有文件名）: 产出: 我的世界/产出/任务001/server.js, search.js → 逐文件检查
 // 格式B（仅目录）: 产出: 我的世界/产出/任务001/ → 回退到目录非空检查
-var outputRe = /产出:\s*我的世界\/(\S+)/g;
+var outputRe = /产出:\s*我的世界\/([^\r\n]+)/g;
 var outputMatch, allOutputReady = true, outputCount = 0;
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;

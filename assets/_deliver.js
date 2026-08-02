@@ -50,7 +50,7 @@ if (taskDirHint) {
     taskDir = "任务" + String(N).padStart(3, "0");
     if (fs.existsSync(boardFile)) {
         var board = fs.readFileSync(boardFile, "utf8");
-        var m = board.match(/我的世界\/(?:产出\/)?(任务\d+_?[^\s(\[{\/（]+)\/?\s*$/m);
+        var m = board.match(/^-\s*(?:产出|任务目录)[：:]\s*我的世界\/(?:产出\/)?(任务\d+_?[^\s(\[{\/（]+)(?:\/[^\s]+(?:\s*,\s*[^\s]+)*)?\/?\s*$/m);
         if (m) {
             taskDir = m[1];
         }

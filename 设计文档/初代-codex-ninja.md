@@ -406,7 +406,7 @@ flowchart TD
 | `assets/_辩论模式.md` | 辩论玩法流程（含裁判） |
 | `assets/_单人输出模式.md` | 单人输出玩法流程 |
 | `assets/monitor.js` | 大鱼翻篇监控 + 心跳检测 + 死锁检测 |
-| `assets/_轮询片段.md` | 轮询代码唯一来源（待命/休眠 REPL 片段） |
+| `assets/_轮询片段.md` | 轮询代码唯一来源（待命/休眠 REPL 片段）——**已删除，失效** |
 | `assets/_poll.js` | 通用轮询工具（Shell 备用） |
 | `assets/_sign.js` | 签字工具（Shell 备用） |
 | `assets/_lock.js` | 原子文件锁（Shell 备用） |
