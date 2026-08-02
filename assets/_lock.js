@@ -1,7 +1,7 @@
 // _lock.js — 原子文件锁（wx标志，真正的原子操作）
 // 用法: node _lock.js acquire [lockName] [等待超时秒数]
 //       node _lock.js release [lockName]
-// lockName默认"写锁"。Shell版命名=lockName+".lock"（如 任务001.lock），REPL版= "写锁_"+name+".lock"（如 写锁_任务001.lock）——两者不同，混用互斥失效
+// lockName默认"写锁"。统一命名 = "写锁_" + lockName + ".lock"（如 写锁_任务001.lock），与 REPL 版一致，混用互斥有效
 //
 // lockName统一在argv[3]，release也能拿到
 
@@ -15,8 +15,8 @@ var lockName = process.argv[3] || "写锁";
 // waitTimeout: acquire 时自己等锁的最大时长（秒），用 argv[4]，默认180秒
 var waitTimeout = parseInt(process.argv[4], 10) || 180;
 var LOCK_STALE_SEC = 600;
-// ⚠️ Shell版锁命名 = lockName + ".lock"（如 任务001.lock）。REPL版 lock() 用 "写锁_" + name + ".lock"（如 写锁_任务001.lock），两者不同——混用互斥失效。角色优先用 REPL 版。
-var lockFile = path.resolve(__dirname, "..", "我的世界", lockName + ".lock");
+// 锁命名统一 = "写锁_" + lockName + ".lock"（如 写锁_任务001.lock），与 REPL 版 lock() 一致，混用互斥有效。角色优先用 REPL 版。
+var lockFile = path.resolve(__dirname, "..", "我的世界", "写锁_" + lockName + ".lock");
 
 if (action === "release") {
     if (fs.existsSync(lockFile)) {
