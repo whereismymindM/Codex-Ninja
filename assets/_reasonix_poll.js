@@ -106,7 +106,7 @@ if (fs.existsSync(nextFile)) {
 var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
 if (fs.existsSync(curFile)) {
   var bc = fs.readFileSync(curFile, "utf8");
-  if (/模式[：:]\s*收工/.test(bc)) {
+  if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
     log("收工轮 N=" + lastN);
     console.log("RETIRED N=" + lastN);
     process.exit(2);
