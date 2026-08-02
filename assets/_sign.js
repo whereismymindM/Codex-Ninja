@@ -25,7 +25,7 @@ if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
 }
 var content = "# " + roleName + " · 第" + N + "轮签字\n\n" + (msg || "已完成。") + "\n";
 
-// 原子写入 + 重试（最多3次，应对 shell 超时假阴性）
+// 原子写入 + 自检（1 次写入 + 自检验证，原子写入本身就可靠）
 var maxRetries = 1; // 原子写入本身就可靠，1次够，多了给shell超时送人头
 for (var attempt = 1; attempt <= maxRetries; attempt++) {
     try {
