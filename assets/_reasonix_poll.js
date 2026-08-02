@@ -49,7 +49,8 @@ try {
 }
 
 // ── 2. mtime 预检 ──
-//     记录 我的世界/ 目录 mtime，无变化时走快路径跳过全量文件检查
+//     记录 我的世界/ 目录 mtime（取整到毫秒整数），无变化时走快路径跳过全量文件检查
+//     写入与读取两端均为整数：String(Math.round(...)) 写入 → parseInt 读回，保证 === 命中快路径
 var mtimeFile = path.join(talkDir, "_mtime.txt");
 var lastMtime = 0;
 try {
@@ -58,7 +59,7 @@ try {
   }
 } catch(e) {}
 
-var curMtime = fs.statSync(worldDir).mtimeMs;
+var curMtime = Math.round(fs.statSync(worldDir).mtimeMs);
 var wakeFile = path.join(talkDir, "_wakeup.md");
 
 if (curMtime === lastMtime) {
