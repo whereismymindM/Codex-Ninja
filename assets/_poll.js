@@ -30,7 +30,7 @@ var readyIdx = args.indexOf("--ready");
 var readyMode = readyIdx !== -1;
 if (readyMode) args.splice(readyIdx, 1);
 
-// --low-power：低功耗模式（休眠后不关窗，每60秒轮询+检_wakeup.md）
+// --low-power：低功耗模式（休眠后不关窗，每3秒轮询+检_wakeup.md）
 var lpIdx = args.indexOf("--low-power");
 var lowPowerMode = lpIdx !== -1;
 if (lowPowerMode) args.splice(lpIdx, 1);
@@ -162,7 +162,7 @@ if (fs.existsSync(targetFile)) {
         process.exit(0);
     }
 
-    var waitSec = lowPowerMode ? 3 : intervals[Math.min(intervalIdx, intervals.length - 1)]; // 低功耗60s→3s
+    var waitSec = lowPowerMode ? 3 : intervals[Math.min(intervalIdx, intervals.length - 1)]; // 低功耗固定3s，正常模式渐进提速
     if (!lowPowerMode || elapsed % 120 === 0) {
         console.log("等 " + desc + " 中...（已等 " + elapsed + "s / " + maxWaitSec + "s，下次 " + waitSec + "s 后检查）");
     }
