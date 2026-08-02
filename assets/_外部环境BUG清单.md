@@ -12,7 +12,7 @@
 | # | 原则 | 一句话 | 覆盖的 BUG |
 |---|------|--------|-----------|
 | 1 | **别让 PowerShell 碰中文** | 读写中文文件走 Node.js 临时 .js 文件 | BUG 1, 2, 3 |
-| 2 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 8, 12 |
+| 2 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 12 |
 | 3 | **REPL 是持久化运行时** | 变量复用不复声明; 别依赖 homeDir | BUG 9, 10 |
 
 > 编码细节：反引号别嵌套 Markdown 代码块用 lines.push()（BUG 11）；双窗口 poll 太密会 I/O 闪退间隔 >= 5 秒（BUG 13）。

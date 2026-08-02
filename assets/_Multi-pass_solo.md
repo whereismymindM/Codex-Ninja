@@ -52,7 +52,7 @@ Multi-pass solo 是一种**运行模式**（怎么跑），不是玩法模式（
 如果任务涉及代码审查，**在Pass1之前先跑Pass0**：
 
 1. 检查项目是否有 `.soulforge/project-soul.md`
-2. 如果没有 → 运行 `node soul-scan.js --ast <项目目录>` 自动生成
+2. 如果没有 → 运行 `node soul-scan.js --ast <项目目录>` 自动生成（注：soul-scan.js 是外部工具，不在本 Skill 内，需另行准备）
 3. 读 `project-soul.md`，了解整个项目的模块边界和依赖关系
 4. Pass1-3的专家基于项目灵魂展开审查——不再盲人摸象
 
@@ -65,7 +65,7 @@ Multi-pass solo 是一种**运行模式**（怎么跑），不是玩法模式（
 
 1. **读灵魂** → `灵魂舱/角色/{角色名}/灵魂.md`
 2. **读上pass产出**（Pass1跳过）→ 理解前人工作
-3. **产出** → REPL `fs.writeFileSync` 写到 `我的世界/产出/{任务目录}/Pass{N}_{角色名}_{任务描述}.md`
+3. **产出** → `fs.writeFileSync` 写到 `我的世界/产出/{任务目录}/Pass{N}_{角色名}_{任务描述}.md`
 
 产出要求：
 - 站在该角色专业视角
@@ -125,6 +125,6 @@ Multi-pass solo任务：
 
 1. **每pass必读该角色灵魂**——不跳过，不凭记忆
 2. **终审必须逐条验证**——不照单全收前序pass结论
-3. **产出用REPL写文件**——零Shell依赖
+3. **产出用 `fs.writeFileSync` 写文件**——零Shell依赖
 4. **换帽子时读完上pass产出再动手**——不自说自话
 5. **不需要poll、加锁、心跳、公告牌**——这些是组团模式的，Multi-pass solo全砍掉

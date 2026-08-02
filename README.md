@@ -69,20 +69,28 @@ codex-ninja/
 ├── SKILL.md                 # Skill 入口（老渣身份声明）
 ├── README.md                # 本文件
 ├── CHANGELOG.md             # 版本历史（时间线格式）
+├── 启动指南.md               # 方案A 启动流程
 ├── assets/                  # 玩法文件 + 模板 + 工具
 │   ├── 公告牌完全指南.md      # 老渣写公告牌的完整参考
 │   ├── 大鱼_AGENTS模板.md     # 大鱼窗口模板
-│   ├── 角色_AGENTS模板.md     # 角色窗口模板
+│   ├── 角色_AGENTS模板.md     # 角色窗口模板（Codex 版）
 │   ├── Reasonix版_角色_AGENTS模板.md
-│   ├── _reasonix_poll.js
-│   ├── _轮询片段.md
+│   ├── _Multi-pass_solo.md   # 单窗口换帽子模式
 │   ├── _双人对话模式.md       # 玩法流程文件
 │   ├── _主笔审核模式.md
 │   ├── _辩论模式.md
 │   ├── _单人输出模式.md
+│   ├── 完整示例_RSS摘要系统.md # 5角色6轮实战示例
+│   ├── 场景模板.md
+│   ├── _工具速查.md
+│   ├── _隐患清单.md
+│   ├── _外部环境BUG清单.md
 │   ├── monitor.js           # 大鱼翻篇监控
-│   └── _poll.js 等工具       # Shell 备用工具
-├── scripts/                 # 脚手架
+│   ├── _reasonix_poll.js    # Reasonix 单次探测轮询
+│   ├── _poll.js             # Shell 备用轮询
+│   ├── _sign.js / _lock.js / _deliver.js / _wakeup.js
+├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）
+├── 设计文档/                 # 设计理念与机制详解
 └── 团队须知/                # 注入所有角色窗口的通用规则
 ```
 

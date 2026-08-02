@@ -61,7 +61,7 @@ if (isFishMode) {
     // 大鱼 AGENTS.md —— 纯模板，替换路径变量
     var fishDir = projectDir + "/火影-大鱼";
     fs.mkdirSync(fishDir, { recursive: true });
-    var fishContent = fishTpl.replace(/\{\{项目根目录\}\}/g, path.resolve(projectDir, ".."));
+    var fishContent = fishTpl;
     fs.writeFileSync(fishDir + "/AGENTS.md", fishContent, "utf8");
     console.log("OK: 火影-大鱼/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
 

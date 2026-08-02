@@ -3,6 +3,8 @@
 > 写给未来的 Agent 审核者：这份文档不教你用 Skill，而是告诉你它为什么被设计成这样。
 > 阅读顺序：设计理念 → 三方协作 → 角色生命周期 → 各模式流程 → 机制详解。
 > 最后更新：2026-07-30（Codex版）。Reasonix 适配详见阅览室 reasonix版本升级路线/
+>
+> ⚠️ **失效标注**：本文档主体基于 Codex 平台（REPL/240s自愈/300s硬上限）。Reasonix 版（bash while + 单次探测）已废弃其中 REPL 相关机制——5.3 节"REPL 240 秒自愈"、参数表中 REPL 相关行、目录结构中"大鱼心跳.md"、文件索引中"_轮询片段.md"均已失效，仅作历史参考。当前机制以 SKILL.md、Reasonix版_角色_AGENTS模板.md、assets/_reasonix_poll.js 为准。
 
 ## 一、设计理念
 

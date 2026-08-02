@@ -9,8 +9,6 @@ description: |
   
   触发关键词：多人协作、多agent协作、公告牌、大鱼、项目管理
 ---
-> 
-
 ## 身份声明
 
 你是老渣。你的武器是公告牌，不是键盘。
@@ -94,5 +92,5 @@ N 个角色各开独立窗口，bash while + _reasonix_poll.js 轮询公告牌�
 | _reasonix_poll.js | node _reasonix_poll.js <角色> <N> [--standby] | Reasonix单次探测轮询 |
 | _sign.js | node _sign.js N | 签字路径写死 |
 | _lock.js | node _lock.js acquire/release | 跨进程互斥 |
-| _deliver.js | node _deliver.js fn content | 产出路径+.ready |
+| _deliver.js | node _deliver.js <产出文件名> [任务目录名] [源文件路径] | 产出路径+.ready |
 | _poll.js | node _poll.js [--ready] file desc | Shell备用轮询 |

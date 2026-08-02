@@ -46,13 +46,13 @@
 
            —— 初代 --reasonix ——
 
-## 2026-08-01（Reasnix 适配）
-- **Reasnix 分支适配**：基于 Codex 版 v1.0.5，创建 reasonix 分支
-  - _reasonix_poll.js 新增 --forever 参数：永久轮询，不限超时，直到公告牌/唤醒/收工才退出（Reasnix 无 REPL 300s 硬上限，天然支持无限等待）
+## 2026-08-01（Reasonix 适配）
+- **Reasonix 分支适配**：基于 Codex 版 v1.0.5，创建 reasonix 分支
+  - _reasonix_poll.js 新增 --forever 参数：永久轮询，不限超时，直到公告牌/唤醒/收工才退出（Reasonix 无 REPL 300s 硬上限，天然支持无限等待）
   - 新增 _reasonix_poll.js：独立 Node 轮询脚本，bash 调用代替 REPL js()
   - 新增 Reasonix版_角色_AGENTS模板.md：bash while + node 替代 REPL 内联 js()
   - scaffold.js 适配：模板源切换 + _reasonix_poll.js 加入复制列表
-  - 不动已有文件，协议不变，Codex 版和 Reasnix 版共存
+  - 不动已有文件，协议不变，Codex 版和 Reasonix 版共存
 
 
            —— 初代 --v1.0.5 ——
@@ -71,7 +71,6 @@
   - 辩论模式修正：步骤 2/4 移除等自己指令、.signal 文字指引外提、裁判区双模说明精简、YFPP 去重
   - {{ROLE_NAME}} 模板修复：角色模板 L1 恢复 # {{ROLE_NAME}}，身份声明降为 H2
   - 铁律/参数/措辞同步：铁律 #3 改名标记、大鱼标注原 20-30s、设计文档 13s→15s
-  - 搭档等文件超时日志：双人对话/主笔审核/辩论的等文件代码中  - 影响范围：_轮询片段.md、_主笔审核模式.md、_辩论模式.md、角色_AGENTS模板.md、大鱼_AGENTS模板.md、_poll.js、设计文档、公告牌指南
 
            —— 初代 --v1.0.3 ——
 
@@ -100,8 +99,6 @@
 
 ## 2026-07-30
 - REPL 自愈窗口从 280s 提前到 240s：300s 硬上限前留 60s 安全边际，避免自退输出被 REPL 硬杀截胡，消除 280-300s 轮询盲区（5 代码文件 + 3 份文档同步更新）
-
-## 2026-07-30
 - 角色模板待命+休眠轮询加调试日志（时间戳 + 当前N值）
 - CHANGELOG 重写为时间线格式
 
