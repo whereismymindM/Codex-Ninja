@@ -127,6 +127,13 @@ roles.forEach(function(r) {
 
     fs.writeFileSync(rd + "/AGENTS.md", content, "utf8");
 
+    // 角色目录 reasonix.toml：turn 内循环模式前置配置（bash_timeout=0，回合内可无限等待轮询）
+    var rxCfgPath = rd + "/reasonix.toml";
+    if (!fs.existsSync(rxCfgPath)) {
+        fs.writeFileSync(rxCfgPath, "[tools]\nbash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n", "utf8");
+        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0)");
+    }
+
     // 大鱼对讲目录
     fs.mkdirSync(projectDir + "/我的世界/" + r.name + "_大鱼对讲", { recursive: true });
 
