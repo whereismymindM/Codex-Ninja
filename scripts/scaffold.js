@@ -86,11 +86,11 @@ if (isFishMode) {
 // 创建基础目录（add 模式跳过——这些目录已存在）
 if (!isAddMode) {
     fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
-        // 部署团队须知到项目父级目录（我的世界/），所有角色窗口共享
+    // 部署团队须知到项目根目录（projectDir，角色窗口的父级），所有角色窗口共享
     var teamNotice = path.resolve(assetDir, "..", "团队须知/AGENTS.md");
-    // 团队须知放到项目根目录，跟我的世界/同级，角色用 ../我的世界/ 引用
-    fs.copyFileSync(teamNotice, path.resolve(projectDir, "..") + "/AGENTS.md");
-    console.log("OK: 团队须知/AGENTS.md → " + path.resolve(projectDir, ".."));
+    // 团队须知放到项目根目录，跟我的世界/同级；角色在 projectDir/角色名/ 下，父级即 projectDir
+    fs.copyFileSync(teamNotice, projectDir + "/AGENTS.md");
+    console.log("OK: 团队须知/AGENTS.md → " + projectDir);
 
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
     fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
