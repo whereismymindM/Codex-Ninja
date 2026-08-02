@@ -6,6 +6,17 @@ var fs = require("fs");
 // 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，我的世界/ 在 monitor.js 同级
 var base = __dirname;
 
+// 心跳时间戳解析：兼容 毫秒 / 秒 / ISO 字符串（角色可能写任意格式，2026-08-02 实测修复）
+function parseHeartbeat(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return NaN;
+    var n = parseInt(s, 10);
+    if (!isNaN(n) && n >= 1000000000000) return n;               // 毫秒时间戳
+    if (!isNaN(n) && n >= 1000000000 && n < 1000000000000) return n * 1000; // 秒时间戳
+    var iso = Date.parse(s);                                      // ISO 字符串
+    return isNaN(iso) ? NaN : iso;
+}
+
 // P1-1: N值从状态文件读，崩溃重启不跳轮次
 var stateFile = base + "/我的世界/.monitor_state.json";
 var N = 1;
@@ -124,13 +135,14 @@ if (activeRoles.length === 0) {
     allRoles.forEach(function(role) {
         var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
             var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
-        // 收工轮强制退场：心跳超时角色视为已退场
+        // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
                 var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
         var hbForce = false;
         try {
           if (fs.existsSync(hbFile3)) {
-            var hbT3 = parseInt(fs.readFileSync(hbFile3, "utf8").trim());
-            if (!isNaN(hbT3) && Date.now() - hbT3 > 2 * 60 * 1000) hbForce = true;
+            var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
+            var hbTimeout3 = (fs.existsSync(base + "/我的世界/大鱼_老渣对讲/调度日志.md")) ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) hbForce = true;
           }
         } catch(_e4) {}
         if (fs.existsSync(retireFile) || fs.existsSync(sleepFile) || hbForce) { console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : "")); }
@@ -232,21 +244,30 @@ fs.renameSync(replyPath + ".tmp", replyPath);
 
 // 3.5 心跳检测（心跳检测）：检查所有角色心跳文件，超时自动唤醒
 var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
+// F 模式（大鱼调度）：角色"干完即退"后 0 进程、无心跳是常态，不是掉线。
+// 判断角色是否属于 F 调度：其目录 reasonix.toml 存在 + 项目存在 大鱼_老渣对讲/调度日志.md
+var F_SCHEDULED = fs.existsSync(worldDir + "/大鱼_老渣对讲/调度日志.md");
 if (fs.existsSync(worldDir)) {
     fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
         var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";
         if (!fs.existsSync(hbFile)) return;
         try {
-            var hbTime = parseInt(fs.readFileSync(hbFile, "utf8").trim());
+            var hbTime = parseHeartbeat(fs.readFileSync(hbFile, "utf8"));
             if (isNaN(hbTime)) return;
             var hbAge = Date.now() - hbTime;
-            if (hbAge > HEARTBEAT_TIMEOUT_MS) {
+            // F 模式下放宽到 10 分钟（角色干完即退后心跳停是正常态），且不自动写唤醒
+            var timeoutMs = F_SCHEDULED ? 10 * 60 * 1000 : HEARTBEAT_TIMEOUT_MS;
+            if (hbAge > timeoutMs) {
                 var roleName = dir.replace("_大鱼对讲", "");
                 console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale)");
+                if (F_SCHEDULED) {
+                    console.log("SKIP " + roleName + " (F-mode: 大鱼调度决定是否唤醒)");
+                    return; // F 模式：不写 _wakeup.md，唤醒由大鱼负责
+                }
                 var wakeFile = worldDir + "/" + dir + "/_wakeup.md";
                 // 防竞争：写 _wakeup.md 前重读心跳——角色可能刚好恢复
                 try {
-                    var hbNow = parseInt(fs.readFileSync(hbFile, "utf8").trim());
+                    var hbNow = parseHeartbeat(fs.readFileSync(hbFile, "utf8"));
                     if (!isNaN(hbNow) && Date.now() - hbNow < 30000) {
                         console.log("SKIP " + roleName + " (just recovered)");
                         return; // 角色刚恢复，不写唤醒文件
