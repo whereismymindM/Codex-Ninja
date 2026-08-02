@@ -202,6 +202,14 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     if (!ready) allOutputReady = false;
 }
 if (outputCount > 0) outputReady = allOutputReady;
+// 3.5 活跃角色完成状态（F 模式大鱼调度用：逐角色输出签字/产出就位，方便大鱼决定唤醒谁）
+if (activeRoles.length > 0) {
+    activeRoles.forEach(function(role) {
+        var signFile = base + "/我的世界/" + role + "_大鱼对讲/完成_" + String(N).padStart(3, "0") + ".md";
+        var signed = fs.existsSync(signFile) && fs.statSync(signFile).size > 20;
+        console.log("ROLE " + role + " " + (signed ? "DONE" : "PENDING") + " N=" + N);
+    });
+}
 // 3. 求助
 var worldDir = base + "/我的世界";
 if (fs.existsSync(worldDir)) {
