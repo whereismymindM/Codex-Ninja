@@ -126,7 +126,7 @@ roles.forEach(function(r) {
     fs.mkdirSync(projectDir + "/我的世界/" + r.name + "_大鱼对讲", { recursive: true });
 
     // 复制协作模式文件
-    ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md", "_轮询片段.md"].forEach(function(mf) {
+    ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
         fs.copyFileSync(assetDir + "/" + mf, rd + "/" + mf);
     });
 

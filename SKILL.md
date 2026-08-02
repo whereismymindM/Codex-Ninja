@@ -51,11 +51,16 @@ add 不碰大鱼和 monitor。跑完删 roles.json。
 
 ---
 
-## 两种运行模式
+## 三种运行模式
 
 ### 经典多窗口（角色>=3、大项目>2h）
 
-N 个角色各开独立窗口，内联轮询公告牌，完全自治。
+N 个角色各开独立窗口，bash while + _reasonix_poll.js 轮询公告牌。
+
+### 外部调度器（无人值守、永久运行）
+
+独立 Node 进程 while true 调度，分步交替踹角色。支持单人/双人/主笔/辩论全模式。
+详见阅览室 reasonix版本升级路线/升级方案_双路线_A与B.md
 
 ### Multi-pass solo（小项目<2h、代码审查）
 
@@ -65,8 +70,8 @@ N 个角色各开独立窗口，内联轮询公告牌，完全自治。
 | 规模 | 耗时 | 推荐 |
 |------|------|------|
 | 小 | <30min | solo |
-| 中 | 30min-2h | solo出方案 -> 多窗口 -> solo审 |
-| 大 | >2h | 经典多窗口 |
+| 中 | 30min-2h | 经典多窗口 |
+| 大 | >2h | 外部调度器 |
 
 ---
 
@@ -75,19 +80,19 @@ N 个角色各开独立窗口，内联轮询公告牌，完全自治。
 | 文件 | 用途 |
 |------|------|
 | assets/公告牌完全指南.md | 格式+状态机+范例+常见错误 |
-
 | assets/大鱼_AGENTS模板.md | 大鱼模板 |
-| assets/角色_AGENTS模板.md | 角色模板 |
+| assets/角色_AGENTS模板.md | 角色模板（Codex版） |
+| assets/Reasonix版_角色_AGENTS模板.md | 角色模板（Reasonix版） |
+| assets/_reasonix_poll.js | Reasonix轮询脚本 |
 | assets/完整示例_RSS摘要系统.md | 5角色6轮实战 |
 | assets/_外部环境BUG清单.md | 中文环境避坑 |
 
 ## 行为约束工具
 
-脚手架自动复制。REPL优先，Shell备用。
-
 | 工具 | 用法 | 强制什么 |
 |------|------|------|
+| _reasonix_poll.js | node _reasonix_poll.js <角色> <N> [--standby] | Reasonix单次探测轮询 |
 | _sign.js | node _sign.js N | 签字路径写死 |
 | _lock.js | node _lock.js acquire/release | 跨进程互斥 |
 | _deliver.js | node _deliver.js fn content | 产出路径+.ready |
-| _poll.js | node _poll.js [--ready] file desc | 轮询公告牌 |
+| _poll.js | node _poll.js [--ready] file desc | Shell备用轮询 |

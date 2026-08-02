@@ -4,9 +4,21 @@
 > **格式**：每条 - 开头，写改了什么（为什么/影响范围）。同一天的多条按时间从上到下排。简洁，人读。
 
 ---
-           ——  待提交，有新提交写写下面 ——
+           —— 初代 --reasonix 文档清理 ——
 
-	
+## 2026-08-02（Codex残留清理）
+- **文档全面清理 Codex 残留**：15个文件，去 REPL/240s/ninja init 等平台专属措辞
+  - README/SKILL/团队须知/工具速查/公告牌指南：REPL→Node，240s→bash while
+  - 大鱼模板/Reasonix版角色模板：去 REPL 监控轮询引用
+  - 4个玩法文件：本轮后改为参照 AGENTS.md bash while，不再引用 _轮询片段.md
+  - 设计文档：补 Reasonix 阅览室索引
+  - 新增 启动指南.md（方案A）
+  - 修复 --sleep 参数不存在、待命缺 --standby
+  - 删除 _轮询片段.md、scaffold 不再复制
+  - _reasonix_poll.js 逻辑未动
+
+
+---
            ——  初代 --reasonix 单次探测优化 ——
 
 ## 2026-08-01（单次探测优化）

@@ -44,7 +44,7 @@ done
 
 每轮看两样东西：
 1. **状态** -> 活跃=干活，待命=跳过，休眠=暂时退场
-2. **本轮后** -> 待命=传 `--standby`，休眠=写休眠文件+传 `--sleep`
+2. **本轮后** -> 待命=传 `--standby`，休眠=写休眠文件+切高频轮询
 
 > 先看状态要不要干活，再看本轮后干完去哪。状态=休眠 和 状态=活跃+本轮后=休眠 是两回事。
 
@@ -54,7 +54,7 @@ done
 
 ```bash
 while true; do
-  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N>)
+  result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N> --standby)
   case $? in
     0) break ;;  # 新公告牌就位
     1) break ;;  # 被唤醒
@@ -104,9 +104,9 @@ done
 
 ---
 
-## REPL 工具函数
+## Node 工具函数
 
-干活期间在 REPL 里定义一次，全程复用。禁止手写 sign/deliver/lock 逻辑。
+干活期间定义一次，全程复用。禁止手写 sign/deliver/lock 逻辑。
 
 ```js
 var sign = async function(roundN) {
