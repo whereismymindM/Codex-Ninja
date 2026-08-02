@@ -127,11 +127,18 @@ roles.forEach(function(r) {
 
     fs.writeFileSync(rd + "/AGENTS.md", content, "utf8");
 
-    // 角色目录 reasonix.toml：turn 内循环模式前置配置（bash_timeout=0，回合内可无限等待轮询）
+    // 角色目录 reasonix.toml：turn 内循环前置配置（bash_timeout=0）+ 沙箱根（write_file 可直接写 我的世界/）
     var rxCfgPath = rd + "/reasonix.toml";
     if (!fs.existsSync(rxCfgPath)) {
-        fs.writeFileSync(rxCfgPath, "[tools]\nbash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n", "utf8");
-        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0)");
+        var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/");
+        fs.writeFileSync(rxCfgPath,
+            "[tools]\n" +
+            "bash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n" +
+            "\n" +
+            "[sandbox]\n" +
+            "workspace_root = \"" + projectRootAbs + "\"   # write_file 沙箱根=项目根，角色可直接写 我的世界/，免 bash 绕行\n",
+            "utf8");
+        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0 + sandbox)");
     }
 
     // 大鱼对讲目录

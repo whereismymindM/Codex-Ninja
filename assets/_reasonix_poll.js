@@ -63,15 +63,25 @@ var curMtime = Math.round(fs.statSync(worldDir).mtimeMs);
 var wakeFile = path.join(talkDir, "_wakeup.md");
 
 if (curMtime === lastMtime) {
-  // 快路径：目录无变化 → 只做心跳 + 唤醒检查
+  // 快路径：目录无变化 → 只做心跳 + 唤醒 + 下一公告牌检查
   // ⚠️ _wakeup.md 写在 {角色}_大鱼对讲/ 子目录，不影响 我的世界/ mtime
   //    必须独立检查，否则休眠角色收不到唤醒信号
+  // ⚠️ 全量发布场景（方案E）：公告牌一次放齐后目录 mtime 不再变化，
+  //    快路径必须仍检查下一公告牌（单文件 existsSync，开销可忽略），否则角色永远 TIMEOUT
   writeHeartbeat();
   if (fs.existsSync(wakeFile)) {
     try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
     log("被唤醒（快路径）");
     console.log("WOKEN");
     process.exit(1);
+  }
+  // 快路径公告牌检查——全量发布下目录 mtime 不变，靠这里检测下一轮
+  var nextFileFast = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
+  if (fs.existsSync(nextFileFast)) {
+    lastN++;
+    log("公告牌_" + String(lastN).padStart(3, "0") + " 就位（快路径）");
+    console.log("BULLETIN N=" + lastN);
+    process.exit(0);
   }
   console.log("TIMEOUT N=" + lastN);
   process.exit(3);
