@@ -79,6 +79,11 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/_wakeup.js", wakeupPath);
     console.log("OK: _wakeup.js (" + fs.statSync(wakeupPath).size + " bytes)");
 
+    // _外部环境BUG清单.md —— 大鱼模板引用 ./_外部环境BUG清单.md，必须复制到位
+    var bugListPath = fishDir + "/_外部环境BUG清单.md";
+    fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListPath);
+    console.log("OK: _外部环境BUG清单.md (" + fs.statSync(bugListPath).size + " bytes)");
+
     console.log("DONE: " + projectDir);
     process.exit(0);
 }
@@ -173,6 +178,15 @@ if (!fs.existsSync(wakeupDest)) {
     console.log("OK: 火影-大鱼/_wakeup.js (new)");
 } else {
     console.log("SKIP: _wakeup.js (already exists)");
+}
+
+// 复制_外部环境BUG清单.md到大鱼目录（大鱼模板引用 ./_外部环境BUG清单.md）
+var bugListDest = fishDir + "/_外部环境BUG清单.md";
+if (!fs.existsSync(bugListDest)) {
+    fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListDest);
+    console.log("OK: 火影-大鱼/_外部环境BUG清单.md (new)");
+} else {
+    console.log("SKIP: _外部环境BUG清单.md (already exists)");
 }
 } else {
     console.log("SKIP: 火影-大鱼/AGENTS.md (add 模式)");
