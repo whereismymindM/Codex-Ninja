@@ -5,7 +5,7 @@
 //       node _poll.js --max-wait 600 <目标文件路径> <描述>
 //         → 最多等600秒（10分钟），超时 exit(2)，让调用方知道不是正常等到
 //       node _poll.js --low-power --wakeup <对讲目录> <目标文件> <描述>
-//         → 低功耗模式：每60秒轮询一次，同时检查_wakeup.md唤醒信号
+//         → 低功耗模式：每3秒轮询一次（短超时防卡死），同时检查_wakeup.md唤醒信号
 
 var fs = require("fs");
 var path = require("path");
