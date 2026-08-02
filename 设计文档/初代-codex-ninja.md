@@ -400,7 +400,7 @@ flowchart TD
 | `团队须知/AGENTS.md` | 注入到所有角色窗口的通用规则 |
 | `assets/公告牌完全指南.md` | 老渣写公告牌的完整参考 |
 | `assets/大鱼_AGENTS模板.md` | 大鱼窗口的 AGENTS.md 模板 |
-| `assets/角色_AGENTS模板.md` | 角色窗口的 AGENTS.md 模板（含 REPL 工具函数） |
+| `assets/角色_AGENTS模板.md` | ~~角色窗口的 AGENTS.md 模板（含 REPL 工具函数）~~ **已废弃删除（2026-08-03），改用 `Reasonix版_角色_AGENTS模板.md`** |
 | `assets/_双人对话模式.md` | 双人对话玩法流程 |
 | `assets/_主笔审核模式.md` | 主笔审核玩法流程 |
 | `assets/_辩论模式.md` | 辩论玩法流程（含裁判） |
