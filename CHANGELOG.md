@@ -6,6 +6,13 @@
 ---
            —— 初代 --reasonix-f 方案F 大鱼调度 ——
 
+## 2026-08-03（第四轮修复：第三轮审查遗漏项——代码组中危 10 项）
+- **monitor 收工轮字段行黑名单**：retireRe 状态限定（只认 `状态：退场/休眠` 行）+ allRoles 加黑名单——`- 模式: 收工（...）`/`- 备注（补充）: xxx` 等带括号字段行不再被当角色（修复前收工轮卡死）
+- **monitor 健壮性**：HELP 自动回复 writeFileSync/renameSync 包 try（Windows rename EPERM/双跑 ENOENT 不再 CRASH）；写唤醒文件包 try；格式B readdirSync 包 try；自检 readFileSync 包 try；state.N 正整数校验
+- **死锁唤醒**：搭档正则补句号终止符；写 _wakeup.md 前重读搭档心跳（刚恢复则跳过，与主唤醒路径一致）
+- **`· 收工` 行首锚定**：monitor 三处 + _reasonix_poll checkRetire——任务描述含"· 收工"不再误判收工/提前退场
+- **scaffold replace 函数化**：4 处 `String.replace(regex, 字符串)` → 函数返回值——角色名/背景含 `$&`/`$'`/`$$` 不再被当替换模式注入
+
 ## 2026-08-03（第三轮深度审查修复：运行缺陷 4 项）
 - **H-1 scaffold 玩法文件替换占位符**：生成角色时 `_双人/主笔/辩论模式.md` 的 `{{ROLE_NAME}}` 心跳路径改为真实角色名——此前生成物含字面占位符，等文件内联循环心跳写入错误目录导致误判 DEAD（影响所有双人/主笔/辩论轮次）
 - **H-2 monitor 收工轮产出行不阻塞收工**：收工轮误写未就位产出行时强制 `outputReady=true`——此前全员已退场仍 WAIT 永不 DONE（与"只看退场文件"承诺矛盾）
