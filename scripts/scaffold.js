@@ -199,7 +199,10 @@ roles.forEach(function(r) {
 
     // 复制协作模式文件
     ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
-        fs.copyFileSync(assetDir + "/玩法模式/" + mf, rd + "/" + mf);
+        // H-1 修复：玩法文件含 {{ROLE_NAME}} 占位符（等文件内联循环的心跳路径），必须替换为角色名——
+        // 否则角色执行时心跳写入字面 {{ROLE_NAME}}_大鱼对讲/ 目录，monitor 读不到 → 误判 DEAD
+        var mfContent = fs.readFileSync(assetDir + "/玩法模式/" + mf, "utf8").replace(/\{\{ROLE_NAME\}\}/g, r.name);
+        fs.writeFileSync(rd + "/" + mf, mfContent, "utf8");
     });
 
     // 复制工具文件

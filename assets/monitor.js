@@ -41,7 +41,7 @@ while (true) {
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
     // 产出检查（与主判断一致：推进判定只看产出就位，签字不阻塞推进，不参与自检判据）
-    var outReSelf = /产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号
+    var outReSelf = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（任务描述里的"产出: 我的世界/…"引用不再误匹配）
     var omSelf; var hasOutSelf = false; var outOkSelf = true;
     while ((omSelf = outReSelf.exec(boardContent)) !== null) {
         hasOutSelf = true;
@@ -189,7 +189,7 @@ var outputReady = activeRoles.length === 0;
 // 产出校验——优先解析产出行中的具体文件名，逐个fs.existsSync检查
 // 格式A（有文件名）: 产出: 我的世界/产出/任务001/server.js, search.js → 逐文件检查
 // 格式B（仅目录）: 产出: 我的世界/产出/任务001/ → 回退到目录非空检查
-var outputRe = /产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号（自检/主流程/复检三处已同步）
+var outputRe = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（自检/主流程/复检三处已同步）
 var outputMatch, allOutputReady = true, outputCount = 0;
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;
@@ -221,7 +221,10 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             var outBase = base + "/我的世界/产出";
             if (fs.existsSync(outBase)) {
                 try {
-                    var outDirs = fs.readdirSync(outBase).filter(function(d2) { return fs.statSync(outBase + "/" + d2).isDirectory(); });
+                    var outDirs = fs.readdirSync(outBase).filter(function(d2) {
+                        // H4 修复：fallback 只扫描当前轮次的任务目录（任务NNN_*），避免跨轮同名 .ready 误命中导致本轮提前 DONE
+                        return fs.statSync(outBase + "/" + d2).isDirectory() && d2.indexOf("任务" + String(N).padStart(3, "0")) === 0;
+                    });
                     var fbOk = missing.every(function(fn) {
                         return outDirs.some(function(d2) {
                             return fs.existsSync(outBase + "/" + d2 + "/" + fn + ".ready");
@@ -241,6 +244,9 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     if (!ready) allOutputReady = false;
 }
 if (outputCount > 0) outputReady = allOutputReady;
+// H2 修复：收工轮（isRetireRound）误写产出行不阻塞收工判定——monitor 对收工轮只看退场文件（与文档承诺一致）；
+// 活跃轮时 isRetireRound 未赋值（undefined）不生效，待命轮保持原有产出检查
+if (isRetireRound) outputReady = true;
 // 3.5 活跃角色完成状态（F 模式大鱼调度用：逐角色输出签字/产出就位，方便大鱼决定唤醒谁）
 if (activeRoles.length > 0) {
     activeRoles.forEach(function(role) {
