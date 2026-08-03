@@ -185,6 +185,10 @@ var sign = async function(roundN) {
   var signFile = path.default.join(worldDir, roleName + "_大鱼对讲", "完成_" + Npad + ".md");
   var content = "# " + roleName + " 第" + Npad + "轮签字\n\n任务完成，产出已交付。";
   fs.default.writeFileSync(signFile, content, "utf8");
+  // A-2 同步：签字行为日志（角色实际执行层）
+  try {
+    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_大鱼对讲", roleName + "_操作日志.md"), "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + Npad + "\n", "utf8");
+  } catch(_ls) {}
   if(fs.default.statSync(signFile).size > 20) return "SIGNED";
   return "SIGN_FAIL";
 };
@@ -197,10 +201,27 @@ var deliver = async function(filename, taskDirName, sourcePath) {
   if(!fs.default.existsSync(outDir)) fs.default.mkdirSync(outDir, {recursive: true});
   var outPath = path.default.join(outDir, filename);
   var readyPath = outPath + ".ready";
-  var _dlContent = new Date().toISOString();
+  // B-4 同步：metadata 证据链（producer/size/mtime）+ 文档类存在性校验（角色实际执行层；sourcePath 代码类跳过）
+  var _dlContent = "OK " + new Date().toISOString();
   if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
+  try {
+    if(roleName) _dlContent += "\nproducer: " + roleName;
+    if(!sourcePath) {
+      try {
+        var _st = fs.default.statSync(outPath);
+        _dlContent += "\nsize: " + _st.size + "\nmtime: " + _st.mtimeMs;
+        if(_st.size === 0) console.log("DELIVER_WARN: " + filename + " 大小为 0");
+      } catch(_tnf) {
+        console.log("DELIVER_WARN: " + filename + " 不存在于 " + outDir + "——deliver 只发信号，内容需先写入！");
+      }
+    }
+  } catch(_md) {}
   fs.default.writeFileSync(readyPath + ".tmp", _dlContent, "utf8");
   fs.default.renameSync(readyPath + ".tmp", readyPath);
+  // A-2 同步：交付行为日志
+  try {
+    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_大鱼对讲", roleName + "_操作日志.md"), "[" + new Date().toISOString().substring(11,19) + "] DELIVER " + filename + "\n", "utf8");
+  } catch(_ld) {}
   return "DELIVERED to " + outPath;
 };
 
