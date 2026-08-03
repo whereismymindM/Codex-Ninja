@@ -141,7 +141,7 @@ if (activeRoles.length === 0) {
         try {
           if (fs.existsSync(hbFile3)) {
             var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
-            var hbTimeout3 = (fs.existsSync(base + "/我的世界/大鱼_老渣对讲/调度日志.md")) ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            var hbTimeout3 = (fs.existsSync(base + "/火影-大鱼/_运行形态.mode") && fs.readFileSync(base + "/火影-大鱼/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) hbForce = true;
           }
         } catch(_e4) {}
@@ -258,9 +258,13 @@ fs.renameSync(replyPath + ".tmp", replyPath);
 
 // 3.5 心跳检测（心跳检测）：检查所有角色心跳文件，超时自动唤醒
 var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
-// F 模式（大鱼调度）：角色"干完即退"后 0 进程、无心跳是常态，不是掉线。
-// 判断角色是否属于 F 调度：其目录 reasonix.toml 存在 + 项目存在 大鱼_老渣对讲/调度日志.md
-var F_SCHEDULED = fs.existsSync(worldDir + "/大鱼_老渣对讲/调度日志.md");
+// 运行形态判定：看 火影-大鱼/_运行形态.mode（scaffold fish 命令写入）
+//   = "run" → run拉起（角色干完即退，心跳停是正常态）；否则 → 窗口常驻（心跳停=掉线，自动唤醒）
+var F_SCHEDULED = false;
+try {
+    var modeFlag = worldDir.replace(/我的世界$/, "火影-大鱼") + "/_运行形态.mode";
+    F_SCHEDULED = fs.existsSync(modeFlag) && fs.readFileSync(modeFlag, "utf8").trim() === "run";
+} catch(e) {}
 if (fs.existsSync(worldDir)) {
     fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
         var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";

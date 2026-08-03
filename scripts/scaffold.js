@@ -73,6 +73,11 @@ if (isFishMode) {
     fs.writeFileSync(fishDir + "/AGENTS.md", fishContent, "utf8");
     console.log("OK: 火影-大鱼/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
 
+    // 形态标志文件：monitor 靠它区分窗口常驻/run拉起的心跳处理（run拉起=角色干完即退，心跳停是正常态）
+    var modeFlag = fishDir + "/_运行形态.mode";
+    fs.writeFileSync(modeFlag, fishShape, "utf8");
+    console.log("OK: 运行形态标志 " + fishShape);
+
     // 大鱼→老渣对讲目录，收工时写审计报告用
     fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
     console.log("OK: 我的世界/大鱼_老渣对讲/");

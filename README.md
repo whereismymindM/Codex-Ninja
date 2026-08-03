@@ -11,7 +11,7 @@
 | 形态 | 窗口常驻（reasonix code，推荐）+ run 拉起（reasonix run --continue，轻量） |
 | 核心能力 | 单次探测轮询 + 回合内循环（`bash_timeout_seconds=0` + 回合内不输出最终回复直到收工） |
 | 轮询方式 | bash while + node _reasonix_poll.js 单次探测；角色持续 poll 到收工轮 |
-| 永动能力 | 回合内等效永动（实测单回合 25 分钟跑完 3 轮项目） |
+| 永动能力 | 回合内等效永动（实测单回合 20+ 分钟跑完 3 轮项目） |
 
 > 后续升级路线：阅览室 reasonix版本升级路线/升级方案_双路线_A与B.md
 

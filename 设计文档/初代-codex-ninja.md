@@ -4,7 +4,7 @@
 > 阅读顺序：设计理念 → 三方协作 → 角色生命周期 → 各模式流程 → 机制详解。
 > 最后更新：2026-07-30（Codex版）。Reasonix 适配详见阅览室 reasonix版本升级路线/
 >
-> ⚠️ **失效标注**：本文档主体基于 Codex 平台（REPL/240s自愈/300s硬上限）。Reasonix 版（bash while + 单次探测）已废弃其中 REPL 相关机制——5.3 节"REPL 240 秒自愈"、参数表中 REPL 相关行、目录结构中"大鱼心跳.md"、文件索引中"_轮询片段.md"均已失效，仅作历史参考。当前机制以 SKILL.md、Reasonix版_角色_AGENTS模板.md、assets/_reasonix_poll.js 为准。
+> ⚠️ **失效标注**：本文档主体基于 Codex 平台（REPL/240s自愈/300s硬上限）。Reasonix 版（bash while + 单次探测）已废弃其中 REPL 相关机制——5.3 节"REPL 240 秒自愈"、参数表中 REPL 相关行、目录结构中"大鱼心跳.md"、文件索引中"_轮询片段.md"均已失效，仅作历史参考。**"大鱼逐轮搬运 + monitor 翻篇"流程也已过时**——当前为大鱼校验后全量发布（有待命轮则扣留收工轮，追加/收工由老渣-大鱼协调，见大鱼模板）。当前机制以 SKILL.md、Reasonix版_角色_AGENTS模板.md、assets/_reasonix_poll.js、assets/模板/大鱼_AGENTS模板_*.md 为准。
 
 ## 一、设计理念
 
