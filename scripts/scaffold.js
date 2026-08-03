@@ -95,7 +95,7 @@ if (isFishMode) {
     // 避免大鱼会话回退到上级/全局配置（无 bash_timeout、workspace_root 指向错误目录 → write_file 被沙箱拦截 → bash 绕行）
     var fishRxCfgPath = fishDir + "/reasonix.toml";
     if (!fs.existsSync(fishRxCfgPath)) {
-        var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/");
+        var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
         fs.writeFileSync(fishRxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询（monitor 周期验证 + 调度循环）\n" +
@@ -209,7 +209,7 @@ roles.forEach(function(r) {
     // 角色目录 reasonix.toml：turn 内循环前置配置（bash_timeout=0）+ 沙箱根（write_file 可直接写 我的世界/）
     var rxCfgPath = rd + "/reasonix.toml";
     if (!fs.existsSync(rxCfgPath)) {
-        var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/");
+        var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
         fs.writeFileSync(rxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n" +
@@ -253,7 +253,7 @@ fs.mkdirSync(fishDir, { recursive: true });
 // H10 修复：init 模式同样生成大鱼 reasonix.toml（不存在才写，与角色目录一致）
 var fishRxCfgPath2 = fishDir + "/reasonix.toml";
 if (!fs.existsSync(fishRxCfgPath2)) {
-    var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/");
+    var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
     fs.writeFileSync(fishRxCfgPath2,
         "[tools]\n" +
         "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询\n" +
