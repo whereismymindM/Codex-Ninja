@@ -16,6 +16,11 @@ var args = process.argv.slice(2);
 var maxWaitIdx = args.indexOf("--max-wait");
 var maxWaitSec = 0;
 if (maxWaitIdx !== -1) {
+    // L16 修复：--max-wait 缺数值时报错退出——避免 parseInt(undefined)=NaN→0 且 splice 误删后续参数导致 targetFile 丢失
+    if (args[maxWaitIdx + 1] === undefined || isNaN(parseInt(args[maxWaitIdx + 1], 10))) {
+        console.log("用法: --max-wait 需要一个数值参数（秒），如 --max-wait 600");
+        process.exit(1);
+    }
     maxWaitSec = parseInt(args[maxWaitIdx + 1], 10) || 0;
     args.splice(maxWaitIdx, 2);
 }

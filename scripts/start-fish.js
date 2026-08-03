@@ -35,7 +35,7 @@ if (!RX) {
     if (!RX) RX = "reasonix"; // 兜底走 PATH
 }
 
-var prompt = "读取 AGENTS.md，你是大鱼调度者。按「F 模式调度」节开始调度循环：每 60s 跑 node ../monitor.js，读当前轮公告牌解析活跃角色，逐个检查完成_N.md，未完成的用 reasonix run --continue/--dir 唤醒（prompt 带『干完即退』），等全员退场后写收工审计报告。禁止输出最终回复，直到收工审计完成。现在开始。";
+var prompt = "读取 AGENTS.md，你是大鱼调度者。按「调度角色（按需拉起，干完即退）」节开始调度循环：每 60s 跑 node ../monitor.js，读当前轮公告牌解析活跃角色，逐个检查完成_N.md，未完成的用 reasonix run --continue/--dir 唤醒（prompt 带『干完即退』），等全员退场后写收工审计报告。禁止输出最终回复，直到收工审计完成。现在开始。";
 
 console.log("========================================");
 console.log("  大鱼调度者启动（F 模式）");
@@ -43,18 +43,33 @@ console.log("  项目: " + projectDir);
 console.log("  reasonix: " + RX);
 console.log("========================================");
 
-var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", "500", prompt], {
-    cwd: fishDir,
-    shell: true,
-    stdio: "inherit"
-});
+// M8 修复：崩溃/--max-steps 超限后自动重启（带次数上限），避免 F 模式调度静默停摆
+var MAX_RESTARTS = 5;
+var restartCount = 0;
 
-child.on("error", function(err) {
-    console.error("启动失败: " + err.message);
-    console.error("请确认 reasonix 可用（`reasonix version`），或设置 REASONIX_CMD 指向 reasonix.cmd 绝对路径");
-    process.exit(1);
-});
-child.on("exit", function(code) {
-    console.log("大鱼进程退出，退出码=" + code);
-    process.exit(code || 0);
-});
+function start() {
+    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", "500", prompt], {
+        cwd: fishDir,
+        shell: true,
+        stdio: "inherit"
+    });
+
+    child.on("error", function(err) {
+        console.error("启动失败: " + err.message);
+        console.error("请确认 reasonix 可用（`reasonix version`），或设置 REASONIX_CMD 指向 reasonix.cmd 绝对路径");
+        process.exit(1);
+    });
+    child.on("exit", function(code) {
+        console.log("大鱼进程退出，退出码=" + code);
+        if (restartCount < MAX_RESTARTS) {
+            restartCount++;
+            console.log("10 秒后自动重启（第 " + restartCount + "/" + MAX_RESTARTS + " 次）...");
+            setTimeout(start, 10000);
+        } else {
+            console.log("超过最大重启次数（" + MAX_RESTARTS + "），退出。请人工检查 reasonix 状态。");
+            process.exit(code || 0);
+        }
+    });
+}
+
+start();

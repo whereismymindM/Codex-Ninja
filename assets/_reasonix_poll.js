@@ -18,7 +18,7 @@ var roleName = args[0];
 var lastN = parseInt(args[1], 10) || 0;
 var isStandby = args[2] === "--standby";
 
-var worldDir = "../我的世界";
+var worldDir = path.join(__dirname, "..", "我的世界");   // M3 修复：基于 __dirname 解析（与 _sign/_lock/_deliver 一致），不受 bash CWD 影响
 var talkDir = path.join(worldDir, roleName + "_大鱼对讲");
 
 try { fs.mkdirSync(talkDir, { recursive: true }); } catch(e) {}
@@ -35,6 +35,8 @@ function log(msg) {
 
 // ── 1. 信号文件优先检测（mtime 无关，最高优先级）──
 //     用 statSync 替代 existsSync——复用 stat 结果取 mtime，省一次调用
+//     （L4 兼容注：_round_NNN.signal 是 A 方案逐轮搬运时代遗留；当前全量发布形态不用 signal，
+//      保留此路径仅为兼容旧项目，不影响新形态行为）
 var sigFile = path.join(worldDir, "_round_" + String(lastN + 1).padStart(3, "0") + ".signal");
 var bulletinFile = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
 try {
@@ -62,7 +64,9 @@ try {
   }
 } catch(e) {}
 
-var curMtime = Math.round(fs.statSync(worldDir).mtimeMs);
+var curMtime = 0;
+try { curMtime = Math.round(fs.statSync(worldDir).mtimeMs); }
+catch(e) { console.log("TIMEOUT N=" + lastN); process.exit(3); } // M3 修复：我的世界/ 不可访问时按"无事发生"退出，避免崩溃退出码 1 被误判为 WOKEN
 var wakeFile = path.join(talkDir, "_wakeup.md");
 
 if (curMtime === lastMtime) {
@@ -143,7 +147,9 @@ function writeHeartbeat() {
     if (fs.existsSync(hbStateFile)) {
       var raw = fs.readFileSync(hbStateFile, "utf8").replace(/^\uFEFF/, "");
       var hbState = JSON.parse(raw);
-      if (hbState.lastHb && Date.now() - hbState.lastHb < HB_INTERVAL_MS) {
+      // L16 修复：时钟回拨时 lastHb 在未来（Date.now() < lastHb）→ 差值恒 < 间隔 → 永不写心跳 → 被误判 DEAD。
+      // 加 lastHb <= Date.now() 守卫：未来时间戳视为过期，立即写心跳。
+      if (hbState.lastHb && hbState.lastHb <= Date.now() && Date.now() - hbState.lastHb < HB_INTERVAL_MS) {
         shouldWrite = false;
       }
     }

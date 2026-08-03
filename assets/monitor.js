@@ -1,7 +1,7 @@
 // === 大鱼监控脚本（轮询版）===
 // 用法：在项目根目录下 node monitor.js
 // 每次运行检查一轮状态后退出，stdout 即时可见
-// 大鱼每 10-15 秒跑一次（活跃轮）：WAIT → 等 → DONE → 翻篇
+// 大鱼每 60 秒跑一次（大鱼模板规定）：WAIT → 等 → DONE → 项目完成（只验证，不翻篇）
 var fs = require("fs");
 // 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，我的世界/ 在 monitor.js 同级
 var base = __dirname;
@@ -37,11 +37,11 @@ while (true) {
     // Count active roles from bulletin (regex just to count, not to build paths)
     // 只扫公告牌头部（任务: 之前的角色声明区），避免任务描述里的"状态：活跃"文本被误匹配
     var headerPart = boardContent.split(/\n- 任务[:：]/)[0];
-    var actCount = (headerPart.match(/- .+?[（(].*状态[:：]活跃/g) || []).length;
+    var actCount = (headerPart.match(/- .+?[（(].*状态[:：]\s*活跃/g) || []).length; // M1 修复：与主流程 :123 一致，兼容冒号后带空格
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
-    // 产出检查（与主判断一致：翻篇只看产出就位，签字降级为建议项，不参与自检判据）
-    var outReSelf = /产出:\s*我的世界\/([^\r\n]+)/g;
+    // 产出检查（与主判断一致：推进判定只看产出就位，签字不阻塞推进，不参与自检判据）
+    var outReSelf = /产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号
     var omSelf; var hasOutSelf = false; var outOkSelf = true;
     while ((omSelf = outReSelf.exec(boardContent)) !== null) {
         hasOutSelf = true;
@@ -67,14 +67,14 @@ while (true) {
     if (!hasActive && allDone) {
         var isRetire = /模式[：:]\s*收工/.test(boardContent) || /·\s*收工/.test(boardContent);
         if (isRetire) {
-            var retireRe = /- (.+?)[（→]/g;
+            var retireRe = /- (.+?)[（(→]/g; // H8 修复：兼容半角括号
             var retireMatch;
             allDone = true;
             while ((retireMatch = retireRe.exec(boardContent)) !== null) {
-                var roleName = retireMatch[1].trim();
+                var roleName = retireMatch[1].trim().replace(/^组[A-Z]\s*[:：]\s*/, ""); // H8 修复：先剥离组前缀再过滤，与主流程 :127 一致
                 // 过滤非角色行（模式、任务、产出等字段）
-                // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不翻篇
-                if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
+                // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不推进
+                if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + Npad;
                 var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
                 // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）
@@ -95,12 +95,12 @@ if (!fs.existsSync(boardFile)) {
         var prevContent = fs.readFileSync(prevBoard, "utf8");
         if (/模式[：:]\s*收工/.test(prevContent) || /·\s*收工/.test(prevContent)) {
             // 上一轮是收工，检查退场文件
-            var retireRe = /- (.+?)[（→]/g;
+            var retireRe = /- (.+?)[（(→]/g; // H8 修复：兼容半角括号
             var retireMatch, allRetired = true;
             while ((retireMatch = retireRe.exec(prevContent)) !== null) {
-                var roleName = retireMatch[1].trim();
-                // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不翻篇
-                if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1) continue;
+                var roleName = retireMatch[1].trim().replace(/^组[A-Z]\s*[:：]\s*/, ""); // H8 修复：先剥离组前缀再过滤
+                // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不推进
+                if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
                 var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(rf) && !fs.existsSync(sf)) { allRetired = false; break; }
@@ -121,7 +121,7 @@ var activeRoles = [];
 var allRoles = [];
 var headerPart = board.split(/\n- 任务[:：]/)[0];
 var re = /- (.+?)[（(].*状态[:：]\s*活跃/g; // P1-2: 同时匹配全角和半角括号
-var allRe = /- (.+?)（/g;
+var allRe = /- (.+?)[（(]/g; // H8 修复：兼容半角括号
 var m;
 var am;
 while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
@@ -130,6 +130,13 @@ while ((am = allRe.exec(headerPart)) !== null) { var arn = am[1].replace(/^组[A
 // 1. 签字 & 休眠/退场检查
 var allRetired = true; // 收工轮用：所有角色是否都写了退场文件（或休眠文件，两者都验）
 if (activeRoles.length === 0) {
+    // 无活跃角色：可能是收工轮（全员退场），也可能是待命轮（全员待命、无产出）
+    var isRetireRound = /模式[：:]\s*收工/.test(board) || /·\s*收工/.test(board);
+    if (!isRetireRound) {
+        // H2 修复：待命轮不要求退场文件——输出 STANDBY 供大鱼识别（避免误报 SIGN [收工]/RETIRE MISS），并阻止误判 DONE
+        console.log("STANDBY N=" + N);
+        allRetired = false;
+    } else {
     // 收工轮：全员退场，逐个检查退场文件（或休眠文件，两者都验）是否到位
     console.log("SIGN [收工]");
     allRoles.forEach(function(role) {
@@ -153,7 +160,12 @@ if (activeRoles.length === 0) {
                 var flowFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "_流水账.md";
                 if (fs.existsSync(flowFile)) {
                     var flowLines = fs.readFileSync(flowFile, "utf8").split("\n").filter(function(l) { return l.trim().length > 0; }).length;
-                    if (flowLines < 2) console.log("FLOW " + role + " ⚠️ 流水账过简（" + flowLines + " 行，应为全程总结）");
+                    if (flowLines < 2) {
+                        // M16 修复：全程待命角色写一行"全程待命"是角色模板允许的合规写法，豁免 ⚠️
+                        var _flowContent = fs.readFileSync(flowFile, "utf8");
+                        if (_flowContent.indexOf("全程待命") !== -1) console.log("FLOW " + role + " OK（全程待命，单行豁免）");
+                        else console.log("FLOW " + role + " ⚠️ 流水账过简（" + flowLines + " 行，应为全程总结）");
+                    }
                     else console.log("FLOW " + role + " OK (" + flowLines + " 行)");
                 } else {
                     console.log("FLOW " + role + " ⚠️ 无流水账");
@@ -162,6 +174,7 @@ if (activeRoles.length === 0) {
         }
         else { console.log("RETIRE " + role + " MISS"); allRetired = false; }
     });
+    } // end isRetireRound
 } else {
     activeRoles.forEach(function(role) {
         var sign = base + "/我的世界/" + role + "_大鱼对讲/完成_" + String(N).padStart(3,"0") + ".md";
@@ -176,7 +189,7 @@ var outputReady = activeRoles.length === 0;
 // 产出校验——优先解析产出行中的具体文件名，逐个fs.existsSync检查
 // 格式A（有文件名）: 产出: 我的世界/产出/任务001/server.js, search.js → 逐文件检查
 // 格式B（仅目录）: 产出: 我的世界/产出/任务001/ → 回退到目录非空检查
-var outputRe = /产出:\s*我的世界\/([^\r\n]+)/g;
+var outputRe = /产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号（自检/主流程/复检三处已同步）
 var outputMatch, allOutputReady = true, outputCount = 0;
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;
@@ -247,8 +260,11 @@ if (fs.existsSync(worldDir)) {
             console.log("HELP " + dir + ": " + help.substring(0, 150));
             // P1-3: 原子写入——先写.tmp再rename
         var replyPath = fullDir + "/" + f.replace("大鱼对话", "大鱼回复");
-fs.writeFileSync(replyPath + ".tmp", "大鱼收到，继续按公告牌行动", "utf8");
-fs.renameSync(replyPath + ".tmp", replyPath);
+        // H3 修复：大鱼已写具体回复则不覆盖（自动回复仅作兜底，避免覆盖/抢占大鱼的具体回复）
+        if (!fs.existsSync(replyPath)) {
+            fs.writeFileSync(replyPath + ".tmp", "大鱼收到，继续按公告牌行动", "utf8");
+            fs.renameSync(replyPath + ".tmp", replyPath);
+        }
             // 处理完改名，下次不重复读
             fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_已处理");
         });
@@ -267,6 +283,11 @@ try {
 } catch(e) {}
 if (fs.existsSync(worldDir)) {
     fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
+        // M2 修复：已退场角色跳过心跳检测——退场后心跳停是正常态，不应被唤醒
+        try {
+            var _dirEntries = fs.readdirSync(worldDir + "/" + dir);
+            if (_dirEntries.some(function(f) { return f.indexOf("已退场_") === 0; })) return;
+        } catch(_e7) {}
         var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";
         if (!fs.existsSync(hbFile)) return;
         try {
@@ -309,7 +330,7 @@ if (fs.existsSync(worldDir)) {
               for (var __i = 0; __i < __lines.length; __i++) {
                 var __l = __lines[__i];
                 if (__l.indexOf(__role) !== -1 && __l.indexOf("搭档") !== -1) {
-                  var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)[，,;；\)）]/);
+                  var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)(?=[，,;；\)）]|\s*$)/); // L12 修复：搭档名在行尾（无尾随分隔符）也能匹配
                   if (__m && __m[1]) {
                     var __partner = __m[1].trim();
                     console.log("DEADLOCK partner=" + __partner);

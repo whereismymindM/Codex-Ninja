@@ -8,6 +8,12 @@ var path = require("path");
 
 var projectDir = process.argv[2];
 
+// L15 修复：缺少项目目录参数时直接报错，避免相对 CWD 污染
+if (!projectDir) {
+    console.error("ERROR: 缺少项目目录参数（第一个参数）——用法: node scaffold.js <项目目录> [roles.json] [init|add|fish]");
+    process.exit(1);
+}
+
 // 防呆：projectDir 不能以 "我的世界" 结尾——角色会被生成到我的世界里面而不是同级
 // 正确：projectDir 是 我的世界/ 的上级目录（如 一号舱室-软件开发部）
 if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/我的世界")) {
@@ -54,6 +60,15 @@ try { roles = JSON.parse(rolesRaw); }
 catch (e) { console.error("ERROR: JSON 格式错误: " + e.message); process.exit(1); }
 if (!Array.isArray(roles) || roles.length === 0) { console.error("ERROR: roles.json 必须是非空数组"); process.exit(1); }
 
+// L15 修复：校验角色 name 字段（非空、去首尾空白），防止生成异常目录
+roles.forEach(function(r) {
+    if (!r || typeof r.name !== "string" || r.name.trim().length === 0) {
+        console.error("ERROR: roles.json 中每个角色必须有非空 name 字段（当前项: " + JSON.stringify(r) + "）");
+        process.exit(1);
+    }
+    r.name = r.name.trim();
+});
+
 } // !isFishMode
 
 // 读模板
@@ -69,6 +84,20 @@ if (isFishMode) {
     // 大鱼 AGENTS.md —— 纯模板，替换路径变量
     var fishDir = projectDir + "/火影-大鱼";
     fs.mkdirSync(fishDir, { recursive: true });
+    // H10 修复：大鱼目录也生成 reasonix.toml（bash_timeout=0 + sandbox=项目根）——与角色一致，
+    // 避免大鱼会话回退到上级/全局配置（无 bash_timeout、workspace_root 指向错误目录 → write_file 被沙箱拦截 → bash 绕行）
+    var fishRxCfgPath = fishDir + "/reasonix.toml";
+    if (!fs.existsSync(fishRxCfgPath)) {
+        var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/");
+        fs.writeFileSync(fishRxCfgPath,
+            "[tools]\n" +
+            "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询（monitor 周期验证 + 调度循环）\n" +
+            "\n" +
+            "[sandbox]\n" +
+            "workspace_root = \"" + fishRootAbs + "\"   # write_file 沙箱根=项目根，大鱼可直接写 我的世界/，免 bash 绕行\n",
+            "utf8");
+        console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
+    }
     var fishContent = fishTpl;
     fs.writeFileSync(fishDir + "/AGENTS.md", fishContent, "utf8");
     console.log("OK: 火影-大鱼/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
@@ -181,6 +210,19 @@ if (!isAddMode) {
 // 检查是否已存在，不覆盖已有文件（角色不动项目动）
 var fishDir = projectDir + "/火影-大鱼";
 fs.mkdirSync(fishDir, { recursive: true });
+// H10 修复：init 模式同样生成大鱼 reasonix.toml（不存在才写，与角色目录一致）
+var fishRxCfgPath2 = fishDir + "/reasonix.toml";
+if (!fs.existsSync(fishRxCfgPath2)) {
+    var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/");
+    fs.writeFileSync(fishRxCfgPath2,
+        "[tools]\n" +
+        "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询\n" +
+        "\n" +
+        "[sandbox]\n" +
+        "workspace_root = \"" + fishRootAbs2 + "\"   # write_file 沙箱根=项目根\n",
+        "utf8");
+    console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
+}
 var fishAgentsPath = fishDir + "/AGENTS.md";
 if (!fs.existsSync(fishAgentsPath)) {
     fs.writeFileSync(fishAgentsPath, fishTpl, "utf8");

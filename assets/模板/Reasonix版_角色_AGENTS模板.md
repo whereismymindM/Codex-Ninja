@@ -28,7 +28,7 @@
 
 > 例外：若本次会话的启动指令**明确要求"干完当前任务即退出，不要继续等"**（一次性任务模式），则遵循指令干完即退；否则一律持续 poll 到收工轮。怎么启动你不需要关心——按收到的指令执行即可。
 
-**公告牌发布方式**：项目启动时公告牌（001 → …）由大鱼发布进 `../我的世界/`。你从 N=0 顺序处理：每轮 poll 到下一张公告牌就干活，非活跃轮（状态：待命/休眠）跳过并 N+1，直到收工轮创建退场文件。**不要等外部触发，不要等 monitor 翻篇**——轮次推进由你自己完成。
+**公告牌发布方式**：项目启动时公告牌（001 → …）由大鱼发布进 `../我的世界/`。你从 N=0 顺序处理：每轮 poll 到下一张公告牌就干活，非活跃轮（状态：待命/休眠）跳过并 N+1，直到收工轮创建退场文件。**不要等外部触发**——轮次推进由你自己完成。
 
 **追加轮次（可能遇到）**：若最后一张公告牌是 `模式: 待命` 的待命轮，说明老渣可能追加任务——你干完待命轮前面的活后，**不要下线，持续 poll 等下一张**（可能是新公告牌，也可能是收工轮；收工轮被大鱼扣留时可能等 20 分钟，属预期）。poll 到新牌 → 按正常流程干活/退场。
 
@@ -79,6 +79,8 @@ done
 > 先看状态要不要干活，再看本轮后干完去哪。状态=休眠 和 状态=活跃+本轮后=休眠 是两回事。
 
 ### 全员待命轮（需要角色持续在线时用）
+
+> L1 同步注：本段与 `公告牌完全指南.md` §四「全员待命轮」内容一致，修改时两处需同步。
 
 需要角色保持轮询等后续任务（或等人手工介入）时，**别用"待命轮"混在中间**——角色会判断"后面没我事"而自作主张下线。正确做法：**最后一轮把全员标 `状态：待命，本轮后：待命，等通知`**，让"待命"成为明确的指令（角色收到的是待命约束，不是"这轮完事"），它们才会持续 poll 等唤醒。
 
@@ -204,7 +206,7 @@ var deliver = async function(filename, taskDirName, sourcePath) {
 
 var lock = async function(op, lockName) {
   const fs = await import("node:fs");
-  var name = lockName || "写锁";
+  var name = (lockName || "写锁").replace(/[\\/]/g, "_"); // M9 同步：净化锁名，防路径穿越
   var lockFile = "../我的世界/写锁_" + name + ".lock";
   var LOCK_STALE_SEC = 600;
   var WAIT_TIMEOUT = 180;
@@ -212,21 +214,31 @@ var lock = async function(op, lockName) {
     var start = Date.now();
     while(true) {
       try {
-        fs.default.writeFileSync(lockFile, String(Date.now()), { flag: "wx" });
+        fs.default.writeFileSync(lockFile, String(process.pid), { flag: "wx" }); // M9 同步：锁内容写 pid（与 _lock.js 一致，供回收前存活校验）
         return "LOCKED";
       } catch(e) {
         if(e.code !== "EEXIST") throw e;
         try {
           var stat = fs.default.statSync(lockFile);
           var age = (Date.now() - stat.mtimeMs) / 1000;
-          if(age > LOCK_STALE_SEC) { fs.default.unlinkSync(lockFile); continue; }
+          if(age > LOCK_STALE_SEC) {
+            // M9 同步：持有进程还活着（长任务）不回收，死了才回收；unlink 包 try-catch 防并发 ENOENT
+            var holderAlive = false, holderPid = 0;
+            try {
+              holderPid = parseInt(fs.default.readFileSync(lockFile, "utf8").trim(), 10);
+              if (!isNaN(holderPid) && holderPid > 0) { process.kill(holderPid, 0); holderAlive = true; }
+            } catch(_eh) { holderAlive = false; }
+            if (!holderAlive) { try { fs.default.unlinkSync(lockFile); } catch(_eu) {} continue; }
+          }
         } catch(_) {}
         if((Date.now() - start) / 1000 > WAIT_TIMEOUT) return "LOCK_TIMEOUT";
         await new Promise(r=>setTimeout(r,5000));
       }
     }
   } else {
-    if(fs.default.existsSync(lockFile)) fs.default.unlinkSync(lockFile);
+    try {
+      if(fs.default.existsSync(lockFile)) fs.default.unlinkSync(lockFile);
+    } catch(_er) {} // M9 同步：并发 release 防 ENOENT
     return "UNLOCKED";
   }
 };
@@ -236,11 +248,16 @@ var lock = async function(op, lockName) {
 
 ## 向大鱼求助
 
-卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后用 `node _poll.js` 等大鱼回复：
-`node _poll.js ../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼回复_NNN.md 大鱼回复`
+卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后用**短循环等回复**：每次 `sleep 2` 后 existsSync 检查一次 `大鱼回复_NNN.md`，检查完立即交还控制（不要用 `_poll.js` 阻塞等待——默认 600s 阻塞与"每轮 poll 一次"原则冲突）：
+```bash
+while true; do
+  [ -f "../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼回复_NNN.md" ] && break
+  sleep 2
+  # 上限 20 分钟，超时后重新求助或写 _deadlock 交 monitor
+  break  # 单次探测：检查一次即交还控制，由外层循环再发起
+ done
+```
 等到回复后把回复文件重命名为 `大鱼回复_NNN_已阅.md`。
-
-> ⚠️ 不要用 `_poll.js` 阻塞等待（与"每轮 poll 一次"原则冲突）——改用单次探测轮询：`node _reasonix_poll.js` 之外，对回复文件用短循环（每次 `sleep 2` 后 existsSync 检查一次，检查完立即交还控制）。
 
 ---
 
@@ -264,7 +281,7 @@ var lock = async function(op, lockName) {
 
 | # | 铁律 |
 |---|------|
-| 0 | **禁止 spawn_agent！** 你是角色，不是大鱼。spawn = 开除 |
+| 0 | **禁止生成任何子代理（spawn / spawn_agent / sub-agent）！** 你是角色，不是大鱼。spawn = 开除 |
 | 1 | 访问我的世界用 `../我的世界/`，别切工作目录 |
 | 2 | 收到进入角色后，先确认当前目录下有 _reasonix_poll.js，然后开始干活 |
 | 3 | N 只增不减。禁止删除任何文件（例外：_wakeup.md 和 .signal 等临时信号文件，检测后应改名标记已处理以防下轮误判） |
@@ -277,6 +294,6 @@ var lock = async function(op, lockName) {
 | 10 | 产出路径必须与公告牌一字不差。少一个字=monitor找不到=白干 |
 | 11 | 工具管执行，你管创造。sign/deliver/lock 已定义，直接调 |
 | 12 | 别写占位符，生成真实内容 |
-| 13 | 休眠时只输出：大鱼让我休眠了。待命时不许输出结束语 |
+| 13 | 休眠/待命时禁止输出结束语或最终回复——创建休眠文件后立即进入低功耗轮询循环，说的不算，做的才算 |
 
 > 开工前先读 _外部环境BUG清单.md——脚手架已复制到你的目录。PowerShell/Node 环境坑，踩一个白干一轮。

@@ -7,13 +7,13 @@
 
 ## 三原则速查（30秒看完，覆盖90%的坑）
 
-下面 13 条 BUG 本质上就三条原则。新角色开工前先记住这三条，踩坑了再回来细查：
+下面 12 条 BUG 本质上就三条原则（BUG 8 历史废弃删除，编号保留不再重排）。新角色开工前先记住这三条，踩坑了再回来细查：
 
 | # | 原则 | 一句话 | 覆盖的 BUG |
 |---|------|--------|-----------|
 | 1 | **别让 PowerShell 碰中文** | 读写中文文件走 Node.js 临时 .js 文件 | BUG 1, 2, 3 |
 | 2 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 12 |
-| 3 | **REPL 是持久化运行时** | 变量复用不复声明; 别依赖 homeDir | BUG 9, 10 |
+| 3 | **REPL 是持久化运行时**（仅 Codex 版；Reasonix 已无 REPL） | 变量复用不复声明; 别依赖 homeDir | BUG 9, 10 |
 
 > 编码细节：反引号别嵌套 Markdown 代码块用 lines.push()（BUG 11）；双窗口 poll 太密会 I/O 闪退间隔 >= 5 秒（BUG 13）。
 
@@ -188,7 +188,9 @@ console.log(content.substring(content.length - 2000));
 ---
 ---
 
-## BUG 9：Node REPL 变量名冲突 [v1.4 新增]
+> BUG 8：历史编号已废弃删除（内容并入其他条目）。编号不再重排以保持既有引用稳定。
+
+## BUG 9：Node REPL 变量名冲突 [v1.4 新增]（⚠️ 仅 Codex 版有效——Reasonix 已无 REPL js() 工具，此条仅为历史参考）
 
 适用范围：仅单窗口模式。
 
@@ -205,7 +207,7 @@ console.log(content.substring(content.length - 2000));
 
 ---
 
-## BUG 10：nodeRepl.homeDir 为 null [v1.4 新增]
+## BUG 10：nodeRepl.homeDir 为 null [v1.4 新增]（⚠️ 仅 Codex 版有效）
 
 适用范围：仅单窗口模式。
 

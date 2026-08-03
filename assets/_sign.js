@@ -19,6 +19,7 @@ fs.mkdirSync(signDir, { recursive: true });
 var signFile = signDir + "/完成_" + String(N).padStart(3, "0") + ".md";
 
 // 快速路径：签字文件已存在且非空 → 直接跳过
+// ⚠️ L14 说明：若签错轮/内容错误需要重签，先手动删除旧签字文件再运行本脚本（已有有效签字不会自动覆盖）
 if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
     console.log("SIGNED (已存在): " + signFile + " (" + fs.statSync(signFile).size + " 字节)");
     process.exit(0);

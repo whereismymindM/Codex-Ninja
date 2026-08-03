@@ -31,14 +31,22 @@ if (taskDirHint) {
     console.log("DELIVER_FAST: 跳过公告牌扫描，直接定位 " + taskDirHint);
 } else {
     // 慢路径：扫描公告牌推导任务目录（兼容旧调用）
+    // ⚠️ H9 修复：全量发布形态下 我的世界/ 会同时存在多张公告牌，慢路径只能取"最大非收工轮"，
+    //    无法知道当前正在干第几轮 → .ready 可能写到错误任务目录 → monitor 永不就位。
+    //    必须传第 3 参（任务目录名）走快速路径，或确保调用时明确当前轮。
     var N = 1;
     var boardFiles = fs.readdirSync(worldDir).filter(function(f) { return /^公告牌_\d+\.md$/.test(f); });
+    var nonRetireCount = 0;
     boardFiles.forEach(function(f) {
       var num = parseInt(f.match(/公告牌_(\d+)\.md/)[1], 10);
       var boardContent = fs.readFileSync(worldDir + "/" + f, "utf8");
       if (boardContent.indexOf("模式: 收工") !== -1 || boardContent.indexOf("模式：收工") !== -1 || boardContent.indexOf("· 收工") !== -1) return;
+      nonRetireCount++;
       if (num > N) N = num;
     });
+    if (nonRetireCount > 1) {
+      console.log("DELIVER_WARN: 检测到 " + nonRetireCount + " 张非收工公告牌（全量发布形态），慢路径无法确定当前轮次，.ready 可能写到错误任务目录！请改用 node _deliver.js <产出文件名> <任务目录名> 显式传任务目录。");
+    }
 
     var boardFile = worldDir + "/公告牌_" + String(N).padStart(3, "0") + ".md";
     if (!fs.existsSync(boardFile)) {
