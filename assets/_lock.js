@@ -54,10 +54,15 @@ while (true) {
             var age = (Date.now() - stat.mtimeMs) / 1000;
             if (age > LOCK_STALE_SEC) {
                 // M9 修复：先校验持有进程是否还活着——活着（长任务）不回收，死了才回收；unlink 包 try-catch 防并发 ENOENT
+                // M-3 修复：区分 ESRCH（进程不存在=已死可回收）与 EPERM（进程存在但无权限探测）——
+                //   EPERM 按"存活"保守处理（不回收），避免 Windows 下误回收活锁导致双写竞态
                 var holderAlive = false, holderPid = 0;
                 try {
                     holderPid = parseInt(fs.readFileSync(lockFile, "utf8").trim(), 10);
-                    if (!isNaN(holderPid) && holderPid > 0) { process.kill(holderPid, 0); holderAlive = true; }
+                    if (!isNaN(holderPid) && holderPid > 0) {
+                        try { process.kill(holderPid, 0); holderAlive = true; }
+                        catch(_kp) { if (_kp.code !== "ESRCH") holderAlive = true; }
+                    }
                 } catch(_eh) { holderAlive = false; }
                 if (holderAlive) {
                     console.log("LOCK_STALE 但持有进程存活 (pid=" + holderPid + ")，视为长任务继续等待");

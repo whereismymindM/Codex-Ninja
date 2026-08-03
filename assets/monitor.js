@@ -92,8 +92,10 @@ if (!fs.existsSync(boardFile)) {
     var prevN = N - 1;
     var prevBoard = base + "/我的世界/公告牌_" + String(prevN).padStart(3,"0") + ".md";
     if (fs.existsSync(prevBoard)) {
-        var prevContent = fs.readFileSync(prevBoard, "utf8");
-        if (/模式[：:]\s*收工/.test(prevContent) || /·\s*收工/.test(prevContent)) {
+        // 复核补充：readFileSync 包 try（与 M-1 同类）——读失败跳过收工回看，走 WAIT（安全）；monitor 重跑幂等
+        var prevContent;
+        try { prevContent = fs.readFileSync(prevBoard, "utf8"); } catch(_pb) {}
+        if (prevContent && (/模式[：:]\s*收工/.test(prevContent) || /·\s*收工/.test(prevContent))) {
             // 上一轮是收工，检查退场文件
             var retireRe = /- (.+?)[（(→]/g; // H8 修复：兼容半角括号
             var retireMatch, allRetired = true;

@@ -14,6 +14,12 @@ if (!roleName) {
   process.exit(1);
 }
 
+// 复核补充：角色名禁止路径分隔符/相对路径/纯点号——防写到我世界/ 之外（与 scaffold M-4 同一漏洞类别的另一入口）
+if (/[\\/]|\.\.|^\.+$/.test(roleName)) {
+  console.log('ERROR: 角色名不能包含路径分隔符（/ \\）或 ..（当前: ' + roleName + '）');
+  process.exit(1);
+}
+
 // 对讲目录在 我的世界/{角色名}_大鱼对讲/
 var talkDir = path.resolve(__dirname, '..', '我的世界', roleName + '_大鱼对讲');
 

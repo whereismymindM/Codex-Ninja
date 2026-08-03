@@ -67,6 +67,11 @@ roles.forEach(function(r) {
         process.exit(1);
     }
     r.name = r.name.trim();
+    // M-4 修复：角色名禁止路径分隔符/相对路径/纯点号——防 mkdir/写文件逃出项目目录（如 name: "../火影-大鱼"）或写入项目根（name: "."）
+    if (/[\\/]|\.\.|^\.+$/.test(r.name)) {
+        console.error("ERROR: roles.json 角色名不能包含路径分隔符（/ \\）、'..' 或纯点号（当前: " + r.name + "）");
+        process.exit(1);
+    }
 });
 
 } // !isFishMode

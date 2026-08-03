@@ -223,10 +223,14 @@ var lock = async function(op, lockName) {
           var age = (Date.now() - stat.mtimeMs) / 1000;
           if(age > LOCK_STALE_SEC) {
             // M9 同步：持有进程还活着（长任务）不回收，死了才回收；unlink 包 try-catch 防并发 ENOENT
+            // M-3 同步：EPERM（存在但无权限探测）按存活保守处理，避免 Windows 误回收活锁
             var holderAlive = false, holderPid = 0;
             try {
               holderPid = parseInt(fs.default.readFileSync(lockFile, "utf8").trim(), 10);
-              if (!isNaN(holderPid) && holderPid > 0) { process.kill(holderPid, 0); holderAlive = true; }
+              if (!isNaN(holderPid) && holderPid > 0) {
+                try { process.kill(holderPid, 0); holderAlive = true; }
+                catch(_kp) { if (_kp.code !== "ESRCH") holderAlive = true; }
+              }
             } catch(_eh) { holderAlive = false; }
             if (!holderAlive) { try { fs.default.unlinkSync(lockFile); } catch(_eu) {} continue; }
           }

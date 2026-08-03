@@ -39,7 +39,9 @@ if (taskDirHint) {
     var nonRetireCount = 0;
     boardFiles.forEach(function(f) {
       var num = parseInt(f.match(/公告牌_(\d+)\.md/)[1], 10);
-      var boardContent = fs.readFileSync(worldDir + "/" + f, "utf8");
+      // 复核补充：readFileSync 包 try（与 M-1 同类）——文件并发移动/锁定时读失败，跳过该文件继续，避免崩溃 exit 1
+      var boardContent;
+      try { boardContent = fs.readFileSync(worldDir + "/" + f, "utf8"); } catch(_eb) { return; }
       if (boardContent.indexOf("模式: 收工") !== -1 || boardContent.indexOf("模式：收工") !== -1 || boardContent.indexOf("· 收工") !== -1) return;
       nonRetireCount++;
       if (num > N) N = num;
@@ -57,11 +59,14 @@ if (taskDirHint) {
 
     taskDir = "任务" + String(N).padStart(3, "0");
     if (fs.existsSync(boardFile)) {
+      // 复核补充：readFileSync 包 try——读失败保持默认 任务N 推导，不崩溃
+      try {
         var board = fs.readFileSync(boardFile, "utf8");
         var m = board.match(/^-\s*(?:产出|任务目录)[：:]\s*我的世界\/(?:产出\/)?(任务\d+_?[^\s(\[{\/（]+)(?:\/[^\s]+(?:\s*,\s*[^\s]+)*)?\/?\s*$/m);
         if (m) {
             taskDir = m[1];
         }
+      } catch(_br) {}
     }
 } // 慢路径结束
 

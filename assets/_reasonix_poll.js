@@ -112,12 +112,15 @@ if (fs.existsSync(nextFile)) {
 // ── 4. 收工检查 ──
 var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
 if (fs.existsSync(curFile)) {
-  var bc = fs.readFileSync(curFile, "utf8");
-  if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
-    log("收工轮 N=" + lastN);
-    console.log("RETIRED N=" + lastN);
-    process.exit(2);
-  }
+  // M-1 修复：readFileSync 包 try——文件在 existsSync 与读取之间被移走/锁定时，未捕获异常会以 exit 1 退出被误判为"被唤醒"；读失败视为无收工信号继续
+  try {
+    var bc = fs.readFileSync(curFile, "utf8");
+    if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
+      log("收工轮 N=" + lastN);
+      console.log("RETIRED N=" + lastN);
+      process.exit(2);
+    }
+  } catch(e) {}
 }
 
 // ── 5. 唤醒检查（慢路径）──
