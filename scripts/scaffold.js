@@ -25,8 +25,9 @@ if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/我的世界"))
 var assetDir = path.resolve(__dirname, "..", "assets");
 
 // 解析运行模式：第二个参数是 "fish" 则直接走鱼模式，否则第三个参数是 roles.json
-// F-14 修复：isFishMode 需同时满足 第4参为 window/run 或不存在——若用户 roles 文件恰好叫 fish 且带 add 等第4参，按 roles 文件处理而非误入 fish 模式
-var isFishMode = process.argv[3] === "fish" && (process.argv[4] === undefined || process.argv[4] === "window" || process.argv[4] === "run");
+// F-14 修复：isFishMode 需同时满足 第4参为 window/run 或不存在，且当前目录无名为 fish 的文件——
+// 若用户 roles 文件恰好叫 fish（无论带不带第4参），按 roles 文件处理而非误入 fish 模式（文件存在优先）
+var isFishMode = process.argv[3] === "fish" && !fs.existsSync(process.argv[3]) && (process.argv[4] === undefined || process.argv[4] === "window" || process.argv[4] === "run");
 var mode, rolesFile, isAddMode, fishShape;
 if (isFishMode) {
     mode = "fish";

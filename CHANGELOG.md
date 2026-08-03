@@ -6,6 +6,11 @@
 ---
            —— 初代 --reasonix-f 方案F 大鱼调度 ——
 
+## 2026-08-03（收官复核残留 3 处补齐：F-2 审核侧 signal / F-1 dir quote / F-14 fish 文件消歧）
+- **F-2 审核侧补全**：主笔审核审核方改名 `请审核.md → _已处理` 时，同名 `请审核.md.signal` 一并归档（`_signal_acked`）——主笔重发前空窗期不再旧 signal 秒返→读已改名 .md→ENOENT
+- **F-1 dir 补 quote**：start-fish 的 `--dir fishDir` 同样手动双引号包裹——项目根路径含空格（如 `D:\My Projects\项目A`）时不被 cmd 拆分
+- **F-14 fish 文件消歧**：`node scaffold.js 项目 fish`（无第4参）且 CWD 存在名为 fish 的 roles 文件时，按 roles 文件处理（init）而非误入 fish 模式——实测：MODE: init + 角色正常生成
+
 ## 2026-08-03（收官复查修复：26 项新发现 F-1~F-26）
 - **运行/流程（F-1~F-9）**：F-1 start-fish shell:true 参数拆分（实测）——prompt 手动 quote 包裹防 cmd 拆分；F-2 主笔打回轮 .signal 随 .md 一起改名归档；F-3 run 形态主笔审核改"回合内循环"（打回不再断链）；F-4 辩手等裁判改为等 .ready（裁判只写 .ready 不写 .signal）；F-5 启动指南修正（删 toml 无效 → 删整个角色目录重跑）；F-6 双人对话问方按产出负责人判断才交付（防双写）；F-7 辩论 :86 统一改名而非删除；F-8 单人输出文档类 deliver 带任务目录参数；F-9 run 收工 prompt 顺序对齐（先退场文件后流水账）
 - **代码边界（F-10~F-17）**：F-10 monitor 自检格式B readdirSync 包 try；F-11 格式A/B 判定改按尾斜杠（无扩展名产出不再误判目录，实测）；F-12 fallback 任务前缀加边界（任务001 不命中 任务0010）；F-13 _sign 轮次必须是 >=1 整数（0/0.5 不再静默 完成_000.md）；F-14 scaffold isFishMode 消歧（roles 文件叫 fish 不再误入）+ desc 缺失兜底 name；F-15 _lock.js + 模板内联 lock 等锁期间续心跳（防 2min 误判 DEAD）；F-16 _poll --wakeup/--phase 缺参报错；F-17 monitor 复检忙等 → Atomics.wait

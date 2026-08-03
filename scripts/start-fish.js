@@ -52,7 +52,9 @@ function start() {
     // （实测：["第一段","含空格的中文","prompt","内容"] → 被拆成 4 段）→ 手动用双引号包裹 prompt 整体；
     // prompt 内无 ASCII 双引号（用「」『』），包裹后作为单个参数传入
     var promptArg = '"' + prompt.replace(/"/g, '\\"') + '"';
-    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", (process.env.FISH_MAX_STEPS || "500"), promptArg], {
+    // F-1 补充（复核残留2）：--dir 的项目根路径同样手动 quote——项目根含空格（如 D:\My Projects\项目A）时不被 cmd 拆分
+    var dirArg = '"' + fishDir.replace(/"/g, '\\"') + '"';
+    var child = spawn(RX, ["run", "--dir", dirArg, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", (process.env.FISH_MAX_STEPS || "500"), promptArg], {
         cwd: fishDir,
         shell: true,
         stdio: "inherit"
