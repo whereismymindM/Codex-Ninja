@@ -1,8 +1,8 @@
 // scaffold.js —— 多Agent协作项目脚手架
 // 用法：
-//   node scaffold.js <项目目录> fish                       → 只重建大鱼+monitor
-//   node scaffold.js <项目目录> <roles.json>               → init（默认，全新项目）
-//   node scaffold.js <项目目录> <roles.json> add           → add（追加角色）
+//   node scaffold.js <项目目录> fish [window|run]        → 只重建大鱼+monitor（window=窗口常驻模板，run=run拉起模板，默认window）
+//   node scaffold.js <项目目录> <roles.json>             → init（默认，全新项目）
+//   node scaffold.js <项目目录> <roles.json> add         → add（追加角色）
 var fs = require("fs");
 var path = require("path");
 
@@ -20,12 +20,18 @@ var assetDir = path.resolve(__dirname, "..", "assets");
 
 // 解析运行模式：第二个参数是 "fish" 则直接走鱼模式，否则第三个参数是 roles.json
 var isFishMode = process.argv[3] === "fish";
-var mode, rolesFile, isAddMode;
+var mode, rolesFile, isAddMode, fishShape;
 if (isFishMode) {
     mode = "fish";
     rolesFile = null;
     isAddMode = false;
-    console.log("MODE: fish");
+    // 形态：window（窗口常驻，默认）| run（run拉起）
+    fishShape = (process.argv[4] || "window").toLowerCase();
+    if (fishShape !== "window" && fishShape !== "run") {
+        console.error("ERROR: fish 形态必须是 window 或 run，当前: " + fishShape);
+        process.exit(1);
+    }
+    console.log("MODE: fish (" + fishShape + " 形态)");
 } else {
     rolesFile = process.argv[3];
     mode = (process.argv[4] || "init").toLowerCase();
@@ -51,8 +57,10 @@ if (!Array.isArray(roles) || roles.length === 0) { console.error("ERROR: roles.j
 } // !isFishMode
 
 // 读模板
-var roleTpl = fs.readFileSync(assetDir + "/Reasonix版_角色_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
-var fishTpl = fs.readFileSync(assetDir + "/大鱼_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
+var roleTpl = fs.readFileSync(assetDir + "/模板/Reasonix版_角色_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
+// 大鱼模板按形态选：window（窗口常驻，默认）| run（run拉起）
+var fishTplFile = (isFishMode && fishShape === "run") ? "大鱼_AGENTS模板_run拉起.md" : "大鱼_AGENTS模板_窗口常驻.md";
+var fishTpl = fs.readFileSync(assetDir + "/模板/" + fishTplFile, "utf8").replace(/^\uFEFF/, "");
 
 // 鱼模式：只重建大鱼AGENTS.md（纯模板，不注入灵魂——大鱼不需要人格）和monitor.js
 if (isFishMode) {
@@ -146,7 +154,7 @@ roles.forEach(function(r) {
 
     // 复制协作模式文件
     ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
-        fs.copyFileSync(assetDir + "/" + mf, rd + "/" + mf);
+        fs.copyFileSync(assetDir + "/玩法模式/" + mf, rd + "/" + mf);
     });
 
     // 复制工具文件

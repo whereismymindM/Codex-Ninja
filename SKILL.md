@@ -87,8 +87,10 @@ N 个角色各开独立窗口，bash while + _reasonix_poll.js 轮询公告牌�
 | 文件 | 用途 |
 |------|------|
 | assets/公告牌完全指南.md | 格式+状态机+范例+常见错误 |
-| assets/大鱼_AGENTS模板.md | 大鱼模板 |
-| assets/Reasonix版_角色_AGENTS模板.md | 角色模板（Reasonix版） |
+| assets/模板/大鱼_AGENTS模板.md | 大鱼模板·形态选择入口（选一生成） |
+| assets/模板/大鱼_AGENTS模板_窗口常驻.md | 大鱼模板（窗口常驻形态，reasonix code） |
+| assets/模板/大鱼_AGENTS模板_run拉起.md | 大鱼模板（run 拉起形态，调度唤醒） |
+| assets/模板/Reasonix版_角色_AGENTS模板.md | 角色模板（Reasonix版） |
 | assets/_reasonix_poll.js | Reasonix轮询脚本 |
 | assets/完整示例_RSS摘要系统.md | 5角色6轮实战 |
 | assets/_外部环境BUG清单.md | 中文环境避坑 |

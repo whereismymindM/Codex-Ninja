@@ -399,12 +399,12 @@ flowchart TD
 | `CHANGELOG.md` | 版本历史 |
 | `团队须知/AGENTS.md` | 注入到所有角色窗口的通用规则 |
 | `assets/公告牌完全指南.md` | 老渣写公告牌的完整参考 |
-| `assets/大鱼_AGENTS模板.md` | 大鱼窗口的 AGENTS.md 模板 |
+| `assets/大鱼_AGENTS模板.md` | 大鱼窗口的 AGENTS.md 模板（**已移至 assets/模板/，拆窗口常驻/run拉起两形态**） |
 | `assets/角色_AGENTS模板.md` | ~~角色窗口的 AGENTS.md 模板（含 REPL 工具函数）~~ **已废弃删除（2026-08-03），改用 `Reasonix版_角色_AGENTS模板.md`** |
-| `assets/_双人对话模式.md` | 双人对话玩法流程 |
-| `assets/_主笔审核模式.md` | 主笔审核玩法流程 |
-| `assets/_辩论模式.md` | 辩论玩法流程（含裁判） |
-| `assets/_单人输出模式.md` | 单人输出玩法流程 |
+| `assets/_双人对话模式.md` | 双人对话玩法流程（**已移至 assets/玩法模式/**） |
+| `assets/_主笔审核模式.md` | 主笔审核玩法流程（**已移至 assets/玩法模式/**） |
+| `assets/_辩论模式.md` | 辩论玩法流程（含裁判）（**已移至 assets/玩法模式/**） |
+| `assets/_单人输出模式.md` | 单人输出玩法流程（**已移至 assets/玩法模式/**） |
 | `assets/monitor.js` | 大鱼翻篇监控 + 心跳检测 + 死锁检测 |
 | `assets/_轮询片段.md` | 轮询代码唯一来源（待命/休眠 REPL 片段）——**已删除，失效** |
 | `assets/_poll.js` | 通用轮询工具（Shell 备用） |
