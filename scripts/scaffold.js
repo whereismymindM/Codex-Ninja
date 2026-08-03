@@ -153,6 +153,27 @@ if (!isAddMode) {
 
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
     fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
+    // B-8 修复：工具源码只读快照——复制 monitor/scaffold/工具脚本到 我的世界/skill文档/工具源码/，
+    // 角色可读（ship path 有地形可查），不可写（信息边界意图保留）；版本戳防快照漂移（对话 T13 提案）
+    var srcSnap = projectDir + "/我的世界/skill文档/工具源码";
+    fs.mkdirSync(srcSnap, { recursive: true });
+    var snapFiles = [
+        [projectDir + "/monitor.js", "monitor.js"],
+        [__dirname + "/scaffold.js", "scaffold.js"],
+        [assetDir + "/_reasonix_poll.js", "_reasonix_poll.js"],
+        [assetDir + "/_deliver.js", "_deliver.js"],
+        [assetDir + "/_sign.js", "_sign.js"],
+        [assetDir + "/_lock.js", "_lock.js"],
+        [assetDir + "/_poll.js", "_poll.js"],
+        [assetDir + "/_wakeup.js", "_wakeup.js"]
+    ];
+    snapFiles.forEach(function(pair) {
+        try {
+            if (fs.existsSync(pair[0])) fs.copyFileSync(pair[0], srcSnap + "/" + pair[1]);
+        } catch(_sn) {}
+    });
+    fs.writeFileSync(srcSnap + "/版本戳.txt", "快照时间: " + new Date().toISOString() + "\n来源: codex-ninja scaffold init（B-8 只读快照，角色可读不可写；更新=重跑 scaffold）\n", "utf8");
+    console.log("OK: 我的世界/skill文档/工具源码/ (B-8 只读快照 + 版本戳)");
 } else {
     console.log("SKIP: 我的世界/ (add 模式不重建)");
 }

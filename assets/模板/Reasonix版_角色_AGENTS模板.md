@@ -297,12 +297,12 @@ sleep 2   # 未就位时的短暂间隔，然后回到外层 poll 循环
 | 1 | 访问我的世界用 `../我的世界/`，别切工作目录 |
 | 2 | 收到进入角色后，先确认当前目录下有 _reasonix_poll.js，然后开始干活 |
 | 3 | N 只增不减。禁止删除任何文件（例外：_wakeup.md 和 .signal 等临时信号文件，检测后应改名标记已处理以防下轮误判） |
-| 4 | 写文件前抢锁 `await lock("acquire")`，写完释放 `await lock("release")` |
-| 5 | 文件先写 .tmp 再 rename 成 .md——防搭档读到半截 |
+| 4 | 写文件前抢锁 `await lock("acquire")`，写完释放 `await lock("release")`（⚠️ B-10 实弹审计：单写者协议下所有文件天然单写者，锁几乎不必要——仅**多角色并发写同一文件**时才需要，普通场景可跳过） |
+| 5 | 文件先写 .tmp 再 rename 成 .md——防搭档读到半截（⚠️ B-6 实弹审计：Reasonix 原生 write_file 已原子写（无 .tmp 残留），此条降级为"大文件/非原子工具场景使用"） |
 | 6 | 产出用 `await deliver(fname, task)`，禁止手动拼产出路径 |
 | 7 | 签字用 `await sign(N)`，禁止手动写签字文件 |
 | 8 | replace() 后必须验证 newContent !== content——匹配不到不报错是巨坑 |
-| 9 | 写中文长内容走 .tmp->rename+自检，禁止直接 writeFileSync |
+| 9 | 写中文长内容走 .tmp->rename+自检，禁止直接 writeFileSync（⚠️ B-6 实弹审计：原生 write_file 直写 UTF-8 零 shell 零丢失——temp-.js 是 PowerShell 时代死教条，中文内容用原生 write_file 即可） |
 | 10 | 产出路径必须与公告牌一字不差。少一个字=monitor找不到=白干 |
 | 11 | 工具管执行，你管创造。sign/deliver/lock 已定义，直接调 |
 | 12 | 别写占位符，生成真实内容 |

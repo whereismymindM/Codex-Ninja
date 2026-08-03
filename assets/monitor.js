@@ -55,7 +55,15 @@ while (true) {
             var fnsSelf = fpSelf.substring(lsSelf + 1).split(/\s*,\s*/);
             for (var fiSelf = 0; fiSelf < fnsSelf.length; fiSelf++) {
                 var fnSelf = fnsSelf[fiSelf].trim();
-                if (fnSelf && !fs.existsSync(base + "/我的世界/" + odSelf + "/" + fnSelf + ".ready")) { outOkSelf = false; break; }
+                var _rpSelf = base + "/我的世界/" + odSelf + "/" + fnSelf + ".ready";
+                if (fnSelf && !fs.existsSync(_rpSelf)) { outOkSelf = false; break; }
+                // B-5 修复：self-check 处也做 metadata 校验（size:0 空交付提示，收工审计可见）
+                if (fnSelf) {
+                    try {
+                        var _rcSelf = fs.readFileSync(_rpSelf, "utf8");
+                        if (/size:\s*0\b/.test(_rcSelf)) console.log("OUTPUT-WARN " + fnSelf + " .ready 显示 size=0——空交付！");
+                    } catch(_rmS) {}
+                }
             }
         } else {
             var od2Self = fpSelf.replace(/\/$/, "");
@@ -227,8 +235,18 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
         });
         ready = allExist;
-        if (!ready) {
-            // fallback: 老渣可能把产出路径错写成源文件目录（如 soulforge/）
+        // B-5 修复：.ready 存在时读 metadata 校验——size:0（空交付）或缺失 size 行（无 metadata 旧版/代码类）输出提示，供收工审计参考
+        if (ready && fileNames) {
+            fileNames.forEach(function(fn) {
+                try {
+                    var _rfp = outDirPath + "/" + fn.trim() + ".ready";
+                    var _rc = fs.readFileSync(_rfp, "utf8");
+                    if (/size:\s*0\b/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 显示 size=0——空交付！");
+                    else if (!/size:/.test(_rc) && !/source:/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 无 metadata（旧版或非标准交付）");
+                } catch(_rm) {}
+            });
+        }
+        if (!ready) {            // fallback: 老渣可能把产出路径错写成源文件目录（如 soulforge/）
             // 实际 .ready 在 产出/ 子目录下——扫描兜底
             var outBase = base + "/我的世界/产出";
             if (fs.existsSync(outBase)) {
