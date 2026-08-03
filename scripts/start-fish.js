@@ -61,13 +61,19 @@ function start() {
     });
     child.on("exit", function(code) {
         console.log("大鱼进程退出，退出码=" + code);
+        // 复核修复：正常收工（exit 0，项目完成）不重启——重启会让已完成的项目空转；
+        // 仅非 0 退出码（崩溃/--max-steps 超限/模型报错）才自动重启，带上限防无限循环
+        if (code === 0) {
+            console.log("正常退出（exit 0），不重启。");
+            process.exit(0);
+        }
         if (restartCount < MAX_RESTARTS) {
             restartCount++;
             console.log("10 秒后自动重启（第 " + restartCount + "/" + MAX_RESTARTS + " 次）...");
             setTimeout(start, 10000);
         } else {
             console.log("超过最大重启次数（" + MAX_RESTARTS + "），退出。请人工检查 reasonix 状态。");
-            process.exit(code || 0);
+            process.exit(code || 1);
         }
     });
 }

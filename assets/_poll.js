@@ -74,7 +74,6 @@ var wakeFile = (lowPowerMode && wakeupDir) ? path.join(wakeupDir, "_wakeup.md") 
 if (maxWaitSec <= 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗8s（短超时），正常模式600s
 
 var startTime = Date.now();
-var lastDirMtime; // 目录mtime缓存
 
 var elapsed = 0;
 // 渐进式间隔：首轮快速响应，逐步放缓
@@ -133,27 +132,14 @@ while (true) {
     }
 
     
-    // 目录mtimeMs预检——公告牌目录无变更则跳过文件扫描
-    var targetDir = path.dirname(targetFile);
-    var dirChanged = true;
-    try {
-        if (fs.existsSync(targetDir)) {
-            var dirStat = fs.statSync(targetDir);
-            if (typeof lastDirMtime !== "undefined" && dirStat.mtimeMs === lastDirMtime) {
-                dirChanged = false;
-            }
-            lastDirMtime = dirStat.mtimeMs;
-        }
-    } catch(e) { dirChanged = true; }
-
-    if (dirChanged) {
-if (fs.existsSync(targetFile)) {
+    // M4 修复：targetFile 检查每次循环直接 existsSync（开销可忽略），不依赖目录 mtime 门控——
+    // 覆盖写已存在文件不更新目录 mtime，旧的门控会让"等文件更新"的调用方永远等不到
+    if (fs.existsSync(targetFile)) {
         console.log(desc + " 出现了！等了 " + elapsed + " 秒");
         var flushEnd = Date.now() + 200;
         while (Date.now() < flushEnd) {}
         process.exit(0);
     }
-        }
     if (signalMode && fs.existsSync(signalFile)) {
         console.log("对话结束.signal 出现了（问方已喊停）！等了 " + elapsed + " 秒");
         var flushEnd = Date.now() + 200;

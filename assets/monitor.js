@@ -137,13 +137,13 @@ if (activeRoles.length === 0) {
         console.log("STANDBY N=" + N);
         allRetired = false;
     } else {
-    // 收工轮：全员退场，逐个检查退场文件（或休眠文件，两者都验）是否到位
-    console.log("SIGN [收工]");
-    allRoles.forEach(function(role) {
-        var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
+        // 收工轮：全员退场，逐个检查退场文件（或休眠文件，两者都验）是否到位
+        console.log("SIGN [收工]");
+        allRoles.forEach(function(role) {
+            var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
             var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
-        // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
-                var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
+            // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
+            var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
         var hbForce = false;
         try {
           if (fs.existsSync(hbFile3)) {

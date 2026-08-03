@@ -248,14 +248,13 @@ var lock = async function(op, lockName) {
 
 ## 向大鱼求助
 
-卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后用**短循环等回复**：每次 `sleep 2` 后 existsSync 检查一次 `大鱼回复_NNN.md`，检查完立即交还控制（不要用 `_poll.js` 阻塞等待——默认 600s 阻塞与"每轮 poll 一次"原则冲突）：
+卡住了？写 `../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼对话_NNN.md` 求助。然后**每轮 poll 时顺带探测一次回复**（不要用 `_poll.js` 阻塞等待——默认 600s 阻塞与"每轮 poll 一次"原则冲突）：
 ```bash
-while true; do
-  [ -f "../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼回复_NNN.md" ] && break
-  sleep 2
-  # 上限 20 分钟，超时后重新求助或写 _deadlock 交 monitor
-  break  # 单次探测：检查一次即交还控制，由外层循环再发起
- done
+# 单次探测：检查一次立即交还控制，由外层 poll 循环反复发起（不要在此阻塞等待）
+if [ -f "../我的世界/{{ROLE_NAME}}_大鱼对讲/大鱼回复_NNN.md" ]; then
+  echo "大鱼回复已就位"
+fi
+sleep 2   # 未就位时的短暂间隔，然后回到外层 poll 循环
 ```
 等到回复后把回复文件重命名为 `大鱼回复_NNN_已阅.md`。
 

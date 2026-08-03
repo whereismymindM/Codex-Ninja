@@ -135,9 +135,14 @@ if (!isAddMode) {
     fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
     // 部署团队须知到项目根目录（projectDir，角色窗口的父级），所有角色窗口共享
     var teamNotice = path.resolve(assetDir, "..", "团队须知/AGENTS.md");
-    // 团队须知放到项目根目录，跟我的世界/同级；角色在 projectDir/角色名/ 下，父级即 projectDir
-    fs.copyFileSync(teamNotice, projectDir + "/AGENTS.md");
-    console.log("OK: 团队须知/AGENTS.md → " + projectDir);
+    // M6 修复：项目根 AGENTS.md 已存在则不覆盖（与 monitor.js 的"已存在不覆盖"策略一致）——
+    // 避免 init 静默覆盖用户自写/旧版文件
+    if (!fs.existsSync(projectDir + "/AGENTS.md")) {
+        fs.copyFileSync(teamNotice, projectDir + "/AGENTS.md");
+        console.log("OK: 团队须知/AGENTS.md → " + projectDir);
+    } else {
+        console.log("SKIP: 团队须知/AGENTS.md → " + projectDir + "（已存在，不覆盖）");
+    }
 
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
     fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
@@ -148,6 +153,12 @@ if (!isAddMode) {
 // 处理每个角色
 roles.forEach(function(r) {
     var rd = projectDir + "/" + r.name;
+    // M5 修复：角色目录已存在 → 警告跳过，不覆盖已有角色的 AGENTS.md/工具脚本/玩法文件。
+    // add 的用途是补新角色；重复跑/撞名时保留现有文件，避免静默覆盖丢失定制（重置角色请先移除该角色目录）
+    if (fs.existsSync(rd + "/AGENTS.md")) {
+        console.log("SKIP: " + r.name + "（目录已存在，跳过生成——如需重置请先移除该角色目录）");
+        return;
+    }
     fs.mkdirSync(rd, { recursive: true });
 
     // 替换模板变量
