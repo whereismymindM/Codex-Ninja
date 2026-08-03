@@ -210,6 +210,8 @@ var lock = async function(op, lockName) {
   var lockFile = "../我的世界/写锁_" + name + ".lock";
   var LOCK_STALE_SEC = 600;
   var WAIT_TIMEOUT = 180;
+  // F-15 同步：等锁期间续心跳（防 monitor 2min 误判 DEAD——等锁最长 180s > 120s 阈值）
+  var _hbCtr15 = 0;
   if(op === "acquire") {
     var start = Date.now();
     while(true) {
@@ -236,6 +238,13 @@ var lock = async function(op, lockName) {
           }
         } catch(_) {}
         if((Date.now() - start) / 1000 > WAIT_TIMEOUT) return "LOCK_TIMEOUT";
+        // F-15 同步：等锁期间续心跳（每 12 次循环约 60s 写一次，防 monitor 2min 误判 DEAD）
+        if (++_hbCtr15 % 12 === 0) {
+          try {
+            fs.default.mkdirSync("../我的世界/{{ROLE_NAME}}_大鱼对讲", { recursive: true });
+            fs.default.writeFileSync("../我的世界/{{ROLE_NAME}}_大鱼对讲/_heartbeat.txt", String(Date.now()), "utf8");
+          } catch(_hb) {}
+        }
         await new Promise(r=>setTimeout(r,5000));
       }
     }

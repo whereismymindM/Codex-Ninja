@@ -25,7 +25,8 @@ if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/我的世界"))
 var assetDir = path.resolve(__dirname, "..", "assets");
 
 // 解析运行模式：第二个参数是 "fish" 则直接走鱼模式，否则第三个参数是 roles.json
-var isFishMode = process.argv[3] === "fish";
+// F-14 修复：isFishMode 需同时满足 第4参为 window/run 或不存在——若用户 roles 文件恰好叫 fish 且带 add 等第4参，按 roles 文件处理而非误入 fish 模式
+var isFishMode = process.argv[3] === "fish" && (process.argv[4] === undefined || process.argv[4] === "window" || process.argv[4] === "run");
 var mode, rolesFile, isAddMode, fishShape;
 if (isFishMode) {
     mode = "fish";
@@ -169,7 +170,7 @@ roles.forEach(function(r) {
     // 替换模板变量（第四轮修复：replace 用函数返回值——字符串替换中 $&/$'/$$ 会被当替换模式注入）
     var content = roleTpl
         .replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; })
-        .replace(/\{\{ROLE_DESC\}\}/g, function() { return r.desc; });
+        .replace(/\{\{ROLE_DESC\}\}/g, function() { return r.desc || r.name; }); // F-14 修复：desc 缺失时兜底用 name（避免生成字面 undefined）
 
     // 注入背景
     var bg = r.background;

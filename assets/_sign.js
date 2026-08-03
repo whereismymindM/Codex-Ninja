@@ -9,8 +9,10 @@ var N = process.argv[2];
 var msg = process.argv[3] || "";
 
 // L-13 修复：N 必须是数字——否则生成 完成_abc.md，monitor 永远等不到
-if (!N || isNaN(parseInt(N, 10))) { console.log("用法: node _sign.js <轮次号> [消息]"); process.exit(1); }
-N = parseInt(N, 10);
+// F-13 修复：且必须是 >=1 的整数——"0"/"0.5" 会静默生成 完成_000.md（monitor 从 N=1 起查，永不匹配）
+var nN = parseInt(N, 10);
+if (!N || isNaN(nN) || nN < 1 || String(nN) !== String(N).trim()) { console.log("用法: node _sign.js <轮次号> [消息]"); process.exit(1); }
+N = nN;
 
 // 角色名由scaffold在生成时焊死，不读AGENTS.md——省掉readFileSync+正则，防系统负载超时
 var roleName = "{{ROLE_NAME}}";

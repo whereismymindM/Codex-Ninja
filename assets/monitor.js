@@ -49,7 +49,8 @@ while (true) {
         hasOutSelf = true;
         var fpSelf = omSelf[1].trim();
         var lsSelf = fpSelf.lastIndexOf("/");
-        if (lsSelf !== -1 && fpSelf.substring(lsSelf + 1).indexOf(".") !== -1) {
+        // F-11 修复：格式A/B 判定改按"尾斜杠"（目录形式带 /）而非"含点"——无扩展名产出文件（如 …/任务001/说明）不再误判为目录
+        if (lsSelf !== -1 && !fpSelf.endsWith("/")) {
             var odSelf = fpSelf.substring(0, lsSelf);
             var fnsSelf = fpSelf.substring(lsSelf + 1).split(/\s*,\s*/);
             for (var fiSelf = 0; fiSelf < fnsSelf.length; fiSelf++) {
@@ -59,7 +60,9 @@ while (true) {
         } else {
             var od2Self = fpSelf.replace(/\/$/, "");
             var dp2Self = base + "/我的世界/" + od2Self;
-            var rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : [];
+            // F-10 修复：自检格式B readdirSync 包 try（目录并发被删不 CRASH，与主流程 :251 一致）
+            var rfsSelf = [];
+            try { rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rds) {}
             if (rfsSelf.length === 0) { outOkSelf = false; break; }
         }
     }
@@ -205,7 +208,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     var fullPath = outputMatch[1];
     var lastSlash = fullPath.lastIndexOf("/");
     var outDir, fileNames;
-    if (lastSlash !== -1 && fullPath.substring(lastSlash + 1).indexOf(".") !== -1) {
+    if (lastSlash !== -1 && !fullPath.endsWith("/")) { // F-11 修复：格式A/B 判定改按尾斜杠（目录形式带 /）而非含点
         outDir = fullPath.substring(0, lastSlash);
         fileNames = fullPath.substring(lastSlash + 1).split(/\s*,\s*/);
     } else {
@@ -231,8 +234,10 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             if (fs.existsSync(outBase)) {
                 try {
                     var outDirs = fs.readdirSync(outBase).filter(function(d2) {
-                        // H4 修复：fallback 只扫描当前轮次的任务目录（任务NNN_*），避免跨轮同名 .ready 误命中导致本轮提前 DONE
-                        return fs.statSync(outBase + "/" + d2).isDirectory() && d2.indexOf("任务" + String(N).padStart(3, "0")) === 0;
+                        // H4 修复：fallback 只扫描当前轮次的任务目录，避免跨轮同名 .ready 误命中导致本轮提前 DONE
+                        // F-12 修复：前缀加边界（任务001 不命中 任务0010 四位目录）——目录名 == 任务NNN 或以 任务NNN_ 开头
+                        var taskPrefix = "任务" + String(N).padStart(3, "0");
+                        return fs.statSync(outBase + "/" + d2).isDirectory() && (d2 === taskPrefix || d2.indexOf(taskPrefix + "_") === 0);
                     });
                     var fbOk = missing.every(function(fn) {
                         return outDirs.some(function(d2) {
@@ -401,8 +406,18 @@ if (!outputReady && activeRoles.length > 0) {
         if (_recentChange) {
             console.log("RETRY: 产出目录近期有变化，快速复检（最多5次×2s）");
             for (var _retry = 0; _retry < 5 && !outputReady; _retry++) {
-                var _wu = Date.now() + 2000;
-                while (Date.now() < _wu) {}
+                // F-17 修复：忙等 → Atomics.wait（与 _poll/_lock 统一），降级 100ms 切片兜底
+                try {
+                    var _sab = new SharedArrayBuffer(4);
+                    var _v = new Int32Array(_sab);
+                    Atomics.wait(_v, 0, 0, 2000);
+                } catch(_at) {
+                    var _wu = Date.now() + 2000;
+                    while (Date.now() < _wu) {
+                        var _rem = _wu - Date.now();
+                        if (_rem > 100) { var _w3 = Date.now() + 100; while (Date.now() < _w3) {} }
+                    }
+                }
                 outputRe.lastIndex = 0;
                 var _allOk = true, _anyOutput = false;
                 while ((outputMatch = outputRe.exec(board)) !== null) {
@@ -410,7 +425,7 @@ if (!outputReady && activeRoles.length > 0) {
                     var _fullPath2 = outputMatch[1];
                     var _lastSlash2 = _fullPath2.lastIndexOf("/");
                     var _outDir2, _fileNames2;
-                    if (_lastSlash2 !== -1 && _fullPath2.substring(_lastSlash2 + 1).indexOf(".") !== -1) {
+                    if (_lastSlash2 !== -1 && !_fullPath2.endsWith("/")) { // F-11 修复：复检同样按尾斜杠判定格式A/B
                         _outDir2 = _fullPath2.substring(0, _lastSlash2);
                         _fileNames2 = _fullPath2.substring(_lastSlash2 + 1).split(/\s*,\s*/);
                     } else {

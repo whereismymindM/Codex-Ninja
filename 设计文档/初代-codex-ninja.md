@@ -2,7 +2,7 @@
 
 > 写给未来的 Agent 审核者：这份文档不教你用 Skill，而是告诉你它为什么被设计成这样。
 > 阅读顺序：设计理念 → 三方协作 → 角色生命周期 → 各模式流程 → 机制详解。
-> 最后更新：2026-07-30（Codex版）。Reasonix 适配详见阅览室 reasonix版本升级路线/
+> 最后更新：2026-08-03（含 reasonix-f 全面审查修复）。Reasonix 适配详见阅览室 reasonix版本升级路线/
 >
 > ⚠️ **失效标注**：本文档主体基于 Codex 平台（REPL/240s自愈/300s硬上限）。Reasonix 版（bash while + 单次探测）已废弃其中 REPL 相关机制——5.3 节"REPL 240 秒自愈"、参数表中 REPL 相关行、目录结构中"大鱼心跳.md"、文件索引中"_轮询片段.md"均已失效，仅作历史参考。**"大鱼逐轮搬运 + monitor 翻篇"流程也已过时**——当前为大鱼校验后全量发布（有待命轮则扣留收工轮，追加/收工由老渣-大鱼协调，见大鱼模板）。当前机制以 SKILL.md、Reasonix版_角色_AGENTS模板.md、assets/_reasonix_poll.js、assets/模板/大鱼_AGENTS模板_*.md 为准。
 
@@ -57,7 +57,7 @@ sequenceDiagram
         alt DONE (产出就位)
             大鱼->>我的世界: 搬运下一轮公告牌
         else WAIT
-            大鱼->>大鱼: 继续等待，10-15s 后再跑 monitor
+            大鱼->>大鱼: 继续等待（已过时：10-15s → 现行统一 60s，见大鱼模板）
         end
     end
 
@@ -84,13 +84,13 @@ stateDiagram-v2
     note right of 休眠
         低功耗轮询 (每3s)
         写 _heartbeat.txt
-        240s 自愈 break
+        240s 自愈 break（⚠️ 已失效——Reasonix 版无 REPL，见 :7 总标注）
     end note
 
     note right of 待命
         间歇轮询 (每15s)
         写 _heartbeat.txt
-        240s 自愈 break
+        240s 自愈 break（⚠️ 已失效——Reasonix 版无 REPL，见 :7 总标注）
     end note
 ```
 
@@ -251,7 +251,7 @@ sequenceDiagram
         角色->>对讲目录: writeFileSync _heartbeat.txt.tmp → rename
     end
 
-    loop 大鱼端：每10-15s扫一次（活跃轮）
+    loop 大鱼端：每10-15s扫一次（活跃轮，⚠️ 已过时：现行统一每 60s）
         大鱼->>对讲目录: readFileSync _heartbeat.txt
         alt 心跳时间 > 2分钟
             大鱼->>对讲目录: 重读心跳 (double-check)

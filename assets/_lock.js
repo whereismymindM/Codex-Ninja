@@ -41,6 +41,20 @@ if (action !== "acquire") {
 
 // acquire: 原子抢锁（wx = 不存在才创建）
 var start = Date.now();
+// F-15 修复：等锁期间续心跳（防 monitor 2min 误判 DEAD——等锁最长 180s > 120s 阈值）；角色名从 AGENTS.md 头部读取
+var _hbCtr15 = 0;
+function heartbeatDuringWait() {
+    if (++_hbCtr15 % 12 !== 0) return; // 每 12 次循环（约 60s）写一次
+    try {
+        var ag15 = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
+        var rm15 = ag15.match(/^# (.+)$/m);
+        var roleName15 = rm15 ? rm15[1].trim() : "";
+        if (!roleName15) return;
+        var hbDir15 = path.resolve(__dirname, "..", "我的世界", roleName15 + "_大鱼对讲");
+        fs.mkdirSync(hbDir15, { recursive: true });
+        fs.writeFileSync(hbDir15 + "/_heartbeat.txt", String(Date.now()), "utf8");
+    } catch(e) {}
+}
 while (true) {
     try {
         fs.writeFileSync(lockFile, process.pid.toString(), { flag: "wx" });
@@ -76,6 +90,7 @@ while (true) {
             var elapsed = (Date.now() - start) / 1000;
             if (elapsed > waitTimeout) { console.log("LOCK_TIMEOUT (等了 " + Math.floor(elapsed) + "s)"); process.exit(1); }
             console.log("LOCK_WAIT (已等" + Math.floor(elapsed) + "s / " + waitTimeout + "s)");
+            heartbeatDuringWait(); // F-15 修复：等锁期间续心跳
             // M9 修复：忙等 → Atomics.wait 真休眠（与 _poll.js safeSleep 一致），降级 100ms 切片兜底
             try {
                 var _sab = new SharedArrayBuffer(4);

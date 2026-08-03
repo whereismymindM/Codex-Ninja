@@ -48,7 +48,11 @@ var MAX_RESTARTS = 5;
 var restartCount = 0;
 
 function start() {
-    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", (process.env.FISH_MAX_STEPS || "500"), prompt], {
+    // F-1 修复：shell:true 下 Node 对 args 只拼接不转义，含空格的 prompt 会被 cmd 拆成多个位置参数
+    // （实测：["第一段","含空格的中文","prompt","内容"] → 被拆成 4 段）→ 手动用双引号包裹 prompt 整体；
+    // prompt 内无 ASCII 双引号（用「」『』），包裹后作为单个参数传入
+    var promptArg = '"' + prompt.replace(/"/g, '\\"') + '"';
+    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", (process.env.FISH_MAX_STEPS || "500"), promptArg], {
         cwd: fishDir,
         shell: true,
         stdio: "inherit"

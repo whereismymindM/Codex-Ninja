@@ -46,6 +46,11 @@ if (lowPowerMode) args.splice(lpIdx, 1);
 var wakeupDir = null;
 var wuIdx = args.indexOf("--wakeup");
 if (wuIdx !== -1) {
+    // F-16 修复：缺参报错（与 --max-wait 的 L16 防护一致）——否则 wakeupDir=undefined 静默失去唤醒检查
+    if (args[wuIdx + 1] === undefined) {
+        console.log("用法: --wakeup 需要一个目录参数");
+        process.exit(1);
+    }
     wakeupDir = args[wuIdx + 1];
     args.splice(wuIdx, 2);
 }
@@ -55,6 +60,11 @@ if (wuIdx !== -1) {
 var phaseMs = 0;
 var phIdx = args.indexOf("--phase");
 if (phIdx !== -1) {
+    // F-16 修复：缺参/非数值报错——否则 splice 误删后续参数导致 targetFile/desc 错位
+    if (args[phIdx + 1] === undefined || isNaN(parseInt(args[phIdx + 1], 10))) {
+        console.log("用法: --phase 需要一个毫秒数值参数，如 --phase 1300");
+        process.exit(1);
+    }
     phaseMs = parseInt(args[phIdx + 1], 10) || 0;
     args.splice(phIdx, 2);
 }

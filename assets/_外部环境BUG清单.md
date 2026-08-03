@@ -15,7 +15,7 @@
 | 2 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 12 |
 | 3 | **REPL 是持久化运行时**（仅 Codex 版；Reasonix 已无 REPL） | 变量复用不复声明; 别依赖 homeDir | BUG 9, 10 |
 
-> 编码细节：反引号别嵌套 Markdown 代码块用 lines.push()（BUG 11）；双窗口 poll 太密会 I/O 闪退间隔 >= 5 秒（BUG 13）。
+> 编码细节：反引号别嵌套 Markdown 代码块用 lines.push()（BUG 11）；双窗口 poll 太密会 I/O 闪退（BUG 13：实际间隔首轮 3s、低功耗固定 3s，需多角色错相）。
 
 ---
 
@@ -32,7 +32,7 @@
 
 **唯一可靠解法：临时 .js 文件**
 
-> ⚠️ **跨进程传 Windows 路径的额外注意**：当你需要把路径注入到生成的 JS 代码时（比如生成子进程脚本），不要直接拼接字符串——`{{项目根目录}}` 中的 `\U`、`\D` 会被当成 Unicode 转义符。**统一用 `JSON.stringify(path)` 安全注入**，确保路径被正确转义。这是最稳妥的跨进程路径传递方式。
+> ⚠️ **跨进程传 Windows 路径的额外注意**：当你需要把路径注入到生成的 JS 代码时（比如生成子进程脚本），不要直接拼接字符串——路径中的 `\U`、`\D` 等会被当成 Unicode 转义符（旧版曾用 `{{项目根目录}}` 占位符举例，当前模板已改相对路径，此条为通用原则）。**统一用 `JSON.stringify(path)` 安全注入**，确保路径被正确转义。这是最稳妥的跨进程路径传递方式。
 
 ```powershell
 # 第1步：把写入逻辑写到临时 .js 文件
@@ -93,7 +93,7 @@ Remove-Item _write_temp.js
 - 用 `node -e` 读长文件时 shell_command 超时（默认 10 秒）
 - 即使不超时，输出也会在几千字符处被截断（stdout 缓冲区上限），15000 字的文件只看到头尾，中间全丢
 
-**原因**：`fs.readFileSync` + `console.log` 输出到终端时，PowerShell 管道既有耗时瓶颈又有容量上限。此外，**PowerShell 命令本身启动就需要 5-10 秒**——即使是简单的 `Start-Sleep`，通过 `execSync` 调用也会拖慢整体流程。这就是为什么 `_poll.js` 的 `safeSleep` 做了降级：先试 PowerShell，失败了切 Node.js 忙等。
+**原因**：`fs.readFileSync` + `console.log` 输出到终端时，PowerShell 管道既有耗时瓶颈又有容量上限。此外，**PowerShell 命令本身启动就需要 8-18 秒**——即使是简单的 `Start-Sleep`，通过 `execSync` 调用也会拖慢整体流程。这就是为什么 `_poll.js` 的 `safeSleep` 做了降级：先试 PowerShell，失败了切 Node.js 忙等。
 
 **解决方案**：
 - 超时问题：`timeout_ms` 设到 30000 以上
