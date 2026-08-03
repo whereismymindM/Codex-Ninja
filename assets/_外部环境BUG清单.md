@@ -19,7 +19,7 @@
 
 ---
 
-## BUG 1：node -e 内联 + 中文 = 灾难 [最严重]
+## BUG 1：node -e 内联 + 中文 = 灾难 [最严重]（⚠️ 仅 PowerShell/Codex 时代有效——Reasonix 原生 write_file 直写 UTF-8、bash 传参原始字节，此坑在 bash 下不触发；实弹验证 2026-08-03）
 
 **现象**：用 `node -e` 执行包含中文的 JavaScript 代码时，Node 报 `SyntaxError: Unexpected identifier` 或 `Unterminated string constant`。
 
@@ -57,7 +57,7 @@ Remove-Item _write_temp.js
 
 ---
 
-## BUG 2：PowerShell Get-Content 默认编码导致中文乱码
+## BUG 2：PowerShell Get-Content 默认编码导致中文乱码（⚠️ 仅 PowerShell 5.x；bash/git-bash 下 UTF-8 无此问题）
 
 **现象**：`Get-Content -Raw` 读中文文件，输出全是乱码。
 
@@ -77,7 +77,7 @@ Remove-Item _write_temp.js
 
 ---
 
-## BUG 3：PowerShell 对 `--` 的解析冲突 [已规避]
+## BUG 3：PowerShell 对 `--` 的解析冲突 [已规避]（⚠️ 仅 PowerShell；bash 下无此问题）
 
 **现象**：`node -e` 内联脚本中出现 `--` 时，PowerShell 将其解析为运算符。
 
@@ -136,7 +136,7 @@ console.log(content.substring(content.length - 2000));
 - 工具脚本内部增加明确的退出信号，即使外部超时也能从输出判断结果
 
 ---
-## BUG 6：PowerShell here-string 被中文内容打断
+## BUG 6：PowerShell here-string 被中文内容打断（⚠️ 仅 PowerShell；bash heredoc 无此问题——实弹验证：图灵×贾维斯 16 轮对话全用 write_file，零 temp-.js）
 
 **现象**：用 PowerShell here-string 写临时 JS 文件时，如果 JS 模板字符串中包含中文弯引号或中文括号，PowerShell 解析器提前终止 here-string，报 The string is missing the terminator。
 
@@ -286,3 +286,16 @@ fs.writeFileSync("file.py", newContent, "utf8");
 - _poll.js 实际间隔：首轮 3s、渐进放缓（3/5/8/12/20/30s），低功耗固定 3s——多角色并发时用内置 0-1.5s 随机抖动错开相位
 - 遇到闪退后重开窗口即可恢复（公告牌和产出文件不受影响）
 - 如果频繁闪退，改 _poll.js 的 intervals 数组（如整体上调至 5s 起），或给两个角色配不同 --phase（如 0 与 1300ms）
+- 实弹佐证（2026-08-03）：本次 3 窗口常驻测试中贾维斯曾出现一次约 6 分钟无心跳无产出的真实中断（疑似闪退），自动恢复后跑完全程——闪退可恢复、不丢进度，但 monitor 会误报 DEAD 并写唤醒文件（见 心跳判定 A-1 修复）
+
+---
+
+## BUG 14：MSYS/git-bash 路径翻译 [2026-08-03 新增，实弹发现]
+
+**现象**：角色在 bash 里执行 `node _poll.js /tmp/测试目录/文件` 等 POSIX 风格绝对路径参数时，MSYS 会**静默改写**参数（如 `/tmp/x` → `D:\tmp\x`），Node 收到被改写的路径 → ENOENT。
+**根因**：MSYS/git-bash 对命令行参数做路径转换，规则藏在 MSYS 内部（改写部分参数、放过另一些），不可预测、不可在接收端反译。
+**发生条件**：任何在 git-bash 下向 Node 传 POSIX 绝对路径参数的场景。
+**规避方案**：
+- **统一用相对路径**（`../我的世界/...`）——相对路径不以 `/` 开头，MSYS 不碰
+- 确需绝对路径：用 `node -e` 内 `JSON.stringify(path)` 注入，或写成 `C:/x/y` 盘符形式（部分场景仍可能被改）
+- **铁律**：工具脚本路径参数一律相对路径（`../我的世界/`），禁止 POSIX 绝对路径——与角色模板「等待脚本路径统一」同口径

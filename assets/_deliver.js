@@ -97,9 +97,27 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 // deliver 只写 .ready 信号，不搬运文件。文件自行就位。
 var readyFile = outputDir + "/" + fileName + ".ready";
-// 原子写入——先写 .tmp 再 rename，读 .ready 时不会读到半截文件
+// B-4 修复：metadata 证据链（producer/size/mtime）+ 文档类存在性校验（收工审计可读 .ready 内容验证交付质量）
+// ⚠️ T12 陷阱防护：sourcePath（代码类产出，目标在源目录不在 产出/）跳过存在性检查——只加 producer metadata
 var _dlContent = "OK " + new Date().toISOString();
 if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
+try {
+    var _ag2 = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
+    var _rm2 = _ag2.match(/^# (.+)$/m);
+    var _producer = _rm2 ? _rm2[1].trim() : "";
+    if (_producer) _dlContent += "\nproducer: " + _producer;
+    if (!sourcePath) {
+        var _target = outputDir + "/" + fileName;
+        try {
+            var _tst = fs.statSync(_target);
+            _dlContent += "\nsize: " + _tst.size + "\nmtime: " + _tst.mtimeMs;
+            if (_tst.size === 0) console.log("DELIVER_WARN: 目标文件 " + fileName + " 大小为 0——内容可能未写入");
+        } catch(_tnf) {
+            console.log("DELIVER_WARN: 目标文件 " + fileName + " 不存在于 " + outputDir + "——deliver 只发信号，内容文件需先写入！");
+        }
+    }
+} catch(_lg3) {}
+// 原子写入——先写 .tmp 再 rename，读 .ready 时不会读到半截文件
 fs.writeFileSync(readyFile + ".tmp", _dlContent, "utf8");
 fs.renameSync(readyFile + ".tmp", readyFile);
 console.log("SIGNAL: " + readyFile + " 已就绪");
