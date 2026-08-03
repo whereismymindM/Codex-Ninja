@@ -210,15 +210,19 @@ roles.forEach(function(r) {
     var rxCfgPath = rd + "/reasonix.toml";
     if (!fs.existsSync(rxCfgPath)) {
         var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
+        var tmpDirAbs = path.resolve(rd, "临时脚本").replace(/\\/g, "/");   // 角色自己的临时区（沙箱外专属可写，临时脚本不污染 我的世界）
         fs.writeFileSync(rxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n" +
             "\n" +
             "[sandbox]\n" +
-            "workspace_root = \"" + projectRootAbs + "\"   # write_file 沙箱根=项目根，角色可直接写 我的世界/，免 bash 绕行\n",
+            "workspace_root = \"" + projectRootAbs + "\"   # write_file 沙箱根=我的世界（收紧：角色只写干活区；读角色目录/玩法文件用 read_file 不受限）\n" +
+            "allow_write = [\"" + tmpDirAbs + "\"]   # 追加可写：角色自己的 临时脚本/ 目录（临时脚本/中间文件放这，不污染 我的世界）\n",
             "utf8");
-        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0 + sandbox)");
+        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0 + sandbox + allow_write 临时脚本)");
     }
+    // 角色临时脚本区（沙箱 allow_write 指向这里）
+    fs.mkdirSync(rd + "/临时脚本", { recursive: true });
 
     // 大鱼对讲目录
     fs.mkdirSync(projectDir + "/我的世界/" + r.name + "_大鱼对讲", { recursive: true });
