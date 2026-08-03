@@ -388,6 +388,24 @@ if (fs.existsSync(worldDir)) {
                     return; // F 模式：不写 _wakeup.md，唤醒由大鱼负责
                 }
                 var wakeFile = worldDir + "/" + dir + "/_wakeup.md";
+                // ③ 挂死识别：上一轮已写过唤醒信号但角色未 ack（没改名 _acked）+ 仍无产出 → 挂死，需人工干预
+                //    （挂起 bash 感知不到 _wakeup.md，唤醒无效——升级为 STUCK + 写老渣干预信号）
+                if (fs.existsSync(wakeFile)) {
+                    console.log("STUCK " + roleName + " (心跳stale + 唤醒未确认 + 无产出——挂死，需人工干预)");
+                    logMonitor("STUCK " + roleName);
+                    try {
+                        var _ivFile = base + "/我的世界/大鱼_老渣对讲/需人工干预_" + roleName + ".md";
+                        if (!fs.existsSync(_ivFile)) {
+                            var _ivContent = "# 需人工干预: " + roleName + "\n\n" +
+                                "- 时间: " + new Date().toISOString() + "\n" +
+                                "- 现象: 心跳 stale + 唤醒信号未确认 + 无新产出（挂死，疑似 bash 长等 / heredoc 挂起 / 回合异常）\n" +
+                                "- 建议动作: 去该角色窗口按 Ctrl+C 中断挂起命令；或重启 reasonix code（进入角色目录跑 reasonix code，输入「进入角色」）\n";
+                            fs.writeFileSync(_ivFile, _ivContent, "utf8");
+                            console.log("INTERVENE " + roleName + " -> 大鱼_老渣对讲/需人工干预_" + roleName + ".md");
+                        }
+                    } catch(_iv) {}
+                    return; // 不重复写唤醒（上一轮已写，无效）
+                }
                 // 防竞争：写 _wakeup.md 前重读心跳——角色可能刚好恢复
                 try {
                     var hbNow = parseHeartbeat(fs.readFileSync(hbFile, "utf8"));
