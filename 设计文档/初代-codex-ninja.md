@@ -370,7 +370,7 @@ flowchart TD
 │   └── 大鱼_老渣对讲/  # 大鱼跟老渣的通信频道
 └── {角色名}/           # 各角色的独立窗口目录
     ├── AGENTS.md       #   从 角色_AGENTS模板 生成（含 reasonix.toml 配置）
-    ├── reasonix.toml   #   bash_timeout=0 + [sandbox] workspace_root=项目根
+    ├── reasonix.toml   #   bash_timeout=0 + [sandbox] workspace_root=我的世界（沙箱收紧 2026-08-03）
     ├── _reasonix_poll.js  # Reasonix 单次探测轮询（bash while 驱动，主用）
     ├── _poll.js        #   轮询工具（Shell备用）
     ├── _sign.js        #   签字工具（Shell备用）
