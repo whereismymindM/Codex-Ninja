@@ -26,7 +26,15 @@ try { fs.mkdirSync(talkDir, { recursive: true }); } catch(e) {}
 function log(msg) {
   try {
     var ts = new Date().toISOString().substring(11, 19);
-    fs.appendFileSync(path.join(talkDir, roleName + "_轮询日志.md"), "[" + ts + "] " + msg + "\n", "utf8");
+    // 提案5：log 去重——连续相同消息只写一次（待命期收工检测每次 poll 都写同一条，17条/分钟 → 1条）
+    // 文件级去重（poll 是单次进程，进程内去重无效）
+    var _logFile = path.join(talkDir, roleName + "_轮询日志.md");
+    try {
+      var _prev = fs.readFileSync(_logFile, "utf8").trim().split("\n");
+      var _last = _prev[_prev.length - 1] || "";
+      if (_last.indexOf(msg) !== -1) return; // 与上一条相同 → 跳过
+    } catch(_de) {}
+    fs.appendFileSync(_logFile, "[" + ts + "] " + msg + "\n", "utf8");
     // 操作日志（2026-08-02 优化：不靠角色自觉，脚本自动写关键动作）
     // 供老渣/大鱼实时排查"角色卡在哪"，与流水账（角色退场前全程总结）互补
     fs.appendFileSync(path.join(talkDir, roleName + "_操作日志.md"), "[" + ts + "] " + msg + "\n", "utf8");

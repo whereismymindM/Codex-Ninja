@@ -61,7 +61,7 @@ while (true) {
                 if (fnSelf) {
                     try {
                         var _rcSelf = fs.readFileSync(_rpSelf, "utf8");
-                        if (/size:\s*0\b/.test(_rcSelf)) console.log("OUTPUT-WARN " + fnSelf + " .ready 显示 size=0——空交付！");
+                        if (/size:\s*0\b/.test(_rcSelf)) console.log("OUTPUT-WARN " + fnSelf + " .ready 显示 size=0——空交付（收工审计将标红）！");
                     } catch(_rmS) {}
                 }
             }
@@ -241,8 +241,8 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                 try {
                     var _rfp = outDirPath + "/" + fn.trim() + ".ready";
                     var _rc = fs.readFileSync(_rfp, "utf8");
-                    if (/size:\s*0\b/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 显示 size=0——空交付！");
-                    else if (!/size:/.test(_rc) && !/source:/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 无 metadata（旧版或非标准交付）");
+                    if (/size:\s*0\b/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 显示 size=0——空交付（收工审计将标红）！");
+                    else if (!/size:/.test(_rc) && !/source:/.test(_rc)) console.log("OUTPUT-WARN " + fn.trim() + " .ready 无 metadata（旧版或非标准交付，收工审计将标红）");
                 } catch(_rm) {}
             });
         }
