@@ -23,7 +23,7 @@ var N = 1;
 if (fs.existsSync(stateFile)) {
     try {
         var state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-        if (state.N && typeof state.N === "number") N = state.N;
+        if (state.N && Number.isInteger(state.N) && state.N >= 1) N = state.N; // 第四轮修复：校验正整数，防 公告牌_1.5.md 永久 WAIT
     } catch (e) { /* 状态文件损坏，从1开始 */ }
 }
 // 顶层 try-catch：monitor 自身异常不盲飞
@@ -33,7 +33,9 @@ while (true) {
     var bf = base + "/我的世界/公告牌_" + String(N).padStart(3, "0") + ".md";
     if (!fs.existsSync(bf)) break; // 公告牌不存在 → 当前N就是正确轮次
     // 检查该轮是否已完成（所有活跃角色签字 + 产出就位）
-    var boardContent = fs.readFileSync(bf, "utf8");
+    // 第四轮修复：自检 readFileSync 包 try——读失败视为当前轮未完成（break 交主流程处理，主流程 :117 有 READ_ERR 保护）
+    var boardContent;
+    try { boardContent = fs.readFileSync(bf, "utf8"); } catch(_sb) { break; }
     // Count active roles from bulletin (regex just to count, not to build paths)
     // 只扫公告牌头部（任务: 之前的角色声明区），避免任务描述里的"状态：活跃"文本被误匹配
     var headerPart = boardContent.split(/\n- 任务[:：]/)[0];
@@ -65,9 +67,9 @@ while (true) {
     if (hasActive && !hasOutSelf) allDone = false; // 活跃轮漏写产出行 → 视为未完成（与主判断一致，避免自检跳过）
     // P2-10: 收工轮特殊处理——公告牌格式为「角色（状态：退场）」，正则匹配角色行（角色名后紧跟全角括号，无空格）
     if (!hasActive && allDone) {
-        var isRetire = /模式[：:]\s*收工/.test(boardContent) || /·\s*收工/.test(boardContent);
+        var isRetire = /模式[：:]\s*收工/.test(boardContent) || /(?:^|\n)\s*·\s*收工/.test(boardContent); // 第四轮修复：·收工 锚定行首，防任务描述含"· 收工"误判
         if (isRetire) {
-            var retireRe = /- (.+?)[（(→]/g; // H8 修复：兼容半角括号
+            var retireRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第四轮修复：状态限定——只有含"状态：退场/休眠"的行才是角色行，`- 备注（补充）: xxx` 类字段行不再被当角色；H8 兼容半角括号
             var retireMatch;
             allDone = true;
             while ((retireMatch = retireRe.exec(boardContent)) !== null) {
@@ -95,9 +97,9 @@ if (!fs.existsSync(boardFile)) {
         // 复核补充：readFileSync 包 try（与 M-1 同类）——读失败跳过收工回看，走 WAIT（安全）；monitor 重跑幂等
         var prevContent;
         try { prevContent = fs.readFileSync(prevBoard, "utf8"); } catch(_pb) {}
-        if (prevContent && (/模式[：:]\s*收工/.test(prevContent) || /·\s*收工/.test(prevContent))) {
+        if (prevContent && (/模式[：:]\s*收工/.test(prevContent) || /(?:^|\n)\s*·\s*收工/.test(prevContent))) {
             // 上一轮是收工，检查退场文件
-            var retireRe = /- (.+?)[（(→]/g; // H8 修复：兼容半角括号
+            var retireRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第四轮修复：状态限定——只有含"状态：退场/休眠"的行才是角色行，`- 备注（补充）: xxx` 类字段行不再被当角色；H8 兼容半角括号
             var retireMatch, allRetired = true;
             while ((retireMatch = retireRe.exec(prevContent)) !== null) {
                 var roleName = retireMatch[1].trim().replace(/^组[A-Z]\s*[:：]\s*/, ""); // H8 修复：先剥离组前缀再过滤
@@ -127,13 +129,18 @@ var allRe = /- (.+?)[（(]/g; // H8 修复：兼容半角括号
 var m;
 var am;
 while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
-while ((am = allRe.exec(headerPart)) !== null) { var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); allRoles.push(arn); }
+while ((am = allRe.exec(headerPart)) !== null) {
+    var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, '');
+    // 第四轮修复：字段行黑名单——带括号的字段行（如 `- 模式: 收工（全员确认）`）不当角色，防收工轮查不存在的退场文件卡死
+    if (arn === "模式" || arn === "任务" || arn === "产出" || arn === "产出负责人" || arn === "任务目录" || arn === "辩论轮数" || arn.indexOf(":") !== -1 || arn.indexOf("：") !== -1) continue;
+    allRoles.push(arn);
+}
 
 // 1. 签字 & 休眠/退场检查
 var allRetired = true; // 收工轮用：所有角色是否都写了退场文件（或休眠文件，两者都验）
 if (activeRoles.length === 0) {
     // 无活跃角色：可能是收工轮（全员退场），也可能是待命轮（全员待命、无产出）
-    var isRetireRound = /模式[：:]\s*收工/.test(board) || /·\s*收工/.test(board);
+    var isRetireRound = /模式[：:]\s*收工/.test(board) || /(?:^|\n)\s*·\s*收工/.test(board); // 第四轮修复：·收工 锚定行首
     if (!isRetireRound) {
         // H2 修复：待命轮不要求退场文件——输出 STANDBY 供大鱼识别（避免误报 SIGN [收工]/RETIRE MISS），并阻止误判 DONE
         console.log("STANDBY N=" + N);
@@ -239,7 +246,9 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         } else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
     } else {
         // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
-        var readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : [];
+        // 第四轮修复：readdirSync 包 try（目录并发被删时不 CRASH）
+        var readyFiles = [];
+        try { readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rd) {}
         ready = readyFiles.length > 0;
         console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717"));
     }
@@ -270,11 +279,14 @@ if (fs.existsSync(worldDir)) {
         var replyPath = fullDir + "/" + f.replace("大鱼对话", "大鱼回复");
         // H3 修复：大鱼已写具体回复则不覆盖（自动回复仅作兜底，避免覆盖/抢占大鱼的具体回复）
         if (!fs.existsSync(replyPath)) {
-            fs.writeFileSync(replyPath + ".tmp", "大鱼收到，继续按公告牌行动", "utf8");
-            fs.renameSync(replyPath + ".tmp", replyPath);
+            // 第四轮修复：包 try——writeFileSync/renameSync 并发失败不 CRASH（Windows rename 目标已存在抛 EPERM）
+            try {
+                fs.writeFileSync(replyPath + ".tmp", "大鱼收到，继续按公告牌行动", "utf8");
+                fs.renameSync(replyPath + ".tmp", replyPath);
+            } catch(_hr) {}
         }
-            // 处理完改名，下次不重复读
-            fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_已处理");
+            // 处理完改名，下次不重复读（第四轮修复：并发双跑 renameSync ENOENT 不 CRASH）
+            try { fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_已处理"); } catch(_hr2) {}
         });
     });
 }
@@ -322,8 +334,11 @@ if (fs.existsSync(worldDir)) {
                         return; // 角色刚恢复，不写唤醒文件
                     }
                 } catch(_e2) {}
-                fs.writeFileSync(wakeFile, "auto-wakeup: heartbeat timeout " + Math.round(hbAge/1000) + "s", "utf8");
-                console.log("WAKE " + roleName + " -> _wakeup.md");
+                // 第四轮修复：写唤醒文件包 try——写失败不 CRASH（下一轮 monitor 会重试）
+                try {
+                    fs.writeFileSync(wakeFile, "auto-wakeup: heartbeat timeout " + Math.round(hbAge/1000) + "s", "utf8");
+                    console.log("WAKE " + roleName + " -> _wakeup.md");
+                } catch(_wf) { console.log("WARN 写唤醒文件失败: " + _wf.message); }
             }
         } catch(_e) { /* heartbeat corrupt, skip */ }
         // 死锁检测——角色超时写了_deadlock.md -> 读公告牌找搭档 -> 唤醒搭档
@@ -340,13 +355,22 @@ if (fs.existsSync(worldDir)) {
               for (var __i = 0; __i < __lines.length; __i++) {
                 var __l = __lines[__i];
                 if (__l.indexOf(__role) !== -1 && __l.indexOf("搭档") !== -1) {
-                  var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)(?=[，,;；\)）]|\s*$)/); // L12 修复：搭档名在行尾（无尾随分隔符）也能匹配
+                  var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)(?=[，,;；\)）。！？]|\s*$)/); // L12 修复：搭档名在行尾/句号结尾也能匹配；第四轮修复：补句号终止符
                   if (__m && __m[1]) {
                     var __partner = __m[1].trim();
                     console.log("DEADLOCK partner=" + __partner);
                     var __pw = worldDir + "/" + __partner + "_大鱼对讲/_wakeup.md";
-                    fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8");
-                    console.log("WAKE " + __partner + " (deadlock)");
+                    // 第四轮修复：写唤醒前重读搭档心跳——刚恢复则跳过（与主唤醒路径 :318 一致）
+                    var __partnerAlive = false;
+                    try {
+                        var __phb = parseHeartbeat(fs.readFileSync(worldDir + "/" + __partner + "_大鱼对讲/_heartbeat.txt", "utf8"));
+                        if (!isNaN(__phb) && Date.now() - __phb < 30000) __partnerAlive = true;
+                    } catch(_ph) {}
+                    if (__partnerAlive) {
+                        console.log("SKIP " + __partner + " (just recovered, deadlock)");
+                    } else {
+                        try { fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8"); console.log("WAKE " + __partner + " (deadlock)"); } catch(_pw2) {}
+                    }
                   }
                   break;
                 }

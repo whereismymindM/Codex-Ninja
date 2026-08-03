@@ -142,7 +142,7 @@ function checkRetire() {
   if (fs.existsSync(curFile)) {
     try {
       var bc = fs.readFileSync(curFile, "utf8");
-      if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
+      if (/模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(bc)) { // 第四轮修复：·收工 锚定行首，防任务描述含"· 收工"误判提前退场
         log("收工轮 N=" + lastN);
         console.log("RETIRED N=" + lastN);
         process.exit(2);

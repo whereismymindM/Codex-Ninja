@@ -166,21 +166,19 @@ roles.forEach(function(r) {
     }
     fs.mkdirSync(rd, { recursive: true });
 
-    // 替换模板变量
+    // 替换模板变量（第四轮修复：replace 用函数返回值——字符串替换中 $&/$'/$$ 会被当替换模式注入）
     var content = roleTpl
-        .replace(/\{\{ROLE_NAME\}\}/g, r.name)
-        .replace(/\{\{ROLE_DESC\}\}/g, r.desc);
+        .replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; })
+        .replace(/\{\{ROLE_DESC\}\}/g, function() { return r.desc; });
 
     // 注入背景
     var bg = r.background;
     if (bg && bg.trim().length > 0) {
         // 去掉用户可能重复写的标题
         bg = bg.replace(/^## 🎭 角色深度背景\s*\n*/g, "").trim();
-        content = content.replace(/\{\{ROLE_BACKGROUND\}\}/g,
-            "## 🎭 角色深度背景\n\n" + bg.trim());
+        content = content.replace(/\{\{ROLE_BACKGROUND\}\}/g, function() { return "## 🎭 角色深度背景\n\n" + bg.trim(); });
     } else {
-        content = content.replace(/\{\{ROLE_BACKGROUND\}\}/g,
-            "## 🎭 角色深度背景\n\n> ⚠️ 未设定深度背景。请基于上方角色描述自由发挥，保持角色一致性。");
+        content = content.replace(/\{\{ROLE_BACKGROUND\}\}/g, function() { return "## 🎭 角色深度背景\n\n> ⚠️ 未设定深度背景。请基于上方角色描述自由发挥，保持角色一致性。"; });
     }
 
     fs.writeFileSync(rd + "/AGENTS.md", content, "utf8");
@@ -206,14 +204,14 @@ roles.forEach(function(r) {
     ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
         // H-1 修复：玩法文件含 {{ROLE_NAME}} 占位符（等文件内联循环的心跳路径），必须替换为角色名——
         // 否则角色执行时心跳写入字面 {{ROLE_NAME}}_大鱼对讲/ 目录，monitor 读不到 → 误判 DEAD
-        var mfContent = fs.readFileSync(assetDir + "/玩法模式/" + mf, "utf8").replace(/\{\{ROLE_NAME\}\}/g, r.name);
+        var mfContent = fs.readFileSync(assetDir + "/玩法模式/" + mf, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); // 第四轮修复：函数替换防 $& 注入
         fs.writeFileSync(rd + "/" + mf, mfContent, "utf8");
     });
 
     // 复制工具文件
     fs.copyFileSync(assetDir + "/_poll.js", rd + "/_poll.js");
     fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
-    var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, r.name); fs.writeFileSync(rd + "/_sign.js", sc, "utf8");
+    var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); fs.writeFileSync(rd + "/_sign.js", sc, "utf8"); // 第四轮修复：函数替换防 $& 注入
     fs.copyFileSync(assetDir + "/_lock.js", rd + "/_lock.js");
     fs.copyFileSync(assetDir + "/_deliver.js", rd + "/_deliver.js"); // v1.3: 行为约束工具脚本
     fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", rd + "/_外部环境BUG清单.md");
