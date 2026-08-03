@@ -16,8 +16,8 @@ description: |
 
 你是老渣。你的武器是公告牌，不是键盘。
 
-- 你写公告牌文件，一次性写完，放大鱼目录
-- 大鱼逐轮搬运到 我的世界/，不改一字
+- 你写公告牌文件，一次性写完，放大鱼目录（`火影-大鱼/`）
+- 大鱼校验后全量发布到 我的世界/，不改一字（有待命轮则扣留收工轮）
 - 你在旁边窗口盯场救火、看产出、陪故国有明聊天
 - 读到本 Skill 的就是老渣，不是大鱼
 
@@ -27,19 +27,21 @@ description: |
 
 ### 1. 定角色，写 roles.json
 
-从灵魂舱读角色背景，写临时 roles.json。name=公告牌名，desc=名片，background=深度背景。
+从灵魂舱（`大鱼号/灵魂舱/{角色名}/灵魂.md`，仓库外目录）读角色背景，写临时 roles.json。name=公告牌名，desc=名片，background=深度背景。
 
 ### 2. 跑 scaffold
 
-node scaffold.js 项目目录 roles.json        # init
-node scaffold.js 项目目录 roles.json add    # add
-node scaffold.js 项目目录 fish              # fish
+```bash
+node <skill路径>/scripts/scaffold.js <项目根目录> roles.json        # init（全新项目，项目根=我的世界的上级，如 一号舱室-软件开发部）
+node <skill路径>/scripts/scaffold.js <项目根目录> roles.json add    # add（追加角色，不碰大鱼和monitor）
+node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fish（重建大鱼，window=窗口常驻/run=run拉起）
+```
 
-add 不碰大鱼和 monitor。跑完删 roles.json。
+跑完删 roles.json。
 
 ### 3. 部署团队须知
 
-复制 团队须知/AGENTS.md 到角色窗口父级目录。scaffold 自动生成角色模板。
+scaffold init 已自动把 `团队须知/AGENTS.md` 复制到项目根目录（= 我的世界/ 的上级，如 一号舱室-软件开发部）。仅 add 模式需手动补复制。
 
 ### 4. 写公告牌
 
@@ -47,38 +49,28 @@ add 不碰大鱼和 monitor。跑完删 roles.json。
 
 ### 5. 开窗口，盯场
 
-- 大鱼窗口 + N 个角色窗口，各输入 进入角色
+- 大鱼窗口 + N 个角色窗口，各进入角色目录运行 `reasonix code`，然后输入第一句话「进入角色」
 - 你在旁边盯场救火
+- 形态选择：协作复杂用**窗口常驻**（`reasonix code`，推荐）；简单/串行或角色多资源紧用 **run 拉起**（`reasonix run --continue`，见 启动指南.md）
 
 ---
 
-## 三种运行模式
+## 两种运行形态（选一）
 
-### turn 内循环（E 模式，全自动首选）
+### 窗口常驻（推荐，协作复杂）
 
-一个回合内跑完全部轮次：角色 `reasonix run` 启动后回合内循环 等牌→干活→等牌→收工，**无人值守、零外部触发**。前置：角色 reasonix.toml 配 `bash_timeout_seconds = 0`（scaffold 自动生成）+ 公告牌全量发布。已实测（单回合 25 分钟跑完 3 轮项目）。
-详见 启动指南.md「E 模式启动命令」与「"永久轮询"的实现机制与边界」。
+N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js 轮询公告牌自己推进。大鱼窗口也常驻，负责发布/monitor/扣留收工轮。
+详见 启动指南.md「形态一：窗口常驻」。
 
-### 经典多窗口（角色>=3、大项目>2h）
+### run 拉起（简单/串行、角色多资源紧）
 
-N 个角色各开独立窗口，bash while + _reasonix_poll.js 轮询公告牌。
+大鱼按需 `reasonix run --continue` 拉起角色，干完即退（0 进程）。角色不常驻。
+详见 启动指南.md「形态二：run 拉起」。
 
-### 外部调度器（无人值守、永久运行）
-
-独立 Node 进程 while true 调度，分步交替踹角色。支持单人/双人/主笔/辩论全模式。
-详见阅览室 reasonix版本升级路线/升级方案_双路线_A与B.md
-> ⏸️ 状态：已交付 v7，**备用暂缓**（方案E 为主路线；D 保留为并行/强隔离兜底）
-
-### Multi-pass solo（小项目<2h、代码审查）
+### 补充模式：Multi-pass solo（小项目<2h、代码审查）
 
 不需要大鱼和公告牌。一个窗口顺序换帽子，终审交叉验证。
 玩法：assets/_Multi-pass_solo.md
-
-| 规模 | 耗时 | 推荐 |
-|------|------|------|
-| 小 | <30min | solo |
-| 中 | 30min-2h | turn 内循环（E）或经典多窗口 |
-| 大 | >2h | turn 内循环（E，串行）；多角色并行需求用外部调度器（D，备用） |
 
 ---
 
@@ -91,6 +83,7 @@ N 个角色各开独立窗口，bash while + _reasonix_poll.js 轮询公告牌�
 | assets/模板/大鱼_AGENTS模板_窗口常驻.md | 大鱼模板（窗口常驻形态，reasonix code） |
 | assets/模板/大鱼_AGENTS模板_run拉起.md | 大鱼模板（run 拉起形态，调度唤醒） |
 | assets/模板/Reasonix版_角色_AGENTS模板.md | 角色模板（Reasonix版） |
+| 启动指南.md | 启动流程（窗口常驻/run拉起 两形态 + "永久轮询"机制） |
 | assets/_reasonix_poll.js | Reasonix轮询脚本 |
 | assets/完整示例_RSS摘要系统.md | 5角色6轮实战 |
 | assets/_外部环境BUG清单.md | 中文环境避坑 |
