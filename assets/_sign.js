@@ -26,6 +26,7 @@ var signFile = signDir + "/完成_" + String(N).padStart(3, "0") + ".md";
 // ⚠️ L14 说明：若签错轮/内容错误需要重签，先手动删除旧签字文件再运行本脚本（已有有效签字不会自动覆盖）
 if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
     console.log("SIGNED (已存在): " + signFile + " (" + fs.statSync(signFile).size + " 字节)");
+    try { fs.appendFileSync(signDir + "/" + roleName + "_操作日志.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + " (already signed)\n", "utf8"); } catch(_lg2) {} // A-2 行为日志
     process.exit(0);
 }
 var content = "# " + roleName + " · 第" + N + "轮签字\n\n" + (msg || "已完成。") + "\n";
@@ -40,6 +41,7 @@ for (var attempt = 1; attempt <= maxRetries; attempt++) {
         // 自检验证：确认文件真的写入了
         if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
             console.log("SIGNED: " + signFile + " (" + content.length + " 字节)");
+            try { fs.appendFileSync(signDir + "/" + roleName + "_操作日志.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + "\n", "utf8"); } catch(_lg) {} // A-2 行为日志
             process.exit(0);
         }
         console.log("WARN: 签字文件存在但可能不完整，重试 " + attempt + "/" + maxRetries);

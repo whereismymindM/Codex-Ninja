@@ -74,6 +74,20 @@ if (taskDirHint) {
 
 var outputDir = projRoot + "/我的世界/产出/" + taskDir;
 
+// A-2 修复：行为日志——交付动作写一行到角色操作日志（实弹反馈 #2：干活过程对脚本不可见，只有 poll 事件）
+function _logAction(actionMsg) {
+    try {
+        var _ag = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
+        var _rm = _ag.match(/^# (.+)$/m);
+        var _rn = _rm ? _rm[1].trim() : "";
+        if (!_rn) return;
+        var _logDir = path.resolve(__dirname, "..", "我的世界", _rn + "_大鱼对讲");
+        fs.mkdirSync(_logDir, { recursive: true });
+        var _ts = new Date().toISOString().substring(11, 19);
+        fs.appendFileSync(_logDir + "/" + _rn + "_操作日志.md", "[" + _ts + "] " + actionMsg + "\n", "utf8");
+    } catch(_lg) {}
+}
+
 // === 路径兜底校验 ===
 if (outputDir.indexOf("/我的世界/产出/") === -1 && outputDir.indexOf("\\我的世界\\产出\\") === -1) {
     console.error("DELIVER_ERR: 产出路径异常——" + outputDir + " 不在 我的世界/产出/ 下。请确认公告牌的任务目录字段是否正确。");
@@ -90,3 +104,4 @@ fs.writeFileSync(readyFile + ".tmp", _dlContent, "utf8");
 fs.renameSync(readyFile + ".tmp", readyFile);
 console.log("SIGNAL: " + readyFile + " 已就绪");
 console.log("DELIVERED: " + fileName + " (" + outputDir + ")");
+_logAction("DELIVER " + fileName + " -> " + outputDir); // A-2 行为日志

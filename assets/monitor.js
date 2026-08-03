@@ -323,9 +323,40 @@ if (fs.existsSync(worldDir)) {
             var hbAge = Date.now() - hbTime;
             // F 模式下放宽到 10 分钟（角色干完即退后心跳停是正常态），且不自动写唤醒
             var timeoutMs = F_SCHEDULED ? 10 * 60 * 1000 : HEARTBEAT_TIMEOUT_MS;
+            // A-1 修复（实弹测试：贾维斯 bash sleep 等文件时心跳断 → 误判 DEAD 5+ 次）：
+            // DEAD 判定前检查「心跳超时窗口内是否有新产出/对话文件」——角色在干活（写文件）而心跳没更新 = 活着，不算 DEAD。
+            // 心跳不能单独作为死亡证据（大鱼审计建议："DEAD 应结合该窗口内无新产出文件判定"）。
             if (hbAge > timeoutMs) {
                 var roleName = dir.replace("_大鱼对讲", "");
-                console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale)");
+                var hasRecentOutput = false;
+                try {
+                    // 扫 我的世界/产出 与 我的世界/任务* 下最近 timeoutMs 内修改的文件
+                    var _scanDirs = [worldDir + "/产出"];
+                    try {
+                        var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^任务\d+/.test(td); });
+                        _taskDirs.forEach(function(td) { _scanDirs.push(worldDir + "/" + td); });
+                    } catch(_ts) {}
+                    var _cutoff = Date.now() - timeoutMs;
+                    function _scanRecent(dir) {
+                        var entries;
+                        try { entries = fs.readdirSync(dir); } catch(e) { return; }
+                        for (var i = 0; i < entries.length; i++) {
+                            var full = dir + "/" + entries[i];
+                            try {
+                                var st = fs.statSync(full);
+                                if (st.isDirectory()) { _scanRecent(full); }
+                                else if (st.mtimeMs > _cutoff) { hasRecentOutput = true; return; }
+                            } catch(e) {}
+                        }
+                    }
+                    _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
+                } catch(_sc) {}
+                if (hasRecentOutput) {
+                    // 角色在写文件（干活中），心跳只是没同步——视为活着，不 DEAD 不唤醒
+                    console.log("SKIP " + roleName + " (心跳超时但窗口内有新产出文件——干活中)");
+                    return;
+                }
+                console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale, no recent output)");
                 if (F_SCHEDULED) {
                     console.log("SKIP " + roleName + " (F-mode: 大鱼调度决定是否唤醒)");
                     return; // F 模式：不写 _wakeup.md，唤醒由大鱼负责
