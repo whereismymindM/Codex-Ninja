@@ -109,6 +109,28 @@ codex-ninja/
 
 `设计文档/初代-codex-ninja.md` 包含完整的设计理念、三方协作时序图、各模式流程图、机制详解和审核检查清单。修改 Skill 前先读它。
 
+## 分支说明
+
+```
+main (v1.0.5) ──┐   历史主干（v1.0.x 时代，已冻结）
+dev (v1.0.6) ───┤
+                │
+reasonix (初代迁移线) ──  Codex → Reasonix 平台迁移
+   ├─ reasonix-d   方案分支：D 版（+4 提交，未合并，历史残留）
+   └─ reasonix-e   = reasonix（内容一致）
+                │
+reasonix-f (当前主线) ───  稳定基线（e2e 纳入仓库 2eab352）
+   │
+   ├─ test-实弹修复      +16 提交：实弹事故修复（heredoc/心跳/沙箱/扣留基线/收工轮字段行）
+   ├─ test-loopN         +17：= 实弹修复 + _reasonix_poll --loop N
+   └─ test-monitor-alert +21：= loopN + 警告栏/监控日志/挂死识别/流程体验报告
+```
+
+**约定**：
+- `reasonix-f` = 稳定主线，只有验收过的改动才合入；测试分支一律从它分叉、线性延伸，**不平行乱岔**
+- 测试分支（test-*）可自由提交/验证/跑 e2e；**何时合并回 reasonix-f 由用户决定**，不主动 merge
+- 旧分支（main/dev/reasonix/reasonix-d/reasonix-e）为历史存档，不再维护
+
 ## 测试（e2e）
 
 `e2e/`（本仓库独立子目录，已纳入 git）含端到端自检脚本，覆盖全部玩法模式（单人/双人/主笔/辩论/待命/收工）+ 系统机制（心跳/锁/唤醒/死锁/断点续接/扣留/追加链）。**修改 Skill 后跑一遍确认无回归**：
