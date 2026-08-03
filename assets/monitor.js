@@ -6,6 +6,14 @@ var fs = require("fs");
 // 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，我的世界/ 在 monitor.js 同级
 var base = __dirname;
 
+// ② 监控日志：monitor 每次运行追加一行到 我的世界/监控日志.md（历史流水，可追溯每周期检测轨迹）
+function logMonitor(summary) {
+  try {
+    var _ts = new Date().toISOString().substring(11, 19);
+    fs.appendFileSync(base + "/我的世界/监控日志.md", "[" + _ts + "] " + summary + "\n", "utf8");
+  } catch(e) {}
+}
+
 // 心跳时间戳解析：兼容 毫秒 / 秒 / ISO 字符串（角色可能写任意格式，2026-08-02 实测修复）
 function parseHeartbeat(raw) {
     var s = String(raw || "").trim();
@@ -120,15 +128,15 @@ if (!fs.existsSync(boardFile)) {
                 var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(rf) && !fs.existsSync(sf)) { allRetired = false; break; }
             }
-            if (allRetired) { console.log("DONE N=" + prevN); process.exit(0); }
+            if (allRetired) { console.log("DONE N=" + prevN); logMonitor("DONE N=" + prevN); process.exit(0); }
         }
     }
-    console.log("WAIT N=" + N); process.exit(0);
+    console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
 }
 
 var board;
 try { board = fs.readFileSync(boardFile, "utf8").replace(/^\uFEFF/, ""); } // P2-6+P0-4: BOM+异常保护
-catch (e) { console.log("READ_ERR " + boardFile + ": " + e.message); process.exit(0); }
+catch (e) { console.log("READ_ERR " + boardFile + ": " + e.message); logMonitor("READ_ERR " + boardFile); process.exit(0); }
 
 // 解析活跃角色——这轮谁在干活
 var activeRoles = [];
@@ -500,7 +508,7 @@ if (!outputReady && activeRoles.length > 0) {
 // 5. 判断（收工轮额外检查退场文件）
 // 产出优先检查 + mtime快速复检已在前面完成
 if (outputReady && allRetired) {
-    console.log("DONE N=" + N);
+    console.log("DONE N=" + N); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
     try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1 }), "utf8"); } catch (e) {}
 } else {
