@@ -6,6 +6,10 @@
 ---
            —— 初代 --reasonix-f 方案F 大鱼调度 ——
 
+## 2026-08-03（第五轮修复：复核确认 2 项）
+- **monitor allRoles 状态限定**：主流程收工分支改用与自检一致的 `状态：退场/休眠` 限定正则——`- 备注（补充）: xxx` 等任意自定义字段行不再被当角色（黑名单只覆盖已知 6 字段，限定正则根治）
+- **H-1 迁移提示**：修复前生成的角色目录玩法文件残留 `{{ROLE_NAME}}`（等文件内联循环心跳写错目录→误判 DEAD）。scaffold add 对已存在角色 SKIP 不覆盖，升级角色 = 删除该角色目录重跑 scaffold 生成——见 启动指南.md「前置配置」角色目录版本同步提示
+
 ## 2026-08-03（第四轮修复：第三轮审查遗漏项——代码组中危 10 项）
 - **monitor 收工轮字段行黑名单**：retireRe 状态限定（只认 `状态：退场/休眠` 行）+ allRoles 加黑名单——`- 模式: 收工（...）`/`- 备注（补充）: xxx` 等带括号字段行不再被当角色（修复前收工轮卡死）
 - **monitor 健壮性**：HELP 自动回复 writeFileSync/renameSync 包 try（Windows rename EPERM/双跑 ENOENT 不再 CRASH）；写唤醒文件包 try；格式B readdirSync 包 try；自检 readFileSync 包 try；state.N 正整数校验

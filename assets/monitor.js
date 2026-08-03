@@ -125,7 +125,7 @@ var activeRoles = [];
 var allRoles = [];
 var headerPart = board.split(/\n- 任务[:：]/)[0];
 var re = /- (.+?)[（(].*状态[:：]\s*活跃/g; // P1-2: 同时匹配全角和半角括号
-var allRe = /- (.+?)[（(]/g; // H8 修复：兼容半角括号
+var allRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第五轮修复：allRoles 状态限定（与自检 retireRe 一致）——`- 备注（补充）: xxx` 等自定义字段行不再被当角色（黑名单只覆盖已知 6 字段，限定正则根治任意字段行）
 var m;
 var am;
 while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
