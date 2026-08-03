@@ -27,6 +27,8 @@ var taskDir;
 
 // 快速路径：传了任务目录名 → 跳过公告牌扫描
 if (taskDirHint) {
+    // L-11 修复：净化任务目录名（禁分隔符/..）——防路径穿越写出项目根
+    taskDirHint = taskDirHint.replace(/[\\/]/g, "_").replace(/\.\./g, "_");
     taskDir = taskDirHint;
     console.log("DELIVER_FAST: 跳过公告牌扫描，直接定位 " + taskDirHint);
 } else {

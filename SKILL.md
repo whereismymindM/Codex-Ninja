@@ -85,6 +85,10 @@ N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js �
 | assets/模板/Reasonix版_角色_AGENTS模板.md | 角色模板（Reasonix版） |
 | 启动指南.md | 启动流程（窗口常驻/run拉起 两形态 + "永久轮询"机制） |
 | assets/_reasonix_poll.js | Reasonix轮询脚本 |
+| assets/_工具速查.md | 工具用法速查（按老渣/大鱼/角色分类） |
+| assets/_隐患清单.md | 已知隐患与修复记录 |
+| assets/monitor.js | 大鱼周期验证监控脚本 |
+| assets/_wakeup.js | 大鱼唤醒角色工具 |
 | assets/完整示例_RSS摘要系统.md | 5角色6轮实战 |
 | assets/_外部环境BUG清单.md | 中文环境避坑 |
 

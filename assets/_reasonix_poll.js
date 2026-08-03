@@ -90,6 +90,8 @@ if (curMtime === lastMtime) {
     console.log("BULLETIN N=" + lastN);
     process.exit(0);
   }
+  // M-16 修复：快路径同样执行收工检查——断点续接/重启场景下，当前轮已是收工轮且目录 mtime 无变化时也能感知退场
+  checkRetire();
   console.log("TIMEOUT N=" + lastN);
   process.exit(3);
 }
@@ -109,19 +111,8 @@ if (fs.existsSync(nextFile)) {
   process.exit(0);
 }
 
-// ── 4. 收工检查 ──
-var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
-if (fs.existsSync(curFile)) {
-  // M-1 修复：readFileSync 包 try——文件在 existsSync 与读取之间被移走/锁定时，未捕获异常会以 exit 1 退出被误判为"被唤醒"；读失败视为无收工信号继续
-  try {
-    var bc = fs.readFileSync(curFile, "utf8");
-    if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
-      log("收工轮 N=" + lastN);
-      console.log("RETIRED N=" + lastN);
-      process.exit(2);
-    }
-  } catch(e) {}
-}
+// ── 4. 收工检查 ──（M-16：提取为公共函数，快路径/慢路径共用）
+checkRetire();
 
 // ── 5. 唤醒检查（慢路径）──
 if (fs.existsSync(wakeFile)) {
@@ -142,6 +133,23 @@ process.exit(3);
 //     用 _hb_state.json 记录上次写入时间，避免每次调用都写磁盘
 //     休眠默认 15s 间隔（2min 超时下 8x 安全边际）
 //     --standby 模式 30s 间隔（2min 超时下 4x 安全边际）
+
+// ── 收工检查（M-16：快/慢路径共用）──
+//     读当前轮公告牌，若是收工轮（模式: 收工）→ 退出码 2（RETIRED）
+//     M-1：readFileSync 包 try——文件在 existsSync 与读取之间被移走/锁定时，未捕获异常会以 exit 1 退出被误判为"被唤醒"；读失败视为无收工信号继续
+function checkRetire() {
+  var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
+  if (fs.existsSync(curFile)) {
+    try {
+      var bc = fs.readFileSync(curFile, "utf8");
+      if (/模式[：:]\s*收工|·\s*收工/.test(bc)) {
+        log("收工轮 N=" + lastN);
+        console.log("RETIRED N=" + lastN);
+        process.exit(2);
+      }
+    } catch(e) {}
+  }
+}
 function writeHeartbeat() {
   var HB_INTERVAL_MS = isStandby ? 30_000 : 15_000;
   var hbStateFile = path.join(talkDir, "_hb_state.json");

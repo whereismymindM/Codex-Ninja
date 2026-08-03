@@ -10,7 +10,7 @@ var projectDir = process.argv[2];
 
 // L15 修复：缺少项目目录参数时直接报错，避免相对 CWD 污染
 if (!projectDir) {
-    console.error("ERROR: 缺少项目目录参数（第一个参数）——用法: node scaffold.js <项目目录> [roles.json] [init|add|fish]");
+    console.error("ERROR: 缺少项目目录参数（第一个参数）——用法: node scaffold.js <项目目录> <roles.json> [add]  或  node scaffold.js <项目目录> fish [window|run]");
     process.exit(1);
 }
 

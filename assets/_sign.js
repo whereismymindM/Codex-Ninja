@@ -8,7 +8,9 @@ var path = require("path");
 var N = process.argv[2];
 var msg = process.argv[3] || "";
 
-if (!N) { console.log("用法: node _sign.js <轮次号> [消息]"); process.exit(1); }
+// L-13 修复：N 必须是数字——否则生成 完成_abc.md，monitor 永远等不到
+if (!N || isNaN(parseInt(N, 10))) { console.log("用法: node _sign.js <轮次号> [消息]"); process.exit(1); }
+N = parseInt(N, 10);
 
 // 角色名由scaffold在生成时焊死，不读AGENTS.md——省掉readFileSync+正则，防系统负载超时
 var roleName = "{{ROLE_NAME}}";

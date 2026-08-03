@@ -36,6 +36,14 @@ var wakeContent = '# 大鱼唤醒信号\n\n' +
   '- 原因: ' + reason + '\n' +
   '- 操作: 收到后立即切回活跃模式，删除本文件确认收到\n';
 
+// L-12 修复：已有未确认的 _wakeup.md 时不覆盖（可能是 monitor 自动唤醒），追加补充原因保留原信号
+if (fs.existsSync(wakeFile)) {
+  fs.appendFileSync(wakeFile, '\n- 补充唤醒 (' + timestamp + '): ' + reason + '\n');
+  console.log('WAKEUP(append): ' + roleName + '（已有唤醒信号，追加原因）');
+  console.log('文件: ' + wakeFile);
+  process.exit(0);
+}
+
 // 原子写入
 fs.writeFileSync(wakeFile + '.tmp', wakeContent, 'utf8');
 fs.renameSync(wakeFile + '.tmp', wakeFile);

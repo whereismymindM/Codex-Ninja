@@ -96,7 +96,10 @@ codex-ninja/
 │   ├── monitor.js           # 大鱼周期验证监控
 │   ├── _reasonix_poll.js    # Reasonix 单次探测轮询
 │   ├── _poll.js             # Shell 备用轮询
-│   ├── _sign.js / _lock.js / _deliver.js / _wakeup.js
+│   ├── _sign.js             # 签字工具
+│   ├── _lock.js             # 文件锁
+│   ├── _deliver.js          # 交付工具
+│   └── _wakeup.js           # 唤醒工具
 ├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）
 ├── 设计文档/                 # 设计理念与机制详解
 └── 团队须知/                # 注入所有角色窗口的通用规则

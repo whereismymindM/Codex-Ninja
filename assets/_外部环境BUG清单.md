@@ -19,20 +19,6 @@
 
 ---
 
-### BUG 13：Reasonix 桌面闪退（磁盘 I/O 过载）
-
-**现象**：两个角色同时 poll 公告牌时，Reasonix 桌面突然关闭（不报错、不留日志）。
-**根因**：_poll.js 频繁读写磁盘，两个进程并发 → I/O 饱和 → Reasonix 进程被系统杀掉。
-**发生条件**：经典模式，2+ 角色窗口同时 active poll。
-**规避方案**：
-- _poll.js 实际间隔：首轮 3s、渐进放缓（3/5/8/12/20/30s），低功耗固定 3s——多角色并发时用内置 0-1.5s 随机抖动错开相位
-- 遇到闪退后重开窗口即可恢复（公告牌和产出文件不受影响）
-- 如果频繁闪退，改 _poll.js 的 intervals 数组（如整体上调至 5s 起），或给两个角色配不同 --phase（如 0 与 1300ms）
-
----
-
----
-
 ## BUG 1：node -e 内联 + 中文 = 灾难 [最严重]
 
 **现象**：用 `node -e` 执行包含中文的 JavaScript 代码时，Node 报 `SyntaxError: Unexpected identifier` 或 `Unterminated string constant`。
@@ -186,7 +172,6 @@ console.log(content.substring(content.length - 2000));
 **核心原则：在 PowerShell 环境下，凡是涉及中文内容的操作，一步到位用 Node.js + 临时 .js 文件——别跟 `node -e` 较劲。**
 
 ---
----
 
 > BUG 8：历史编号已废弃删除（内容并入其他条目）。编号不再重排以保持既有引用稳定。
 
@@ -289,3 +274,15 @@ fs.writeFileSync("file.py", newContent, "utf8");
 **更好的方案：优先用行级精确操作**——长文本修改不依赖全文 replace，而是：定位到目标行号→精确替换该行，或按章节标题 split→只改目标段落→再 join。
 
 **核心原则：replace() 不可信——每次调用后必须自检 newContent !== content，不自检=在空气里挥拳。**
+
+---
+
+## BUG 13：Reasonix 桌面闪退（磁盘 I/O 过载）
+
+**现象**：两个角色同时 poll 公告牌时，Reasonix 桌面突然关闭（不报错、不留日志）。
+**根因**：_poll.js 频繁读写磁盘，两个进程并发 → I/O 饱和 → Reasonix 进程被系统杀掉。
+**发生条件**：经典模式，2+ 角色窗口同时 active poll。
+**规避方案**：
+- _poll.js 实际间隔：首轮 3s、渐进放缓（3/5/8/12/20/30s），低功耗固定 3s——多角色并发时用内置 0-1.5s 随机抖动错开相位
+- 遇到闪退后重开窗口即可恢复（公告牌和产出文件不受影响）
+- 如果频繁闪退，改 _poll.js 的 intervals 数组（如整体上调至 5s 起），或给两个角色配不同 --phase（如 0 与 1300ms）

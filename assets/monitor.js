@@ -280,7 +280,7 @@ if (fs.existsSync(worldDir)) {
 }
 
 
-// 3.5 心跳检测（心跳检测）：检查所有角色心跳文件，超时自动唤醒
+// 3.5 心跳检测：检查所有角色心跳文件，超时自动唤醒
 var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
 // 运行形态判定：看 火影-大鱼/_运行形态.mode（scaffold fish 命令写入）
 //   = "run" → run拉起（角色干完即退，心跳停是正常态）；否则 → 窗口常驻（心跳停=掉线，自动唤醒）
@@ -326,7 +326,7 @@ if (fs.existsSync(worldDir)) {
                 console.log("WAKE " + roleName + " -> _wakeup.md");
             }
         } catch(_e) { /* heartbeat corrupt, skip */ }
-        // 死锁检测: 死锁检测——角色超时写了_deadlock.md -> 读公告牌找搭档 -> 唤醒搭档
+        // 死锁检测——角色超时写了_deadlock.md -> 读公告牌找搭档 -> 唤醒搭档
                 var __dlFile = worldDir + "/" + dir + "/_deadlock.md";
         if (fs.existsSync(__dlFile)) {
           try {
@@ -421,5 +421,5 @@ if (outputReady && allRetired) {
 
 } catch(e) {
     console.log("CRASH " + e.message);
-  process.exit(1);
+    process.exit(1);
 }

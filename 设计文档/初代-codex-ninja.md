@@ -369,11 +369,16 @@ flowchart TD
 │   │   └── {角色名}已退场_NNN
 │   └── 大鱼_老渣对讲/  # 大鱼跟老渣的通信频道
 └── {角色名}/           # 各角色的独立窗口目录
-    ├── AGENTS.md       #   从 角色_AGENTS模板 生成
+    ├── AGENTS.md       #   从 角色_AGENTS模板 生成（含 reasonix.toml 配置）
+    ├── reasonix.toml   #   bash_timeout=0 + [sandbox] workspace_root=项目根
+    ├── _reasonix_poll.js  # Reasonix 单次探测轮询（bash while 驱动，主用）
     ├── _poll.js        #   轮询工具（Shell备用）
     ├── _sign.js        #   签字工具（Shell备用）
     ├── _lock.js        #   文件锁（Shell备用）
-    └── _deliver.js     #   交付工具（Shell备用）
+    ├── _deliver.js     #   交付工具（Shell备用）
+    ├── _wakeup.js      #   唤醒参考工具（角色不用，供测试）
+    ├── _外部环境BUG清单.md  # 环境坑清单
+    └── _双人对话模式.md 等   # 4 个玩法文件（已注入角色名）
 ```
 
 ## 七、关键参数速查

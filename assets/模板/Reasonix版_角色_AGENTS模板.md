@@ -61,7 +61,7 @@ while true; do
   # 等待下一轮公告牌 | 被唤醒 | 收工
   result=$(node _reasonix_poll.js "{{ROLE_NAME}}" <当前N>)
   code=$?
-  
+
   case $code in
     0) # BULLETIN N=X — 新公告牌就位，读牌干活
         read_bulletin → 状态=活跃? 干活签字 : 继续轮询 ;;

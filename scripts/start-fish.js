@@ -48,7 +48,7 @@ var MAX_RESTARTS = 5;
 var restartCount = 0;
 
 function start() {
-    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", "500", prompt], {
+    var child = spawn(RX, ["run", "--dir", fishDir, "--model", (process.env.DEFAULT_MODEL || "deepseek-v4-flash"), "--max-steps", (process.env.FISH_MAX_STEPS || "500"), prompt], {
         cwd: fishDir,
         shell: true,
         stdio: "inherit"
@@ -78,4 +78,19 @@ function start() {
     });
 }
 
-start();
+// L-14 修复：启动前先探测 reasonix 可用性——shell:true 下 spawn 的 error 事件几乎不触发，
+// 不探活的话 reasonix 缺失会走 5 次无意义重启才报"超过最大重启次数"，诊断信息错位
+var probe = spawn(RX, ["version"], { shell: true, stdio: "ignore" });
+probe.on("error", function(err) {
+    console.error("reasonix 不可用: " + err.message);
+    console.error("请确认 reasonix 已安装且在 PATH，或设置 REASONIX_CMD 指向 reasonix.cmd 绝对路径");
+    process.exit(1);
+});
+probe.on("exit", function(code) {
+    if (code !== 0) {
+        console.error("reasonix version 探测失败（退出码=" + code + "）——请确认 reasonix 可用后重试");
+        process.exit(1);
+    }
+    console.log("reasonix 探测通过，启动大鱼调度者...");
+    start();
+});

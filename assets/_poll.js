@@ -15,13 +15,15 @@ var args = process.argv.slice(2);
 // --max-wait N：最多等N秒后超时退出（P0-1修复）
 var maxWaitIdx = args.indexOf("--max-wait");
 var maxWaitSec = 0;
+var maxWaitSpecified = false; // L-9 修复：允许显式 0（立即超时），不被 || 吞成默认值
 if (maxWaitIdx !== -1) {
     // L16 修复：--max-wait 缺数值时报错退出——避免 parseInt(undefined)=NaN→0 且 splice 误删后续参数导致 targetFile 丢失
     if (args[maxWaitIdx + 1] === undefined || isNaN(parseInt(args[maxWaitIdx + 1], 10))) {
         console.log("用法: --max-wait 需要一个数值参数（秒），如 --max-wait 600");
         process.exit(1);
     }
-    maxWaitSec = parseInt(args[maxWaitIdx + 1], 10) || 0;
+    maxWaitSec = parseInt(args[maxWaitIdx + 1], 10);
+    maxWaitSpecified = true;
     args.splice(maxWaitIdx, 2);
 }
 
@@ -71,9 +73,10 @@ var readyFile = readyMode ? targetFile + ".ready" : null;
 var wakeFile = (lowPowerMode && wakeupDir) ? path.join(wakeupDir, "_wakeup.md") : null;
 
 // 如果没指定 --max-wait，默认最多等 600 秒（10分钟），低功耗模式默认8秒（短超时防卡死）
-if (maxWaitSec <= 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗8s（短超时），正常模式600s
+// L-9 修复：显式传 0 = 立即超时；负数/未指定 → 默认值
+if (!maxWaitSpecified || maxWaitSec < 0) maxWaitSec = lowPowerMode ? 8 : 600; // 低功耗8s（短超时），正常模式600s
 
-var startTime = Date.now();
+var startTime;
 
 var elapsed = 0;
 // 渐进式间隔：首轮快速响应，逐步放缓
@@ -111,6 +114,8 @@ if (lowPowerMode) {
 if (phaseMs > 0) {
     safeSleep(phaseMs / 1000);
 }
+// L-10 修复：startTime 在抖动/相位之后才计时——jitter/phase 不算入超时预算，实际等待时间不缩水
+startTime = Date.now();
 while (true) {
     elapsed = Math.floor((Date.now() - startTime) / 1000);
 
@@ -131,7 +136,7 @@ while (true) {
         process.exit(3); // exit code 3 = 被唤醒
     }
 
-    
+
     // M4 修复：targetFile 检查每次循环直接 existsSync（开销可忽略），不依赖目录 mtime 门控——
     // 覆盖写已存在文件不更新目录 mtime，旧的门控会让"等文件更新"的调用方永远等不到
     if (fs.existsSync(targetFile)) {
