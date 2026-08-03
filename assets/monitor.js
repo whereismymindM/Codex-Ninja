@@ -284,9 +284,11 @@ try {
 if (fs.existsSync(worldDir)) {
     fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
         // M2 修复：已退场角色跳过心跳检测——退场后心跳停是正常态，不应被唤醒
+        // （复核修正：indexOf 用 !== -1——退场文件名是 {角色名}已退场_NNN，不以"已退场_"开头，=== 0 恒 false 等于没修）
+        // 注意：不查 已休眠_——休眠是中间态，心跳停=角色真死，monitor 必须靠心跳检测写 _wakeup.md 唤醒它
         try {
             var _dirEntries = fs.readdirSync(worldDir + "/" + dir);
-            if (_dirEntries.some(function(f) { return f.indexOf("已退场_") === 0; })) return;
+            if (_dirEntries.some(function(f) { return f.indexOf("已退场_") !== -1; })) return;
         } catch(_e7) {}
         var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";
         if (!fs.existsSync(hbFile)) return;
