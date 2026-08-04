@@ -63,6 +63,15 @@ function checkRetire() {
     try {
       var bc = fs.readFileSync(curFile, "utf8");
       if (/模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(bc)) { // 第四轮修复：·收工 锚定行首，防任务描述含"· 收工"误判提前退场
+        // 5-1 修复（升级计划第 3 条，2026-08-04 第五轮）：当前轮是收工轮，但本角色已写过退场文件（{角色}已退场_{N} 或 .acked）=
+        // 该收工轮已处理过——不应再返回 RETIRED（会误导角色跳号空等），按"无事发生"继续等下一张新牌
+        // 第五轮实测：图灵/DHH 收工后 poll 收工轮返回 RETIRED 后错误 N+1 跳号，004 晚 7 秒发布 → 空等 10 分钟
+        try {
+          var exitMarker = path.join(talkDir, roleName + "已退场_" + String(lastN).padStart(3, "0"));
+          if (fs.existsSync(exitMarker) || fs.existsSync(exitMarker + ".acked")) {
+            return null; // 已处理过该收工轮 → 继续等下一张牌（公告牌_(lastN+1) 检测在前）
+          }
+        } catch(e) {}
         log("收工轮 N=" + lastN);
         console.log("RETIRED N=" + lastN);
         return 2;

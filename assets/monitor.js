@@ -98,8 +98,8 @@ while (true) {
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + Npad;
                 var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
-                // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）
-                if (!fs.existsSync(retireFile) && !fs.existsSync(sleepFile)) { allDone = false; break; }
+                // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）；4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
+                if (!fs.existsSync(retireFile) && !fs.existsSync(retireFile + ".acked") && !fs.existsSync(sleepFile) && !fs.existsSync(sleepFile + ".acked")) { allDone = false; break; }
             }
         }
     }
@@ -126,7 +126,7 @@ if (!fs.existsSync(boardFile)) {
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
                 var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
-                if (!fs.existsSync(rf) && !fs.existsSync(sf)) { allRetired = false; break; }
+                if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked")) { allRetired = false; break; } // 4 修复：兼容 .acked
             }
             if (allRetired) { console.log("DONE N=" + prevN); logMonitor("DONE N=" + prevN); process.exit(0); }
         }
@@ -170,6 +170,8 @@ if (activeRoles.length === 0) {
         allRoles.forEach(function(role) {
             var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
             var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
+            // 4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
+            var retireAcked = retireFile + ".acked", sleepAcked = sleepFile + ".acked";
             // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
             var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
         var hbForce = false;
@@ -180,7 +182,7 @@ if (activeRoles.length === 0) {
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) hbForce = true;
           }
         } catch(_e4) {}
-        if (fs.existsSync(retireFile) || fs.existsSync(sleepFile) || hbForce) {
+        if (fs.existsSync(retireFile) || fs.existsSync(retireAcked) || fs.existsSync(sleepFile) || fs.existsSync(sleepAcked) || hbForce) {
             console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : ""));
             // 2026-08-02 优化：流水账覆盖校验——退场角色应有全程总结（≥2 行：至少一轮 + 退场），
             // 不足标 ⚠️（不阻塞退场，提醒角色复盘漏写）

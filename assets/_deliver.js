@@ -95,8 +95,19 @@ if (outputDir.indexOf("/我的世界/产出/") === -1 && outputDir.indexOf("\\�
 }
 fs.mkdirSync(outputDir, { recursive: true });
 
+// 5-6 修复（升级计划 5-6，2026-08-04）：fileName 含 / 时视为子路径——在 outputDir 下建子目录，.ready 与源文件同目录
+// 例：deliver("lib/validate-patterns.js", ...) → 产出/任务NNN/lib/validate-patterns.js.ready（之前斜杠被拼进文件名，语义丢失）
+var readySubDir = outputDir;
+var readyName = fileName;
+if (fileName.indexOf("/") !== -1 || fileName.indexOf("\\") !== -1) {
+    var _parts = fileName.split(/[\\/]/);
+    readyName = _parts.pop();
+    readySubDir = outputDir + "/" + _parts.join("/");
+    fs.mkdirSync(readySubDir, { recursive: true });
+}
+
 // deliver 只写 .ready 信号，不搬运文件。文件自行就位。
-var readyFile = outputDir + "/" + fileName + ".ready";
+var readyFile = readySubDir + "/" + readyName + ".ready";
 // B-4 修复：metadata 证据链（producer/size/mtime）+ 文档类存在性校验（收工审计可读 .ready 内容验证交付质量）
 // ⚠️ T12 陷阱防护：sourcePath（代码类产出，目标在源目录不在 产出/）跳过存在性检查——只加 producer metadata
 var _dlContent = "OK " + new Date().toISOString();
@@ -107,13 +118,13 @@ try {
     var _producer = _rm2 ? _rm2[1].trim() : "";
     if (_producer) _dlContent += "\nproducer: " + _producer;
     if (!sourcePath) {
-        var _target = outputDir + "/" + fileName;
+        var _target = readySubDir + "/" + readyName;
         try {
             var _tst = fs.statSync(_target);
             _dlContent += "\nsize: " + _tst.size + "\nmtime: " + _tst.mtimeMs;
-            if (_tst.size === 0) console.log("DELIVER_WARN: 目标文件 " + fileName + " 大小为 0——内容可能未写入");
+            if (_tst.size === 0) console.log("DELIVER_WARN: 目标文件 " + readyName + " 大小为 0——内容可能未写入");
         } catch(_tnf) {
-            console.log("DELIVER_WARN: 目标文件 " + fileName + " 不存在于 " + outputDir + "——deliver 只发信号，内容文件需先写入！");
+            console.log("DELIVER_WARN: 目标文件 " + readyName + " 不存在于 " + readySubDir + "——deliver 只发信号，内容文件需先写入！");
         }
     }
 } catch(_lg3) {}
