@@ -128,6 +128,12 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/_wakeup.js", wakeupPath);
     console.log("OK: _wakeup.js (" + fs.statSync(wakeupPath).size + " bytes)");
 
+    // 7-1 修复：_fish_loop.js —— 大鱼周期验证循环（公告牌检测 30s + monitor 60s），
+    // 第七轮实测发现缺失（大鱼只能自补临时版）——必须随 scaffold 部署
+    var fishLoopPath = fishDir + "/_fish_loop.js";
+    fs.copyFileSync(assetDir + "/_fish_loop.js", fishLoopPath);
+    console.log("OK: _fish_loop.js (" + fs.statSync(fishLoopPath).size + " bytes)");
+
     // _外部环境BUG清单.md —— 大鱼模板引用 ./_外部环境BUG清单.md，必须复制到位
     var bugListPath = fishDir + "/_外部环境BUG清单.md";
     fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListPath);
@@ -165,7 +171,8 @@ if (!isAddMode) {
         [assetDir + "/_sign.js", "_sign.js"],
         [assetDir + "/_lock.js", "_lock.js"],
         [assetDir + "/_poll.js", "_poll.js"],
-        [assetDir + "/_wakeup.js", "_wakeup.js"]
+        [assetDir + "/_wakeup.js", "_wakeup.js"],
+        [assetDir + "/_fish_loop.js", "_fish_loop.js"]
     ];
     snapFiles.forEach(function(pair) {
         try {
