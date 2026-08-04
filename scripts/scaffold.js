@@ -172,7 +172,8 @@ if (!isAddMode) {
         [assetDir + "/_lock.js", "_lock.js"],
         [assetDir + "/_poll.js", "_poll.js"],
         [assetDir + "/_wakeup.js", "_wakeup.js"],
-        [assetDir + "/_fish_loop.js", "_fish_loop.js"]
+        [assetDir + "/_fish_loop.js", "_fish_loop.js"],
+        [assetDir + "/wait_file.js", "wait_file.js"]
     ];
     snapFiles.forEach(function(pair) {
         try {
@@ -251,6 +252,8 @@ roles.forEach(function(r) {
     fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", rd + "/_外部环境BUG清单.md");
     // _wakeup.js 也放角色目录——虽然不是角色用，但方便测试和参考
     fs.copyFileSync(assetDir + "/_wakeup.js", rd + "/_wakeup.js");
+    // 7-5 沉淀：wait_file.js 标准等文件脚本 → 角色 临时脚本/（乔布斯体验报告建议）
+    fs.copyFileSync(assetDir + "/wait_file.js", rd + "/临时脚本/wait_file.js");
 
     console.log("OK: " + r.name + (bg ? " (含深度背景 " + bg.length + " 字符)" : ""));
 });

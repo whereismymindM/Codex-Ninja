@@ -43,6 +43,7 @@
 - 干完一轮**不要**输出结束语、**不要**输出最终回复——回到循环等下一轮公告牌
 - 每轮 poll 一次即可，**不要**用 while 阻塞等待（bash 等待期间你看不到输出，阻塞 = 无法干活）
 - **🔑 等文件禁止 bash 长等（heredoc 挂死教训，辩论实弹）**：等搭档/依赖文件**禁止**用 `bash sleep 90` 盲等、**禁止**用 `bash heredoc <<'EOF' + node` 等（heredoc 引号/EOF 出错 → bash 永久挂起，bash_timeout=0 不砍 → 掉线误判 DEAD）。**一律用内联 Node 轮询**（下面"等文件内联轮询"代码块：0.5s 检查 + 30s 续心跳 + 20 分钟超时兜底）；确需自定义脚本 → 放 `临时脚本/` 且用内联循环结构
+- **🔧 优先用 `临时脚本/wait_file.js`（7-5 沉淀，第七轮乔布斯体验报告）**：标准等文件脚本已随 scaffold 分发到 `临时脚本/`（`node wait_file.js <目标> [目标2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check]`，退出码 0=就位/2=超时/3=父目录缺失）——比每次复制 40+ 行内联样板少出错面，且保留内联轮询+续心跳+超时兜底全部行为；不满足需求时才手写内联轮询
 - **🔧 等待脚本 CommonJS 化（5-3 修复，第五轮实测）**：内联轮询/自定义等待脚本**禁止 `require` + 顶层 `await` 混用**（Node 24 报 ERR_AMBIGUOUS_MODULE_SYNTAX 直接崩溃，图灵踩过）——统一 `async function main(){...}` + `main().catch(...)` 包装，或全部用 `await import()`（不混 require）
 - **🔧 禁 `/tmp` + 禁 heredoc 写正则（5-4 修复，第五轮实测）**：bash 的 `/tmp` 是 MSYS 虚拟路径，Node 原生解析成 `D:\tmp` 不存在 → ENOENT（林纳斯/DHH 都踩过）。**测试/临时文件一律写自己的 `临时脚本/`**；含正则/反斜杠/引号的内容**用 write_file 原生直写，禁 bash heredoc/`cat >`**（二次转义破坏正则语义，图灵坑 3/DHH 坑 1）
 **不遵守的后果（实弹事故 2026-08-03）**：档案管理员-贾维斯 在辩论中用 `bash heredoc + node` 等文件——heredoc 引号未闭合 → bash 永久挂起（`bash_timeout=0` 不砍）→ 心跳断 19 分钟 → monitor 误判 DEAD 写唤醒（挂起的 bash 感知不到）→ 搭档空等、辩论缺位、项目停滞——直到人工 Ctrl+C 才恢复。**违反此条 = 你自己和整个项目一起卡死，且没人能自动救你。**
@@ -116,7 +117,7 @@ while true; do
   node _reasonix_poll.js "{{ROLE_NAME}}" <当前N> --standby
   case $? in
     0) break ;;  # 新公告牌就位
-    1) break ;;  # 被唤醒
+    1) sleep 15 ;;  # 被唤醒：不 break——下一轮 poll 自然检查公告牌/收工轮（7-4 修复：monitor 可能在角色启动前写过 _wakeup.md，WOKEN 只是迟到的唤醒，继续循环防"假唤醒"反复打断待命）
     2) break ;;  # 收工
     3) sleep 15 ;; # TIMEOUT 继续循环
   esac
