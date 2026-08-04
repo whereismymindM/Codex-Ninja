@@ -178,6 +178,7 @@ function probeOnce() {
     var r1 = checkRetire();
     if (r1 !== null) return r1;
     console.log("TIMEOUT N=" + lastN);
+    console.log("⚠️ 未到收工轮前禁止结束回合——持续 poll（保持在场），收工轮(退出码2)才合法退场");
     return 3;
   }
 
@@ -213,6 +214,7 @@ function probeOnce() {
 
   // 无事发生
   console.log("TIMEOUT N=" + lastN);
+  console.log("⚠️ 未到收工轮前禁止结束回合——持续 poll（保持在场），收工轮(退出码2)才合法退场");
   return 3;
 }
 

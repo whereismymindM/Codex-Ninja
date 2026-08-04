@@ -5,7 +5,8 @@
  * 与"等文件禁止 bash 长等"铁律一致（本脚本本身是非阻塞内联轮询）。
  *
  * 用法：
- *   node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout <分钟>] [--parent-check]
+ *   node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout <分钟>] [--parent-check] [--any]
+ *   --any：任一目标就位即返回（默认=全部就位才返回）；辩论等"立论或终结谁先来"场景用
  *   单文件：  node wait_file.js ../我的世界/产出/任务003_改进方案/方案.md --hb ../我的世界/角色_大鱼对讲/_heartbeat.txt
  *   双文件：  node wait_file.js 路径A 路径B（两个都就位才算完成）
  *   --parent-check：等待前检查父目录存在（不存在 = 任务目录路径可能写错，立即报错，不静默等满超时）
@@ -13,6 +14,12 @@
  *
  * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则不写）
+ *
+ * 9-1 修复（2026-08-05 第九轮）：路径自动锚定，与 CWD 无关——
+ *   本脚本位于 {角色目录}/临时脚本/wait_file.js，用 __dirname 推导角色目录/项目根：
+ *     角色目录 = __dirname/.. ；项目根 = __dirname/../..
+ *   参数以 "../" 开头（相对角色目录写法）→ path.resolve(__dirname, "..", 参数) 自动转绝对路径；
+ *   绝对路径参数原样透传。无论角色 CWD 在哪（角色目录 / cd 进临时脚本 / 别处）路径都正确。
  *
  * CommonJS 同步实现（5-3 修复：禁 require+顶层 await 混用；同步 fs 最稳，无崩溃面）
  */
@@ -25,12 +32,14 @@ var targets = [];
 var hbFile = null;
 var timeoutMin = 20;
 var parentCheck = false;
+var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
 
 for (var i = 0; i < args.length; i++) {
   var a = args[i];
   if (a === "--hb") { hbFile = args[++i]; }
   else if (a === "--timeout") { timeoutMin = parseInt(args[++i], 10) || 20; }
   else if (a === "--parent-check") { parentCheck = true; }
+  else if (a === "--any") { anyMode = true; }
   else { targets.push(a); }
 }
 
@@ -38,6 +47,18 @@ if (targets.length === 0) {
   console.error("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳>] [--timeout 分钟] [--parent-check]");
   process.exit(2);
 }
+
+// ---- 9-1 路径锚定：相对角色目录（../开头）→ 绝对路径；与 CWD 无关 ----
+var roleDir = path.resolve(__dirname, "..");   // 角色目录 = 临时脚本/..
+function anchor(p) {
+  if (!p) return p;
+  // Windows 盘符绝对路径（D:\...）原样透传
+  if (/^[a-zA-Z]:[\/]/.test(p)) return p;
+  // 其余（../我的世界/X、我的世界/X、相对路径）统一锚定到角色目录
+  return path.resolve(roleDir, p);
+}
+targets = targets.map(anchor);
+if (hbFile) hbFile = anchor(hbFile);
 
 // ---- 父目录检查（提案2 fail-loud）----
 if (parentCheck) {
@@ -56,7 +77,9 @@ var deadline = startTs + timeoutMin * 60 * 1000;
 var lastHbTs = 0;
 
 function allReady() {
-  return targets.every(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } });
+  return anyMode
+    ? targets.some(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } })
+    : targets.every(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } });
 }
 
 // 先检查是否已就位（防"旧文件秒返"——调用方需自行确认目标当前不存在才该等）
