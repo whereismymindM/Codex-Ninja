@@ -76,6 +76,7 @@ function checkRetire() {
         } catch(e) {}
         log("收工轮 N=" + lastN);
         console.log("RETIRED N=" + lastN);
+        console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！（已到收工轮→创建退场文件→输出项目完成结束回合）");
         return 2;
       }
     } catch(e) {}
@@ -164,6 +165,8 @@ function probeOnce() {
       try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
       log("被唤醒（快路径）");
       console.log("WOKEN");
+  console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
+    console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 1;
     }
     // 快路径公告牌检查——全量发布下目录 mtime 不变，靠这里检测下一轮
@@ -178,7 +181,6 @@ function probeOnce() {
     var r1 = checkRetire();
     if (r1 !== null) return r1;
     console.log("TIMEOUT N=" + lastN);
-    console.log("⚠️ 未到收工轮前禁止结束回合——持续 poll（保持在场），收工轮(退出码2)才合法退场");
     return 3;
   }
 
@@ -206,6 +208,8 @@ function probeOnce() {
     try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
     log("被唤醒");
     console.log("WOKEN");
+  console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
+    console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 1;
   }
 
@@ -214,7 +218,6 @@ function probeOnce() {
 
   // 无事发生
   console.log("TIMEOUT N=" + lastN);
-  console.log("⚠️ 未到收工轮前禁止结束回合——持续 poll（保持在场），收工轮(退出码2)才合法退场");
   return 3;
 }
 
