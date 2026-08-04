@@ -120,7 +120,7 @@ reasonix run --dir ../{角色目录} --model deepseek-v4-flash --max-steps 120 "
 
 ## 周期验证（monitor）
 
-每 60s 跑一次 `node ../monitor.js`，看输出：
+**跑 `_fish_loop.js` 替代手动节奏**（升级计划第 2 条）：`node _fish_loop.js`——每 30s 检测公告牌源目录（发现新牌打印 NEW_BOARD 提示你去校验发布），每 60s 跑一次 `node ../monitor.js`，看输出：
 - WAIT + SIGN ✓ → 项目正常推进中，继续等
 - **STANDBY N=x** → 当前轮是待命轮（`模式: 待命`，无活跃角色、不要求退场文件）——项目在等通知/等补搬收工轮，继续等（属预期，不要当异常）
 - DONE → 项目完成（全员退场+产出就位），进入「收工」
