@@ -303,6 +303,15 @@ if (!fs.existsSync(wakeupDest)) {
     console.log("SKIP: _wakeup.js (already exists)");
 }
 
+// 7-2 补：复制_fish_loop.js到大鱼目录（init/add 模式同 fish 模式——第七轮实测 init 生成的大鱼也缺 _fish_loop.js）
+var fishLoopDest = fishDir + "/_fish_loop.js";
+if (!fs.existsSync(fishLoopDest)) {
+    fs.copyFileSync(assetDir + "/_fish_loop.js", fishLoopDest);
+    console.log("OK: 火影-大鱼/_fish_loop.js (new)");
+} else {
+    console.log("SKIP: _fish_loop.js (already exists)");
+}
+
 // 复制_外部环境BUG清单.md到大鱼目录（大鱼模板引用 ./_外部环境BUG清单.md）
 var bugListDest = fishDir + "/_外部环境BUG清单.md";
 if (!fs.existsSync(bugListDest)) {
