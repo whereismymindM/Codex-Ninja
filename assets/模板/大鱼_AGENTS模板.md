@@ -19,9 +19,9 @@
 ## 怎么生成大鱼
 
 1. 选形态（上面表格）
-2. 用对应模板生成 `火影-大鱼/AGENTS.md`：
+2. 用对应模板生成你的大鱼目录 `AGENTS.md`（如项目根下的大鱼文件夹）：
    - scaffold 支持：`node scaffold.js <项目根> fish window`（窗口常驻）或 `node scaffold.js <项目根> fish run`（run 拉起）
-   - 或手动把对应模板内容复制为 `火影-大鱼/AGENTS.md`
+   - 或手动把对应模板内容复制为你的大鱼目录 `AGENTS.md`
 3. 启动方式：
    - 窗口常驻：角色窗口 `reasonix code` 常驻；大鱼窗口也常驻（`reasonix code`）
    - run 拉起：只有大鱼常驻，角色按需被拉起

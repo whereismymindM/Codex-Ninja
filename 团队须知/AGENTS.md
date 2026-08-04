@@ -73,8 +73,8 @@
 > 💡 **工具函数**：`sign()` `deliver()` `lock()` 已定义在你的AGENTS.md里——直接 `await sign(N)` `await deliver(fname, task)`，**禁止手写这些逻辑**。
 >
 > 💡 **心跳机制**：`_reasonix_poll.js` 按 `_hb_state.json` 批量写心跳（待命 --standby 30s / 休眠 15s 间隔），monitor 据此判定存活。
-> 🔑 **心跳契约（提案4）**：`_heartbeat.txt` = monitor 读的心跳文件（存活判定）；`_hb_state.json` = poll 脚本自己的节流状态（陈旧正常，monitor 不读它）。写心跳一律写 `_heartbeat.txt`。
 > 🔑 **心跳契约（提案4）**：`_heartbeat.txt` = monitor 读的心跳文件（存活判定）；`_hb_state.json` = poll 脚本自己的节流状态（陈旧正常，monitor 不读它）。写心跳一律写 `_heartbeat.txt`。窗口常驻形态：2 分钟无心跳自动写 `_wakeup.md` 唤醒；run 拉起形态：角色干完即退心跳停是正常态，monitor 10 分钟才判且不自动唤醒（唤醒由大鱼调度负责）。角色不再主动检测大鱼心跳——monitor 由大鱼驱动执行，大鱼自身离线需人工发现/重启。
+> 🔑 **心跳离线认知（6-1 修正，纳特澄清）**：**回合结束/会话间隙（进程不在）心跳必然停——这是正常态，不是"待命断档"**。monitor 2 分钟无心跳会写 `_wakeup.md` 唤醒，你下次 poll（快路径）检测到才改名 `_acked.md` ack——唤醒积压到下次 poll 处理，期间心跳记录持续累积（如 805s）**不是异常，不需要你做什么**。待命轮询跑 `_reasonix_poll.js --standby`（15s 一次）心跳**持续在续不会断**——真正要防的只有"该跑脚本却裸 sleep 等"。
 >
 > 💡 **bash while 永动**：角色通过 bash while + node _reasonix_poll.js 持续轮询，不依赖 REPL。
 
