@@ -12,7 +12,7 @@
  *   --parent-check：等待前检查父目录存在（不存在 = 任务目录路径可能写错，立即报错，不静默等满超时）
  *   --timeout 默认 20 分钟（与模板兜底一致）
  *   --watch-hb <对方心跳文件>：等待中监控对方心跳（12-6 搭档失联检测）——对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4（防盲等，双人对话答方等问方用）
- *   --watch-hb-dead <分钟>：失联阈值，默认 2 分钟
+ *   --watch-hb-dead <分钟>：失联阈值，默认 15 分钟（心跳 stale 且对方目录无新文件才算失联）
  *
  * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
@@ -33,7 +33,7 @@ var args = process.argv.slice(2);
 var targets = [];
 var hbFile = null;
 var watchHbFile = null;
-var watchHbDeadMin = 2;
+var watchHbDeadMin = 15;   // 12-8：失联阈值默认 15 分钟（原 2 分钟太短——长思考/写长文件时心跳会停，2 分钟误判正常干活中的搭档）
 var timeoutMin = 20;
 var parentCheck = false;
 var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
@@ -46,14 +46,14 @@ for (var i = 0; i < args.length; i++) {
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
     console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
-    console.log("  --watch-hb-dead: 失联阈值分钟数（默认 2）");
+    console.log("  --watch-hb-dead: 失联阈值分钟数（默认 15）");
     console.log("  --timeout: 默认 20 分钟");
     console.log("  退出码: 0=就位 2=超时 3=父目录缺失 4=对方失联");
     process.exit(0);
   }
   if (a === "--hb") { hbFile = args[++i]; }
   else if (a === "--watch-hb") { watchHbFile = args[++i]; }
-  else if (a === "--watch-hb-dead") { watchHbDeadMin = parseInt(args[++i], 10) || 2; }
+  else if (a === "--watch-hb-dead") { watchHbDeadMin = parseInt(args[++i], 10) || 15; }
   else if (a === "--timeout") { timeoutMin = parseInt(args[++i], 10) || 20; }
   else if (a === "--parent-check") { parentCheck = true; }
   else if (a === "--any") { anyMode = true; }
@@ -129,8 +129,19 @@ while (Date.now() < deadline) {
       var _pRaw = fs.readFileSync(watchHbFile, "utf8");
       var _pTs = parseInt(String(_pRaw || "").trim(), 10);
       if (_pTs && Date.now() - _pTs > watchHbDeadMin * 60 * 1000) {
-        console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
-        process.exit(4);
+        // M7 宽容：心跳 stale 但对方最近 watchHbDeadMin 分钟内有新文件 = 在干活/长思考，不算失联（对齐 monitor A-1 判据）
+        var _pDir = path.dirname(watchHbFile);
+        var _working = false;
+        try {
+          var _cut = Date.now() - watchHbDeadMin * 60 * 1000;
+          _working = fs.readdirSync(_pDir).some(function(f) {
+            try { return fs.statSync(path.join(_pDir, f)).mtimeMs > _cut; } catch(_e) { return false; }
+          });
+        } catch(_ph2) {}
+        if (!_working) {
+          console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）且无新文件——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
+          process.exit(4);
+        }
       }
     } catch(_ph) {}
   }
