@@ -124,6 +124,13 @@ if (!fs.existsSync(boardFile)) {
         // 复核补充：readFileSync 包 try（与 M-1 同类）——读失败跳过收工回看，走 WAIT（安全）；monitor 重跑幂等
         var prevContent;
         try { prevContent = fs.readFileSync(prevBoard, "utf8"); } catch(_pb) {}
+        // 12-17 大鱼自检：回看竞态（WAIT N=4 抖动）——prevBoard 半写/瞬读失败时 prevContent 为空 → 跳过收工回看误报 WAIT；
+        //   补一次重读（500ms 缓冲，覆盖补搬瞬间/半写状态），仍失败才走 WAIT（安全，monitor 重跑幂等）
+        if (!prevContent) {
+            var _reWait = Date.now() + 500;
+            while (Date.now() < _reWait) { /* 短缓冲 */ }
+            try { prevContent = fs.readFileSync(prevBoard, "utf8"); } catch(_pb2) {}
+        }
         if (prevContent && (/模式[：:]\s*收工/.test(prevContent) || /(?:^|\n)\s*·\s*收工/.test(prevContent))) {
             // 上一轮是收工，检查退场文件
             var retireRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第四轮修复：状态限定——只有含"状态：退场/休眠"的行才是角色行，`- 备注（补充）: xxx` 类字段行不再被当角色；H8 兼容半角括号
