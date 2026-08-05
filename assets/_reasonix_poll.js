@@ -18,7 +18,7 @@ if (args.length < 2) {
 
 var roleName = args[0];
 var lastN = parseInt(args[1], 10) || 0;
-var isStandby = args[2] === "--standby";
+var isStandby = args.indexOf("--standby") !== -1;   // N-3 修复：indexOf 匹配，与 --loop 组合顺序无关
 // --loop N：进程内循环 N 次；缺省 = 1（单次，兼容）
 var loopCount = 1;
 var _li = args.indexOf("--loop");
@@ -132,6 +132,7 @@ function probeOnce() {
       var sigMtime = new Date(sigStat.mtimeMs).toISOString().substring(11, 19);
       log("信号命中 N=" + lastN + " → 公告牌_" + String(lastN).padStart(3, "0") + " 就位（大鱼发布: " + sigMtime + "）");
       console.log("BULLETIN N=" + lastN);
+      console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
     }
   } catch(e) {
@@ -165,8 +166,7 @@ function probeOnce() {
       try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
       log("被唤醒（快路径）");
       console.log("WOKEN");
-  console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
-    console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
+      console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 1;
     }
     // 快路径公告牌检查——全量发布下目录 mtime 不变，靠这里检测下一轮
@@ -175,6 +175,7 @@ function probeOnce() {
       lastN++;
       log("公告牌_" + String(lastN).padStart(3, "0") + " 就位（快路径）");
       console.log("BULLETIN N=" + lastN);
+      console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
     }
     // M-16 修复：快路径同样执行收工检查——断点续接/重启场景下，当前轮已是收工轮且目录 mtime 无变化时也能感知退场
@@ -196,6 +197,7 @@ function probeOnce() {
     lastN++;
     log("公告牌_" + String(lastN).padStart(3, "0") + " 就位");
     console.log("BULLETIN N=" + lastN);
+    console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 0;
   }
 
@@ -208,7 +210,6 @@ function probeOnce() {
     try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
     log("被唤醒");
     console.log("WOKEN");
-  console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 1;
   }

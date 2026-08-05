@@ -131,7 +131,7 @@ if (!fs.existsSync(boardFile)) {
             if (allRetired) { console.log("DONE N=" + prevN); logMonitor("DONE N=" + prevN); process.exit(0); }
         }
     }
-    console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
+    console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
 }
 
 var board;
