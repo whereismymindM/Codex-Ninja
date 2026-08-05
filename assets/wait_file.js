@@ -103,6 +103,15 @@ while (Date.now() < deadline) {
     try { fs.writeFileSync(hbFile, String(Date.now()), "utf8"); } catch(_e) {}
     lastHbTs = Date.now();
   }
+  // 11-2 修复（大鱼第十一轮审计）：唤醒盲区——等待中不跑 poll 循环，收不到 _wakeup.md，只能等超时（第十二轮前纳特/乔布斯/图灵互等 20 分钟，真正解卡是超时兜底不是唤醒信号）
+  // 循环内检测对讲目录的 _wakeup.md：存在 → 改名 _acked（ack）并打印提示（提示角色可能被要求改变等待目标/先手）
+  try {
+    var _wakeFile = hbFile ? hbFile.replace(/_heartbeat\.txt$/, "_wakeup.md") : null;
+    if (_wakeFile && fs.existsSync(_wakeFile)) {
+      try { fs.renameSync(_wakeFile, _wakeFile.replace(/\.md$/, "_acked.md")); } catch(_re) {}
+      console.log("WAKEUP_DETECTED: 收到唤醒信号（已 ack）——若提示改变等待目标/先手顺序，按提示调整后重新 wait_file");
+    }
+  } catch(_we) {}
   if (allReady()) {
     console.log("WAIT_DONE: 目标已就位（" + targets.join(", ") + "），等待耗时 " + Math.round((Date.now() - startTs) / 1000) + "s");
     process.exit(0);
