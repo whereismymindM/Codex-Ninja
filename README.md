@@ -8,6 +8,7 @@
 | 项目 | 说明 |
 |------|------|
 | 当前分支 | reasonix-f |
+| **运行环境** | **reasonix CLI v1.17.6-rc.1**（2026-08-05 实测；Skill 行为依赖该版本特性，升级 CLI 前先对照本表——`--loop`/`bash_timeout_seconds=0`/单会话常驻均以该版本为准） |
 | 形态 | 窗口常驻（reasonix code，推荐）+ run 拉起（reasonix run --continue，轻量） |
 | 核心能力 | 单次探测轮询 + 回合内循环（`bash_timeout_seconds=0` + 回合内不输出最终回复直到收工） |
 | 轮询方式 | bash while + node _reasonix_poll.js 单次探测；角色持续 poll 到收工轮 |
