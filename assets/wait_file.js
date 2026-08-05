@@ -36,6 +36,15 @@ var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"
 
 for (var i = 0; i < args.length; i++) {
   var a = args[i];
+  if (a === "--help" || a === "-h") {
+    console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any]");
+    console.log("  --any: 任一目标就位即返回（默认=全部就位）");
+    console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
+    console.log("  --hb: 每 30s 写心跳到指定文件");
+    console.log("  --timeout: 默认 20 分钟");
+    console.log("  退出码: 0=就位 2=超时 3=父目录缺失");
+    process.exit(0);
+  }
   if (a === "--hb") { hbFile = args[++i]; }
   else if (a === "--timeout") { timeoutMin = parseInt(args[++i], 10) || 20; }
   else if (a === "--parent-check") { parentCheck = true; }
