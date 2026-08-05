@@ -135,15 +135,18 @@ if (!fs.existsSync(boardFile)) {
             // 上一轮是收工，检查退场文件
             var retireRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第四轮修复：状态限定——只有含"状态：退场/休眠"的行才是角色行，`- 备注（补充）: xxx` 类字段行不再被当角色；H8 兼容半角括号
             var retireMatch, allRetired = true;
+            var _retireTotal = 0, _retireOk = 0; // 12-24 判定摘要：回看收工轮退场计数
             while ((retireMatch = retireRe.exec(prevContent)) !== null) {
+                _retireTotal++;
                 var roleName = retireMatch[1].trim().replace(/^组[A-Z]\s*[:：]\s*/, ""); // H8 修复：先剥离组前缀再过滤
                 // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不推进
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "任务目录" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
                 var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked")) { allRetired = false; break; } // 4 修复：兼容 .acked
+                _retireOk++;
             }
-            if (allRetired) { console.log("DONE N=" + prevN); logMonitor("DONE N=" + prevN); process.exit(0); }
+            if (allRetired) { console.log("DONE N=" + prevN + " (回看确认: 收工轮 全员退场 " + _retireOk + "/" + _retireTotal + ")"); logMonitor("DONE N=" + prevN); process.exit(0); } // 12-24 摘要
         }
     }
     console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
@@ -171,6 +174,8 @@ while ((am = allRe.exec(headerPart)) !== null) {
 }
 
 // 1. 签字 & 休眠/退场检查
+var outputProgress = []; // 12-24 判定摘要：各产出行就位进度 {ok, need, have}
+var missingRetireNames = []; // 12-24 判定摘要：收工轮未退场角色名单
 var allRetired = true; // 收工轮用：所有角色是否都写了退场文件（或休眠文件，两者都验）
 if (activeRoles.length === 0) {
     // 无活跃角色：可能是收工轮（全员退场），也可能是待命轮（全员待命、无产出）
@@ -217,7 +222,7 @@ if (activeRoles.length === 0) {
                 }
             } catch(_e6) {}
         }
-        else { console.log("RETIRE " + role + " MISS"); allRetired = false; }
+        else { console.log("RETIRE " + role + " MISS"); allRetired = false; missingRetireNames.push(role); } // 12-24 判定摘要：未退场角色收集
     });
     } // end isRetireRound
 } else {
@@ -293,6 +298,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                 } catch(_e5) { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
             } else { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
         } else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
+        outputProgress.push({ ok: ready, need: fileNames.length, have: ready ? fileNames.length : 0 }); // 12-24 摘要
     } else {
         // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
         // 第四轮修复：readdirSync 包 try（目录并发被删时不 CRASH）
@@ -305,8 +311,10 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         var _ownerEach = _ownerMatch && _ownerMatch[1].trim() === "各自";
         ready = _ownerEach ? readyFiles.length >= activeRoles.length : readyFiles.length > 0;
         console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717") + (_ownerEach ? " (" + readyFiles.length + "/" + activeRoles.length + " .ready)" : ""));
+        outputProgress.push({ ok: ready, need: _ownerEach ? activeRoles.length : 1, have: _ownerEach ? readyFiles.length : (ready ? 1 : 0) }); // 12-24 摘要
     }
     if (!ready) allOutputReady = false;
+    else outputReadyCount++; // 12-24 判定摘要：已就位产出行计数（WAIT 原因输出用）
 }
 if (outputCount > 0) outputReady = allOutputReady;
 // H2 修复：收工轮（isRetireRound）误写产出行不阻塞收工判定——monitor 对收工轮只看退场文件（与文档承诺一致）；
@@ -552,11 +560,21 @@ if (!outputReady && activeRoles.length > 0) {
 // 5. 判断（收工轮额外检查退场文件）
 // 产出优先检查 + mtime快速复检已在前面完成
 if (outputReady && allRetired) {
-    console.log("DONE N=" + N); logMonitor("DONE N=" + N);
+    // 12-24 判定摘要：DONE 带完成原因（大鱼不用读源码就懂）
+    var _doneWhy = isRetireRound ? ("全员退场 " + allRoles.length + "/" + allRoles.length) : ("产出就位 " + outputReadyCount + "/" + outputCount);
+    console.log("DONE N=" + N + " (" + _doneWhy + ")"); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
     try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1 }), "utf8"); } catch (e) {}
 } else {
-    console.log("WAIT N=" + N);
+    // 12-24 判定摘要：WAIT 带等待原因（大鱼 002 自检最卡②——"WAIT N=3 得读源码才懂"）
+    var _why = [];
+    if (!outputReady && outputProgress.length > 0) {
+        var _totNeed = 0, _totHave = 0;
+        outputProgress.forEach(function(_p) { _totNeed += _p.need; _totHave += _p.have; });
+        _why.push("产出 " + _totHave + "/" + _totNeed + " .ready 未就位");
+    }
+    if (isRetireRound && !allRetired) _why.push("收工轮 退场 " + (allRoles.length - missingRetireNames.length) + "/" + allRoles.length + " 缺 " + (missingRetireNames.join(",") || "?"));
+    console.log("WAIT N=" + N + (_why.length ? " (" + _why.join("; ") + ")" : "")); logMonitor("WAIT N=" + N);
 }
 
 } catch(e) {
