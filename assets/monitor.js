@@ -11,7 +11,10 @@ function logMonitor(summary) {
   try {
     var _ts = new Date().toISOString().substring(11, 19);
     fs.appendFileSync(base + "/我的世界/监控日志.md", "[" + _ts + "] " + summary + "\n", "utf8");
-  } catch(e) {}
+  } catch(e) {
+    // 12-14：不再静默吞——监控日志写入失败要可见（第三轮实测：约 8 分钟断档被 catch 吞掉，只能靠 _fish_loop.log 补证）
+    console.error("MONLOG_WARN: 监控日志写入失败: " + (e && e.message ? e.message : e) + " ——监控日志可能断档，以 _fish_loop.log 为准");
+  }
 }
 
 // 心跳时间戳解析：兼容 毫秒 / 秒 / ISO 字符串（角色可能写任意格式，2026-08-02 实测修复）
