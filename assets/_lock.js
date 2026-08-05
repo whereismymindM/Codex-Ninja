@@ -91,7 +91,7 @@ while (true) {
             if (elapsed > waitTimeout) { console.log("LOCK_TIMEOUT (等了 " + Math.floor(elapsed) + "s)"); process.exit(1); }
             console.log("LOCK_WAIT (已等" + Math.floor(elapsed) + "s / " + waitTimeout + "s)");
             heartbeatDuringWait(); // F-15 修复：等锁期间续心跳
-            // M9 修复：忙等 → Atomics.wait 真休眠（与 _poll.js safeSleep 一致），降级 100ms 切片兜底
+            // M9 修复：忙等 → Atomics.wait 真休眠（与 wait_file.js 一致），降级 100ms 切片兜底
             try {
                 var _sab = new SharedArrayBuffer(4);
                 var _view = new Int32Array(_sab);

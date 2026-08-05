@@ -176,7 +176,6 @@ if (!isAddMode) {
         [assetDir + "/_deliver.js", "_deliver.js"],
         [assetDir + "/_sign.js", "_sign.js"],
         [assetDir + "/_lock.js", "_lock.js"],
-        [assetDir + "/_poll.js", "_poll.js"],
         [assetDir + "/_wakeup.js", "_wakeup.js"],
         [assetDir + "/_fish_loop.js", "_fish_loop.js"],
         [assetDir + "/wait_file.js", "wait_file.js"]
@@ -250,7 +249,6 @@ roles.forEach(function(r) {
     });
 
     // 复制工具文件
-    fs.copyFileSync(assetDir + "/_poll.js", rd + "/_poll.js");
     fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
     var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); fs.writeFileSync(rd + "/_sign.js", sc, "utf8"); // 第四轮修复：函数替换防 $& 注入
     fs.copyFileSync(assetDir + "/_lock.js", rd + "/_lock.js");
