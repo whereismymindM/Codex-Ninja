@@ -83,7 +83,11 @@ while (true) {
             // F-10 修复：自检格式B readdirSync 包 try（目录并发被删不 CRASH，与主流程 :251 一致）
             var rfsSelf = [];
             try { rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rds) {}
-            if (rfsSelf.length === 0) { outOkSelf = false; break; }
+            // 12-15 大鱼自检：自检格式 B 同步严格判定——产出负责人=各自 时需 .ready ≥ 活跃角色数
+            //   （否则自检提前推进 N，主流程严格检查形同虚设——本轮 002 图灵先交、自检 15:25 判完成即此路径）
+            var _ownerSelf = boardContent.match(/\n- 产出负责人[:：]\s*(.+)/);
+            var _ownerEachSelf = _ownerSelf && _ownerSelf[1].trim() === "各自";
+            if (_ownerEachSelf ? rfsSelf.length < actCount : rfsSelf.length === 0) { outOkSelf = false; break; }
         }
     }
     if (hasOutSelf && !outOkSelf) allDone = false; // 有产出行但未就位 → 该轮未完成
@@ -285,10 +289,15 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     } else {
         // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
         // 第四轮修复：readdirSync 包 try（目录并发被删时不 CRASH）
+        // 12-15 大鱼自检：格式 B 判定过早——'产出负责人: 各自'（多角色共产出）时任一 .ready 就判完成，
+        //   会早于"语义完成"（本轮 002：图灵先交付 monitor 15:25 判完成，乔布斯/纳特 15:26 才交）。
+        //   修复：产出负责人=各自 → 需 .ready 数量 ≥ 活跃角色数；否则（单人产出）保持"任一即完成"。
         var readyFiles = [];
         try { readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rd) {}
-        ready = readyFiles.length > 0;
-        console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717"));
+        var _ownerMatch = board.match(/\n- 产出负责人[:：]\s*(.+)/);
+        var _ownerEach = _ownerMatch && _ownerMatch[1].trim() === "各自";
+        ready = _ownerEach ? readyFiles.length >= activeRoles.length : readyFiles.length > 0;
+        console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717") + (_ownerEach ? " (" + readyFiles.length + "/" + activeRoles.length + " .ready)" : ""));
     }
     if (!ready) allOutputReady = false;
 }
@@ -520,8 +529,11 @@ if (!outputReady && activeRoles.length > 0) {
                             if (!fs.existsSync(_odp + "/" + _fileNames2[_fi].trim() + ".ready")) { _allOk = false; break; }
                         }
                     } else {
+                        // 12-15 大鱼自检：快速复检格式 B 同步数量校验（产出负责人=各自 → 需 .ready ≥ 活跃角色数）
                         var _rfs = fs.existsSync(_odp) ? fs.readdirSync(_odp).filter(function(f) { return f.endsWith(".ready"); }) : [];
-                        if (_rfs.length === 0) _allOk = false;
+                        var _ownerR = board.match(/\n- 产出负责人[:：]\s*(.+)/);
+                        var _ownerEachR = _ownerR && _ownerR[1].trim() === "各自";
+                        if (_ownerEachR ? _rfs.length < activeRoles.length : _rfs.length === 0) _allOk = false;
                     }
                 }
                 if (_anyOutput && _allOk) { outputReady = true; console.log("RETRY: 产出就绪（第" + (_retry+1) + "次复检）"); break; }
