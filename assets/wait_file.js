@@ -5,15 +5,17 @@
  * 与"等文件禁止 bash 长等"铁律一致（本脚本本身是非阻塞内联轮询）。
  *
  * 用法：
- *   node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout <分钟>] [--parent-check] [--any]
+ *   node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout <分钟>] [--parent-check] [--any] [--watch-hb <对方心跳文件>] [--watch-hb-dead <分钟>]
  *   --any：任一目标就位即返回（默认=全部就位才返回）；辩论等"立论或终结谁先来"场景用
  *   单文件：  node wait_file.js ../我的世界/产出/任务003_改进方案/方案.md --hb ../我的世界/角色_大鱼对讲/_heartbeat.txt
  *   双文件：  node wait_file.js 路径A 路径B（两个都就位才算完成）
  *   --parent-check：等待前检查父目录存在（不存在 = 任务目录路径可能写错，立即报错，不静默等满超时）
  *   --timeout 默认 20 分钟（与模板兜底一致）
+ *   --watch-hb <对方心跳文件>：等待中监控对方心跳（12-6 搭档失联检测）——对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4（防盲等，双人对话答方等问方用）
+ *   --watch-hb-dead <分钟>：失联阈值，默认 2 分钟
  *
- * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）
- * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则不写）
+ * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）
+ * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
  *
  * 9-1 修复（2026-08-05 第九轮）：路径自动锚定，与 CWD 无关——
  *   本脚本位于 {角色目录}/临时脚本/wait_file.js，用 __dirname 推导角色目录/项目根：
@@ -30,6 +32,8 @@ var path = require("path");
 var args = process.argv.slice(2);
 var targets = [];
 var hbFile = null;
+var watchHbFile = null;
+var watchHbDeadMin = 2;
 var timeoutMin = 20;
 var parentCheck = false;
 var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
@@ -40,12 +44,16 @@ for (var i = 0; i < args.length; i++) {
     console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any]");
     console.log("  --any: 任一目标就位即返回（默认=全部就位）");
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
-    console.log("  --hb: 每 30s 写心跳到指定文件");
+    console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
+    console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
+    console.log("  --watch-hb-dead: 失联阈值分钟数（默认 2）");
     console.log("  --timeout: 默认 20 分钟");
-    console.log("  退出码: 0=就位 2=超时 3=父目录缺失");
+    console.log("  退出码: 0=就位 2=超时 3=父目录缺失 4=对方失联");
     process.exit(0);
   }
   if (a === "--hb") { hbFile = args[++i]; }
+  else if (a === "--watch-hb") { watchHbFile = args[++i]; }
+  else if (a === "--watch-hb-dead") { watchHbDeadMin = parseInt(args[++i], 10) || 2; }
   else if (a === "--timeout") { timeoutMin = parseInt(args[++i], 10) || 20; }
   else if (a === "--parent-check") { parentCheck = true; }
   else if (a === "--any") { anyMode = true; }
@@ -68,6 +76,18 @@ function anchor(p) {
 }
 targets = targets.map(anchor);
 if (hbFile) hbFile = anchor(hbFile);
+if (watchHbFile) watchHbFile = anchor(watchHbFile);
+
+// 12-6 修复：无 --hb 时从 __dirname 自动推导角色对讲目录续心跳（角色目录 = 临时脚本/..，对讲目录 = 项目根/我的世界/{角色名}_大鱼对讲）
+//   防止等待中不传 --hb 导致心跳断 → monitor 误判 DEAD（H1：答方等待命令示例曾缺 --hb）
+if (!hbFile) {
+  try {
+    var _roleName = path.basename(roleDir);
+    var _autoHb = path.resolve(roleDir, "..", "我的世界", _roleName + "_大鱼对讲", "_heartbeat.txt");
+    fs.mkdirSync(path.dirname(_autoHb), { recursive: true });
+    hbFile = _autoHb;
+  } catch(_e) {}
+}
 
 // ---- 父目录检查（提案2 fail-loud）----
 if (parentCheck) {
@@ -98,10 +118,21 @@ if (allReady()) {
 }
 
 while (Date.now() < deadline) {
-  // 续心跳（每 30s）
+  // 续心跳（每 30s）——12-6：hbFile 已自动推导，无需显式传 --hb
   if (hbFile && Date.now() - lastHbTs >= 30000) {
     try { fs.writeFileSync(hbFile, String(Date.now()), "utf8"); } catch(_e) {}
     lastHbTs = Date.now();
+  }
+  // 12-6 搭档失联检测（--watch-hb）：对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4
+  if (watchHbFile) {
+    try {
+      var _pRaw = fs.readFileSync(watchHbFile, "utf8");
+      var _pTs = parseInt(String(_pRaw || "").trim(), 10);
+      if (_pTs && Date.now() - _pTs > watchHbDeadMin * 60 * 1000) {
+        console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
+        process.exit(4);
+      }
+    } catch(_ph) {}
   }
   // 11-2 修复（大鱼第十一轮审计）：唤醒盲区——等待中不跑 poll 循环，收不到 _wakeup.md，只能等超时（第十二轮前纳特/乔布斯/图灵互等 20 分钟，真正解卡是超时兜底不是唤醒信号）
   // 循环内检测对讲目录的 _wakeup.md：存在 → 改名 _acked（ack）并打印提示（提示角色可能被要求改变等待目标/先手）
