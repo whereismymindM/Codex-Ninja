@@ -104,9 +104,17 @@ try {
 var tick = 0;
 if (onceMode) {
   // 12-25 大鱼工具复盘最卡①：--once 单轮汇总——跑一轮检测后退出（大鱼每轮轮询从"sleep 55 + tail + ls"三条命令变一条）
-  console.log("[" + ts() + "] ONCE 模式：单轮检测汇总（公告牌 + monitor）");
+  // 13-y 大鱼自检 4-7/P2-1：后台 _fish_loop 在跑时 --once 再跑 monitor → 两实例并发写监控日志.md（每秒多行不可读）
+  //   → --once 检测 _fish_loop.log 新鲜度（60s 内更新 = 后台在跑）→ 跳过 monitor 段，只报公告牌 + 提示
+  var _loopLog = path.join(boardDir, "_fish_loop.log");
+  var _bgFresh = false;
+  try {
+    if (fs.existsSync(_loopLog) && Date.now() - fs.statSync(_loopLog).mtimeMs < 60000) _bgFresh = true;
+  } catch(_lf) {}
+  console.log("[" + ts() + "] ONCE 模式：单轮检测汇总（公告牌" + (_bgFresh ? " + monitor 跳过：后台 _fish_loop 在跑" : " + monitor") + "）");
   checkBoards();
-  runMonitor();
+  if (!_bgFresh) runMonitor();
+  else console.log("[" + ts() + "] 后台 _fish_loop.log 60s 内有更新（后台监控在跑），monitor 段跳过避免并发写监控日志（13-y 大鱼自检 P2-1）");
   process.exit(0);
 }
 while (true) {
