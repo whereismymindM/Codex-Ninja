@@ -57,6 +57,29 @@ function log(msg) {
 // ── 收工检查（M-16：快/慢路径共用）──
 //     读当前轮公告牌，若是收工轮（模式: 收工）→ 返回 2（RETIRED）
 //     M-1：readFileSync 包 try——文件在 existsSync 与读取之间被移走/锁定时，未捕获异常会以 exit 1 退出被误判为"被唤醒"；读失败视为无收工信号继续
+// 10-1 终极方案：非收工轮结束标记检测（fail-loud）
+// 角色在【非收工轮】想结束回合必须先创建 {角色}_结束回合_{N}.md（对讲目录）——
+// poll 检测到 = 违规结束回合，报警提示；收工轮正常退场不创建此标记，不会误报
+function checkEndMarker() {
+  try {
+    var endMarker = path.join(talkDir, roleName + "_结束回合_" + String(lastN).padStart(3, "0") + ".md");
+    if (fs.existsSync(endMarker)) {
+      var curBoard = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
+      var isRetireBoard = false;
+      try {
+        if (fs.existsSync(curBoard)) {
+          var bc = fs.readFileSync(curBoard, "utf8");
+          isRetireBoard = /模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(bc);
+        }
+      } catch(_e) {}
+      if (!isRetireBoard) {
+        log("⚠️ 非收工轮结束标记！回合保持铁律被打破 N=" + lastN);
+        console.log("END_MARKER_VIOLATION N=" + lastN + "（非收工轮结束标记——违规结束回合，请勿输出最终回复，继续 poll！）");
+      }
+    }
+  } catch(_e) {}
+}
+
 function checkRetire() {
   var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
   if (fs.existsSync(curFile)) {
@@ -169,6 +192,7 @@ function probeOnce() {
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 1;
     }
+    checkEndMarker();
     // 快路径公告牌检查——全量发布下目录 mtime 不变，靠这里检测下一轮
     var nextFileFast = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
     if (fs.existsSync(nextFileFast)) {
@@ -213,6 +237,9 @@ function probeOnce() {
     console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 1;
   }
+
+  // ── 5.5 结束标记检测（10-1，fail-loud）──
+  checkEndMarker();
 
   // ── 6. 心跳 ──
   writeHeartbeat();
