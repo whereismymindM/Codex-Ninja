@@ -133,6 +133,12 @@ if (isFishMode) {
     var fishLoopPath = fishDir + "/_fish_loop.js";
     fs.copyFileSync(assetDir + "/_fish_loop.js", fishLoopPath);
     console.log("OK: _fish_loop.js (" + fs.statSync(fishLoopPath).size + " bytes)");
+    // 12-10 修复：_reasonix_poll.js —— 大鱼模板回合保持铁律引用 `_reasonix_poll.js --loop` 保持在场，
+    // 但 fish 模式此前未复制（只有角色目录有）→ 大鱼按模板找不到工具只能退 bash 短轮询；
+    // 补复制，模板引用落地（12-10 实测：大鱼报"_poll 工具不在"）
+    var fishPollPath = fishDir + "/_reasonix_poll.js";
+    fs.copyFileSync(assetDir + "/_reasonix_poll.js", fishPollPath);
+    console.log("OK: _reasonix_poll.js (" + fs.statSync(fishPollPath).size + " bytes)");
 
     // _外部环境BUG清单.md —— 大鱼模板引用 ./_外部环境BUG清单.md，必须复制到位
     var bugListPath = fishDir + "/_外部环境BUG清单.md";
