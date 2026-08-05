@@ -56,6 +56,7 @@ while (true) {
     while ((omSelf = outReSelf.exec(boardContent)) !== null) {
         hasOutSelf = true;
         var fpSelf = omSelf[1].trim();
+        if (/[\{\}]/.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 产出路径含占位符（{}）: " + fpSelf + "——公告牌产出行应为具体文件名或尾斜杠目录，占位符永不匹配（12-1 fail-loud）"); }
         var lsSelf = fpSelf.lastIndexOf("/");
         // F-11 修复：格式A/B 判定改按"尾斜杠"（目录形式带 /）而非"含点"——无扩展名产出文件（如 …/任务001/说明）不再误判为目录
         if (lsSelf !== -1 && !fpSelf.endsWith("/")) {
@@ -224,6 +225,7 @@ var outputMatch, allOutputReady = true, outputCount = 0;
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;
     var fullPath = outputMatch[1];
+    if (/[\{\}]/.test(fullPath)) { console.log("OUTPUT-FORMAT ⚠️ 产出路径含占位符（{}）: " + fullPath + "——公告牌产出行应为具体文件名或尾斜杠目录，占位符永不匹配（12-1 fail-loud）"); }
     var lastSlash = fullPath.lastIndexOf("/");
     var outDir, fileNames;
     if (lastSlash !== -1 && !fullPath.endsWith("/")) { // F-11 修复：格式A/B 判定改按尾斜杠（目录形式带 /）而非含点
