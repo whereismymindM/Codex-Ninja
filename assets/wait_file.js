@@ -111,9 +111,16 @@ function allReady() {
     : targets.every(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } });
 }
 
+// 12-28 纳特 002 自检问题12：--any 命中时打印全部目标误导（实测答方误以为'结束信号与新问同时就位'）——改为标注实际触发目标
+function readySummary() {
+  if (!anyMode) return targets.join(", ");
+  var hit = targets.filter(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } });
+  return "实际触发: " + (hit.length > 0 ? hit.join(", ") : "?");
+}
+
 // 先检查是否已就位（防"旧文件秒返"——调用方需自行确认目标当前不存在才该等）
 if (allReady()) {
-  console.log("WAIT_DONE: 目标已就位（" + targets.join(", ") + "）");
+  console.log("WAIT_DONE: 目标已就位（" + readySummary() + "）");
   process.exit(0);
 }
 
@@ -156,7 +163,7 @@ while (Date.now() < deadline) {
     }
   } catch(_we) {}
   if (allReady()) {
-    console.log("WAIT_DONE: 目标已就位（" + targets.join(", ") + "），等待耗时 " + Math.round((Date.now() - startTs) / 1000) + "s");
+    console.log("WAIT_DONE: 目标已就位（" + readySummary() + "），等待耗时 " + Math.round((Date.now() - startTs) / 1000) + "s");
     process.exit(0);
   }
   // 0.5s 间隔（Atomics.wait 真休眠，降级忙等）
@@ -172,7 +179,7 @@ while (Date.now() < deadline) {
 
 // 超时兜底：先复查目标是否其实已就位（writer 曾因路径错空等 14 分钟）
 if (allReady()) {
-  console.log("WAIT_DONE: 超时复查发现目标已就位（" + targets.join(", ") + "）");
+  console.log("WAIT_DONE: 超时复查发现目标已就位（" + readySummary() + "）");
   process.exit(0);
 }
 console.error("WAIT_TIMEOUT: 等待 " + timeoutMin + " 分钟超时，目标未就位（" + targets.join(", ") + "）。先复查目标路径是否其实已就位，再决定写死锁。");
