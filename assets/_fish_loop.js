@@ -7,8 +7,9 @@
  *   - 每 60s：跑 node monitor.js 输出周期验证
  * 本脚本【只检测+报告】：不校验、不发布、不打回、不唤醒——决策权全在大鱼。
  *
- * 用法：node _fish_loop.js [--board-dir <公告牌源目录>] [--monitor <monitor.js 路径>]
+ * 用法：node _fish_loop.js [--board-dir <公告牌源目录>] [--monitor <monitor.js 路径>] [--once]
  *   默认 board-dir = 当前目录（火影-大鱼/），monitor = 上级目录/monitor.js
+ *   --once（12-25）：单轮检测汇总后退出（公告牌 + monitor 各跑一次）——大鱼每轮轮询一条命令替代手动 sleep+tail+ls
  */
 
 const fs = require("fs");
@@ -18,6 +19,7 @@ const { execSync } = require("child_process");
 var args = process.argv.slice(2);
 var boardDir = ".";
 var monitorPath = path.resolve(__dirname, "..", "monitor.js");
+var onceMode = args.indexOf("--once") !== -1; // 12-25 大鱼工具复盘最卡①：单轮汇总模式（拉日志+monitor 一条命令）
 
 function argVal(flag, def) {
   var i = args.indexOf(flag);
@@ -100,6 +102,13 @@ try {
 } catch (e) {}
 
 var tick = 0;
+if (onceMode) {
+  // 12-25 大鱼工具复盘最卡①：--once 单轮汇总——跑一轮检测后退出（大鱼每轮轮询从"sleep 55 + tail + ls"三条命令变一条）
+  console.log("[" + ts() + "] ONCE 模式：单轮检测汇总（公告牌 + monitor）");
+  checkBoards();
+  runMonitor();
+  process.exit(0);
+}
 while (true) {
   tick++;
   checkBoards();                 // 每 30s 轻检查公告牌
