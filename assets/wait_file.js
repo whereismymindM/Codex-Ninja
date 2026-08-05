@@ -109,7 +109,8 @@ while (Date.now() < deadline) {
     var _wakeFile = hbFile ? hbFile.replace(/_heartbeat\.txt$/, "_wakeup.md") : null;
     if (_wakeFile && fs.existsSync(_wakeFile)) {
       try { fs.renameSync(_wakeFile, _wakeFile.replace(/\.md$/, "_acked.md")); } catch(_re) {}
-      console.log("WAKEUP_DETECTED: 收到唤醒信号（已 ack）——若提示改变等待目标/先手顺序，按提示调整后重新 wait_file");
+      console.log("WAKEUP_DETECTED: 收到唤醒信号（已 ack）——退出等待，按提示调整后重新 wait_file（11-3：检测到唤醒即退出）");
+      process.exit(0);
     }
   } catch(_we) {}
   if (allReady()) {

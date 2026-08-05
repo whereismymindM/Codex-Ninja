@@ -221,13 +221,10 @@ var deliver = async function(filename, taskDirName, sourcePath) {
   if(!fs.default.existsSync(outDir)) fs.default.mkdirSync(outDir, {recursive: true});
   var outPath = path.default.join(outDir, filename);
   var readyPath = outPath + ".ready";
-  // 11-2 修复（图灵 005 自检第 8 条）：deliver 函数内补 roleName——从"../我的世界/<角色名>_大鱼对讲"目录名推导，或从调用处传入
+  // 11-2 修复（图灵 005 自检第 8 条）+ 11-3 修正（复核者：readdirSync[0] 多角色取错）：deliver 函数内补 roleName
   // 原模板引用未定义 roleName → ReferenceError 被 catch 吞 → .ready 缺 producer 字段
-  var roleName = null;
-  try {
-    var _dlRole = fs.default.readdirSync(path.default.join(worldDir)).filter(function(d){ return d.endsWith("_大鱼对讲"); })[0];
-    if (_dlRole) roleName = _dlRole.replace(/_大鱼对讲$/, "");
-  } catch(_dre) {}
+  // 正确来源 = path.basename(process.cwd())——模板内联函数运行在角色会话，CWD=角色目录（11-1 CWD 铁律），scaffold 用角色名建目录
+  var roleName = path.default.basename(process.cwd());
   // B-4 同步：metadata 证据链（producer/size/mtime）+ 文档类存在性校验（角色实际执行层；sourcePath 代码类跳过）
   var _dlContent = "OK " + new Date().toISOString();
   if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
