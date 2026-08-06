@@ -149,14 +149,14 @@ if (isFishMode) {
 if (!isAddMode) {
     fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
     // 部署团队须知到项目根目录（projectDir，角色窗口的父级），所有角色窗口共享
-    var teamNotice = path.resolve(assetDir, "..", "团队须知/AGENTS.md");
-    // M6 修复：项目根 AGENTS.md 已存在则不覆盖（与 monitor.js 的"已存在不覆盖"策略一致）——
+    var teamNotice = path.resolve(assetDir, "..", "团队须知/团队须知.md");
+    // M6 修复：项目根 团队须知.md 已存在则不覆盖（与 monitor.js 的"已存在不覆盖"策略一致）——
     // 避免 init 静默覆盖用户自写/旧版文件
-    if (!fs.existsSync(projectDir + "/AGENTS.md")) {
-        fs.copyFileSync(teamNotice, projectDir + "/AGENTS.md");
-        console.log("OK: 团队须知/AGENTS.md → " + projectDir);
+    if (!fs.existsSync(projectDir + "/团队须知.md")) {
+        fs.copyFileSync(teamNotice, projectDir + "/团队须知.md");
+        console.log("OK: 团队须知/团队须知.md → " + projectDir);
     } else {
-        console.log("SKIP: 团队须知/AGENTS.md → " + projectDir + "（已存在，不覆盖）");
+        console.log("SKIP: 团队须知/团队须知.md → " + projectDir + "（已存在，不覆盖）");
     }
 
     fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
