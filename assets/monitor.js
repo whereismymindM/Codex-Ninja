@@ -31,6 +31,7 @@ function parseHeartbeat(raw) {
 // P1-1: N值从状态文件读，崩溃重启不跳轮次
 var stateFile = base + "/我的世界/.monitor_state.json";
 var N = 1;
+var outputReadyCount = 0; // 12-24 判定摘要：已就位产出行计数（WAIT 原因输出用）——修复未声明直接引用导致的 CRASH
 if (fs.existsSync(stateFile)) {
     try {
         var state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
