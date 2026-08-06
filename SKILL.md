@@ -41,7 +41,7 @@ node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fis
 
 ### 3. 部署团队须知
 
-scaffold init 已自动把 `团队须知/AGENTS.md` 复制到项目根目录（= 我的世界/ 的上级，如 一号舱室-软件开发部）。仅 add 模式需手动补复制。
+scaffold init 已自动把 `团队须知/团队须知.md` 复制到项目根目录（= 我的世界/ 的上级，如 一号舱室-软件开发部）。仅 add 模式需手动补复制。
 
 ### 4. 写公告牌
 
