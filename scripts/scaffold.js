@@ -244,6 +244,14 @@ roles.forEach(function(r) {
         fs.writeFileSync(rd + "/" + mf, mfContent, "utf8");
     });
 
+    // 解耦四件套：启动多步曲/公告牌解读/干活流程/工具分类（2026-08-06 解耦改造新增）
+    // 均含 {{ROLE_NAME}} 占位符（心跳路径/对讲目录），必须替换为角色名——与玩法文件同一逻辑
+    ["_启动多步曲.md", "_公告牌解读.md", "_干活流程.md", "_工具分类.md"].forEach(function(dec) {
+        var decContent = fs.readFileSync(assetDir + "/模板/" + dec, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
+        fs.writeFileSync(rd + "/" + dec, decContent, "utf8");
+        console.log("OK: " + r.name + "/" + dec + " (解耦四件套)");
+    });
+
     // 复制工具文件
     fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
     var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); fs.writeFileSync(rd + "/_sign.js", sc, "utf8"); // 第四轮修复：函数替换防 $& 注入
