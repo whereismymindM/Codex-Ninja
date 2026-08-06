@@ -13,8 +13,8 @@
 |---|---|---|
 | **写完必须验证** | BUG 4, 12 | fs.statSync 验大小；replace() 后自检 newContent !== content |
 | **MSYS 路径翻译** | BUG 14 | 工具脚本路径参数一律相对路径（`../我的世界/`），禁止 POSIX 绝对路径（`/tmp` 会被改写成 `D:\tmp`） |
-| **heredoc 挂死** | （实弹教训） | 等文件禁止 `bash heredoc + node`（引号出错 → bash 永久挂起，心跳断）——用 wait_file.js 或 write_file |
-| **中文直写** | （Reasonix 原生支持） | 中文长内容用 write_file 原生直写，零编码问题 |
+| **heredoc 挂死** | BUG 6（实弹教训） | 等文件禁止 `bash heredoc + node`（引号出错 → bash 永久挂起，心跳断）——用 wait_file.js 或 write_file |
+| **中文直写** | （Reasonix 原生支持，无编号） | 中文长内容用 write_file 原生直写，零编码问题 |
 
 > 其余 BUG 为 PowerShell 时代历史参考，bash 下标注"不触发"的条目可跳过。
 
