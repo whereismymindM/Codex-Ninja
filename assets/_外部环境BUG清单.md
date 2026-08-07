@@ -1,13 +1,13 @@
-# 外部环境BUG清单（PowerShell + 中文）
+# 外部环境BUG清单（Windows + 中文）
 
-> 本文档汇总了在 Windows PowerShell 环境下运行多Agent协作时遇到的所有外部环境坑。
+> 本文档汇总了在 Windows 环境下运行多Agent协作时遇到的所有外部环境坑。
 > 新项目启动前，所有角色Agent应先阅读本文档。也可考虑整合到 SKILL.md 中。
 
 ---
 
 ## ⚡ 当前环境必读（bash/Reasonix 下实际要防的，30 秒版）
 
-> **场景 3/4 实测**：PowerShell 时代的大多数 BUG（1/2/3/9/10）在 bash/Reasonix 环境下**不触发**——别整篇通读浪费时间，先看这份清单，踩坑了再回去细查对应 BUG。
+> 历史说明：PowerShell 时代的 BUG 1/2/3/9/10（node -e 中文、Get-Content 编码、`--` 解析、REPL 冲突）在 bash/Reasonix 环境下不触发，已删除。编号保留不再重排，以保持既有引用稳定。
 
 | 必读项 | 对应 BUG | 一句话 |
 |---|---|---|
@@ -16,93 +16,25 @@
 | **heredoc 挂死** | BUG 6（实弹教训） | 等文件禁止 `bash heredoc + node`（引号出错 → bash 永久挂起，心跳断）——用 wait_file.js 或 write_file |
 | **中文直写** | （Reasonix 原生支持，无编号） | 中文长内容用 write_file 原生直写，零编码问题 |
 
-> 其余 BUG 为 PowerShell 时代历史参考，bash 下标注"不触发"的条目可跳过。
+> 其余 BUG 为通用 Node/环境坑（bash 下同样要防）。
 
 ---
 
 ## 三原则速查（30秒看完，覆盖90%的坑）
 
-下面 12 条 BUG 本质上就三条原则（BUG 8 历史废弃删除，编号保留不再重排）。新角色开工前先记住这三条，踩坑了再回来细查：
+下面这些 BUG 本质上就三条原则。新角色开工前先记住这三条，踩坑了再回来细查：
 
 | # | 原则 | 一句话 | 覆盖的 BUG |
 |---|------|--------|-----------|
-| 1 | **别让 PowerShell 碰中文** | 读写中文文件走 Node.js 临时 .js 文件 | BUG 1, 2, 3 |
-| 2 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 12 |
-| 3 | **REPL 是持久化运行时**（仅 Codex 版；Reasonix 已无 REPL） | 变量复用不复声明; 别依赖 homeDir | BUG 9, 10 |
+| 1 | **写完必须验证** | fs.statSync 验大小; replace() 后自检 | BUG 4, 12 |
+| 2 | **别用 heredoc 等文件** | 用 wait_file.js / 内联轮询，禁止 bash heredoc 长等 | BUG 6（实弹教训） |
+| 3 | **路径一律相对** | `../我的世界/`，禁止 POSIX 绝对路径（MSYS 会改写） | BUG 14 |
 
 > 编码细节：反引号别嵌套 Markdown 代码块用 lines.push()（BUG 11）；双窗口 poll 太密会 I/O 闪退（BUG 13：实际间隔首轮 3s、低功耗固定 3s，需多角色错相）。
 
 ---
 
-## BUG 1：node -e 内联 + 中文 = 灾难 [最严重]（⚠️ 仅 PowerShell/Codex 时代有效——Reasonix 原生 write_file 直写 UTF-8、bash 传参原始字节，此坑在 bash 下不触发；实弹验证 2026-08-03）
-
-**现象**：用 `node -e` 执行包含中文的 JavaScript 代码时，Node 报 `SyntaxError: Unexpected identifier` 或 `Unterminated string constant`。
-
-**根本原因**：中文弯引号（“”）、破折号（—）、省略号（…）甚至中文括号【】等 Unicode 字符，在 PowerShell 传参给 Node 时经过双重解析——PowerShell 先吃一遍字符串，Node 再吃一遍——导致字符被错误解析为 JS 字符串界定符。
-
-**触发条件**：
-- 在 `node -e` 的反引号模板字面量中写中文 -> 必炸
-- 通过 PowerShell 管道（`@'...'@ | node -`）传中文内容 -> 必炸
-- 即使不走管道，纯 `node -e "..."` 里包含弯引号也可能炸
-
-**唯一可靠解法：临时 .js 文件**
-
-> ⚠️ **跨进程传 Windows 路径的额外注意**：当你需要把路径注入到生成的 JS 代码时（比如生成子进程脚本），不要直接拼接字符串——路径中的 `\U`、`\D` 等会被当成 Unicode 转义符（旧版曾用 `{{项目根目录}}` 占位符举例，当前模板已改相对路径，此条为通用原则）。**统一用 `JSON.stringify(path)` 安全注入**，确保路径被正确转义。这是最稳妥的跨进程路径传递方式。
-
-```powershell
-# 第1步：把写入逻辑写到临时 .js 文件
-@'
-var fs = require("fs");
-var content = `你要写的长中文内容`;
-fs.writeFileSync("目标文件.md.tmp", content, "utf8");
-fs.renameSync("目标文件.md.tmp", "目标文件.md");
-''@ | Set-Content -Encoding UTF8 _write_temp.js
-
-# 第2步：执行临时文件
-node _write_temp.js
-
-# 第3步：清理
-Remove-Item _write_temp.js
-```
-
-**关键要点**：
-- JS 内容用反引号模板字面量 `` ` ``，不用双引号——避免转义噩梦
-- `.tmp` -> rename，原子写入——防止搭档读到半截文件
-- 跑完立刻删 `_write_temp.js`，别留垃圾
-
----
-
-## BUG 2：PowerShell Get-Content 默认编码导致中文乱码（⚠️ 仅 PowerShell 5.x；bash/git-bash 下 UTF-8 无此问题）
-
-**现象**：`Get-Content -Raw` 读中文文件，输出全是乱码。
-
-**原因**：PowerShell 5.x 默认用系统编码（GBK/ASCII）而不是 UTF-8。
-
-**解决方案**：
-- 读中文文件：永远加 `-Encoding UTF8`
-  ```powershell
-  Get-Content -Path file.md -Encoding UTF8 -Raw
-  ```
-- 更好的方案：直接用 Node.js 读写中文文件，默认 UTF-8，不翻车
-  ```javascript
-  var fs = require("fs");
-  var content = fs.readFileSync("file.md", "utf8");  // 读
-  fs.writeFileSync("file.md", content, "utf8");       // 写
-  ```
-
----
-
-## BUG 3：PowerShell 对 `--` 的解析冲突 [已规避]（⚠️ 仅 PowerShell；bash 下无此问题）
-
-**现象**：`node -e` 内联脚本中出现 `--` 时，PowerShell 将其解析为运算符。
-
-**实际影响**：`_poll.js --signal` 的 `--` 是作为 `shell_command` 参数传入的，未被 PowerShell 拦截。临时 .js 文件方案也完全绕过了这个坑。
-
-**规避方案**：含 `--` 的代码（如 CSS `var(--color-xxx)`）不要放 `node -e` 里；用临时 .js 文件执行。
-
----
-
-## BUG 4：大文件读取超时 + 输出截断 + PowerShell 启动慢
+## BUG 4：大文件读取超时 + 输出截断
 
 **现象**：
 - 用 `node -e` 读长文件时 shell_command 超时（默认 10 秒）
@@ -175,51 +107,9 @@ console.log(content.substring(content.length - 2000));
 - AGENTS.md 增加铁律：运行工具脚本后，验证结果文件存在才继续下一步
 
 ---
-## 总结：一套组合拳解决所有问题
-
-| 场景 | 不要用 | 要用 |
-|------|--------|------|
-| 写中文文件 | `node -e` | 临时 .js 文件 -> `node` 执行 -> 删除 |
-| 读中文文件 | `Get-Content` 不加 `-Encoding UTF8` | `fs.readFileSync(path, "utf8")` |
-| 长文件操作 | 默认 10s timeout + 一次性 console.log | `timeout_ms: 30000` + 分段 substring 输出 |
-| 含 `--` 的代码 | `node -e` 内联 | 临时 .js 文件 |
-
-**核心原则：在 PowerShell 环境下，凡是涉及中文内容的操作，一步到位用 Node.js + 临时 .js 文件——别跟 `node -e` 较劲。**
-
----
 
 > BUG 8：历史编号已废弃删除（内容并入其他条目）。编号不再重排以保持既有引用稳定。
 
-## BUG 9：Node REPL 变量名冲突 [v1.4 新增]（⚠️ 仅 Codex 版有效——Reasonix 已无 REPL js() 工具，此条仅为历史参考）
-
-适用范围：仅单窗口模式。
-
-现象：在 REPL 中多次调用 js 工具时，第二次报 "Identifier has already been declared"。
-
-原因：REPL 的顶层绑定是持久化的。第一次 const fs = await import(...) 之后，第二次再用 const fs = ... 就冲突。
-
-解法：
-- 第一次 const 声明后，后续直接复用已有变量名
-- 或用 var 声明可重复赋值的变量
-- 实在混乱：调用 js_reset 清空 REPL 重新开始
-
-核心原则：单窗口模式下，REPL 是持久化运行时——"第一次声明，后续复用"。
-
----
-
-## BUG 10：nodeRepl.homeDir 为 null [v1.4 新增]（⚠️ 仅 Codex 版有效）
-
-适用范围：仅单窗口模式。
-
-现象：REPL 中 nodeRepl.homeDir 返回 null，基于它拼接的路径全部失败。
-
-原因：REPL 运行在子进程中，没有暴露宿主用户的 home 目录（只有 cwd 和 tmpDir）。
-
-解法：
-- 绝对路径直接硬编码或用 nodeRepl.cwd 推导
-- 在 spawn sub-agent 的 message 中传入项目绝对路径
-
-核心原则：别依赖 homeDir——把路径传给 sub-agent，让它直接用。
 ---
 
 ## BUG 11：JS 模板字面量反引号 vs Markdown 代码块冲突 [v1.5 新增]
@@ -257,7 +147,7 @@ fs.writeFileSync("目标文件.md.tmp", content, "utf8");
 fs.renameSync("目标文件.md.tmp", "目标文件.md");
 ```
 
-**核心原则：写长中文 Markdown 到 JS 文件时——永远不用模板字面量，用 lines.push()。** BUG 1 警告了 node -e + 中文但没警告模板字面量 + Markdown 反引号的嵌套冲突——本 BUG 补齐这个盲区。
+**核心原则：写长中文 Markdown 到 JS 文件时——永远不用模板字面量，用 lines.push()。**（node -e + 中文的坑与模板字面量 + Markdown 反引号嵌套是同类问题，本 BUG 补齐盲区）
 ---
 
 ## BUG 12：replace() 静默失败——匹配不到时返回原文，不报错 [v1.5 新增]
