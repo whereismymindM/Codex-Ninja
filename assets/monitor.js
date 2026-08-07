@@ -678,7 +678,8 @@ if (outputReady && allRetired) {
     var _doneWhy = isRetireRound ? ("全员退场 " + allRoles.length + "/" + allRoles.length) : ("产出就位 " + outputReadyCount + "/" + outputCount);
     console.log("DONE N=" + N + " (" + _doneWhy + ")"); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
-    try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1 }), "utf8"); } catch (e) {}
+    // 8-3: DONE 时清除 waitSince（轮次完成，卡轮计时归零——否则下轮沿用旧时间戳误报）
+    try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1, waitSinceN: undefined, waitSince: undefined }), "utf8"); } catch (e) {}
 } else {
     // 12-24 判定摘要：WAIT 带等待原因（大鱼 002 自检最卡②——"WAIT N=3 得读源码才懂"）
     var _why = [];
@@ -688,7 +689,38 @@ if (outputReady && allRetired) {
         _why.push("产出 " + _totHave + "/" + _totNeed + " .ready 未就位");
     }
     if (isRetireRound && !allRetired) _why.push("收工轮 退场 " + (allRoles.length - missingRetireNames.length) + "/" + allRoles.length + " 缺 " + (missingRetireNames.join(",") || "?"));
+    // 8-3 产出卡轮熔断（WAIT_OVERDUE，P0 窗口常驻版）：当前轮产出不齐持续 WAIT 超 30 分钟 → 机器自动报警
+    //   角色心跳正常但在干活+产出路径错/deliver 参数错 → .ready 永不齐 → 无限 WAIT 无升级（run 形态已有熔断，窗口常驻补上）
+    //   只报警不干预（写 需人工干预 提示大鱼核查产出路径/deliver 参数），与干预阶梯（大鱼肉眼）互补
+    var _waitOverdue = false;
+    try {
+        var _st2 = {};
+        try { if (fs.existsSync(stateFile)) _st2 = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch(_sr2) {}
+        var _WAIT_OVERDUE_MS = 30 * 60 * 1000;
+        if (_st2.waitSinceN !== N || !_st2.waitSince) {
+            // 首次进入当前轮 WAIT → 记录起始时间
+            _st2.waitSinceN = N; _st2.waitSince = Date.now();
+            try { fs.writeFileSync(stateFile, JSON.stringify(_st2), "utf8"); } catch(_w2) {}
+        } else if (Date.now() - _st2.waitSince > _WAIT_OVERDUE_MS) {
+            _waitOverdue = true;
+        }
+    } catch(_woe) {}
     console.log("WAIT N=" + N + (_why.length ? " (" + _why.join("; ") + ")" : "")); logMonitor("WAIT N=" + N);
+    if (_waitOverdue) {
+        console.log("WAIT_OVERDUE N=" + N + "（当前轮 WAIT 超 30 分钟——产出卡轮：核查角色产出路径是否与公告牌一字不差 / deliver 参数 / 搭档是否完成前置；已写 需人工干预 提示大鱼）");
+        logMonitor("WAIT_OVERDUE N=" + N);
+        try {
+            var _woIv = base + "/我的世界/大鱼_老渣对讲/需人工干预_产出卡轮_" + String(N).padStart(3,"0") + ".md";
+            if (!fs.existsSync(_woIv)) {
+                var _woContent = "# 需人工干预: 第" + String(N).padStart(3,"0") + "轮产出卡轮\n\n" +
+                    "- 时间: " + new Date().toISOString() + "\n" +
+                    "- 现象: 当前轮 WAIT 超 30 分钟（产出 " + (_why.length ? _why.join("; ") : "未就位") + "）——角色可能在干活但产出路径错/deliver 参数错\n" +
+                    "- 建议动作: ①读公告牌产出行核对路径 ②查角色对讲目录/操作日志看其交付动作 ③确认前置依赖是否就位 ④必要时 _wakeup.js 提示角色核查产出路径\n";
+                fs.writeFileSync(_woIv, _woContent, "utf8");
+                console.log("INTERVENE 产出卡轮 -> 大鱼_老渣对讲/需人工干预_产出卡轮_" + String(N).padStart(3,"0") + ".md");
+            }
+        } catch(_woe2) {}
+    }
 }
 
 } catch(e) {
