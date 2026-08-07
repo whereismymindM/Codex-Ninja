@@ -95,10 +95,12 @@ N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js �
 
 ## 行为约束工具
 
+> 完整按使用者分类（老渣/大鱼/角色）速查见 `assets/_工具速查.md`。角色侧关键约束：
+
 | 工具 | 用法 | 强制什么 |
 |------|------|------|
-| _reasonix_poll.js | node _reasonix_poll.js <角色> <N> [--standby] | Reasonix单次探测轮询 |
+| _reasonix_poll.js | node _reasonix_poll.js <角色> <N> [--standby] [--loop N] | Reasonix 单次/循环探测轮询 |
 | _sign.js | node _sign.js N | 签字路径写死 |
 | _lock.js | node _lock.js acquire/release | 跨进程互斥 |
 | _deliver.js | node _deliver.js <产出文件名> [任务目录名] [源文件路径] | 产出路径+.ready |
-| _poll.js | node _poll.js [--ready] file desc | Shell备用轮询 |
+| wait_file.js | node 临时脚本/wait_file.js <目标> [--any] [--hb] [--timeout] | 标准等文件（替代 _poll.js，已归档） |
