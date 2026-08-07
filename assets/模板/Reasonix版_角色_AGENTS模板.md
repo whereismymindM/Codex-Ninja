@@ -109,7 +109,7 @@
 |---|------|
 | 0 | **禁止生成任何子代理（spawn / sub-agent）！** 你是角色，不是大鱼。spawn = 开除。私自生成子代理 = 项目作废——一旦检测到，本轮任务立即标记为失败，需清空现场重新启动。 |
 | 1 | 访问我的世界用 `../我的世界/`（相对角色目录），别切工作目录。**工具 CWD 规则**：`wait_file.js` 已 __dirname 内部锚定（与 CWD 无关）；**其余 `_*.js` 工具（_reasonix_poll/_deliver/_sign/_lock/_wakeup）必须在角色目录 CWD 下跑**——禁止 cd 进 临时脚本/ 或子目录再调用（CWD 偏移 = 相对路径全错 + 心跳断） |
-| 2 | N 只增不减。禁止删除任何文件（例外：_wakeup.md 和 .signal 等临时信号文件**检测后应删除**——删除而非改名（改名 `_wakeup_acked.md` 会残留且 monitor 不扫）；唯一改名例外 = `对话结束.signal` 确需追加新问时改 `_已处理.signal` 再发） |
+| 2 | N 只增不减。禁止删除任何文件（例外：临时信号文件——`_wakeup.md` 检测后应**删除**（删除而非改名，改名 `_wakeup_acked.md` 会残留且 monitor 不扫）；`.signal` 读完对应 .md 后按玩法文件处理（双人=删除 / 辩论·主笔=改名归档）——**核心规则：原 `.signal` 必须消失，改名只能是后缀替换式 `xxx.md.signal` → `xxx.md.signal_acked`，禁止追加式 `xxx.md.signal.signal_acked`**；唯一额外例外 = `对话结束.signal` 确需追加新问时改 `_已处理.signal` 再发） |
 | 3 | **多角色并发写同一文件前**抢锁 `lock("acquire")`，写完释放 `lock("release")`；**单写者场景跳过**（本项目默认单写者协议，锁不必要） |
 | 4 | **文件写入默认用原生 write_file 直写**（已原子写，无 .tmp 残留）；仅**大文件/非原子工具**场景走 .tmp→rename 防搭档读到半截；中文长内容同样 write_file 直写（零 shell 零丢失） |
 | 5 | 产出用 `node _deliver.js <产出文件名> <任务目录> [源文件路径]`（独立脚本优先；内联 `deliver(fname, task)` 仅 fallback），禁止手动拼产出路径。**交付信号标准化**：交付完成 = 产出/任务NNN/ 下出现对应 `.ready`；代码类交付（文件在源目录不在产出/）用 `node _deliver.js 文件名.js 任务NNN 源文件路径`，把改动文件 list 写进 .ready 内容，等待方直接读 .ready 判定，不要自创检测条件 |

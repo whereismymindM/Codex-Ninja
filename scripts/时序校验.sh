@@ -116,6 +116,30 @@ done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
 done)
 [ "$FOUND" = "0" ] && LOG "  （无主笔审核文件）"
 
+# ── 信号文件卫生：残留 .signal / 追加式改名 ──────────
+# 13-1 修复（信号_acked 协议）：等文件方读完 .md 后应 rename 后缀替换（.signal → .signal_acked），
+#   残留 .signal 会让下轮 wait_file 误命中旧信号；追加式 .signal.signal_acked = 改名格式错。
+echo ""
+echo "[信号卫生] 任务目录无残留 .signal、无追加式 .signal.signal_acked"
+FOUND=0
+while IFS= read -r sdir; do
+    FOUND=1
+    # 1) 残留未处理信号（排除合法的 _已处理.signal——对话结束信号改名形态）
+    while IFS= read -r sig; do
+        VIOLATIONS=$((VIOLATIONS+1))
+        LOG "⚠️ $(basename "$sdir"): $(basename "$sig") 残留未处理（应 rename 后缀替换为 .signal_acked，或等文件用 wait_file.js --ack 自动处理）"
+    done < <(find "$sdir" -maxdepth 1 -name "*.signal" ! -name "*_已处理.signal" 2>/dev/null)
+    # 2) 追加式改名错误（xxx.md.signal.signal_acked）
+    while IFS= read -r bad; do
+        VIOLATIONS=$((VIOLATIONS+1))
+        LOG "⚠️ $(basename "$sdir"): $(basename "$bad") 追加式改名（应为 xxx.md.signal_acked，原 .signal 应消失）"
+    done < <(find "$sdir" -maxdepth 1 -name "*.signal.signal_acked" 2>/dev/null)
+done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
+    cnt=$(find "$d" -maxdepth 1 \( -name "*.signal" -o -name "*.signal.signal_acked" \) ! -name "*_已处理.signal" 2>/dev/null | grep -c .)
+    [ "$cnt" -gt 0 ] && echo "$d"
+done)
+[ "$FOUND" = "0" ] && LOG "  （无任务目录或信号卫生干净）"
+
 echo ""
 echo "=============================================="
 if [ "$VIOLATIONS" = "0" ]; then

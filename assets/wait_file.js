@@ -37,12 +37,14 @@ var watchHbDeadMin = 15;   // 12-8：失联阈值默认 15 分钟（原 2 分钟
 var timeoutMin = 20;
 var parentCheck = false;
 var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
+var ackMode = false;   // 13-1：--ack = 目标 .signal 就位后自动 rename 后缀替换为 _acked（机制化，防角色漏改名/追加式改名）
 
 for (var i = 0; i < args.length; i++) {
   var a = args[i];
   if (a === "--help" || a === "-h") {
-    console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any]");
+    console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any] [--ack]");
     console.log("  --any: 任一目标就位即返回（默认=全部就位）");
+    console.log("  --ack: 目标 .signal 就位后自动 rename 后缀替换为 _acked（xxx.md.signal → xxx.md.signal_acked，原 .signal 消失；防漏改名/追加式改名，13-1）");
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
     console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
@@ -57,6 +59,7 @@ for (var i = 0; i < args.length; i++) {
   else if (a === "--timeout") { timeoutMin = parseInt(args[++i], 10) || 20; }
   else if (a === "--parent-check") { parentCheck = true; }
   else if (a === "--any") { anyMode = true; }
+  else if (a === "--ack") { ackMode = true; }
   else { targets.push(a); }
 }
 
@@ -118,8 +121,27 @@ function readySummary() {
   return "实际触发: " + (hit.length > 0 ? hit.join(", ") : "?");
 }
 
+// 13-1 修复（信号_acked 协议机制化）：--ack 模式——目标 .signal 就位后自动 rename 后缀替换
+//   xxx.md.signal → xxx.md.signal_acked（原 .signal 消失）。手动改名常漏/常追加错（.signal.signal_acked），脚本代改零手工。
+//   非 .signal 目标忽略（不误改普通文件）；默认（无 --ack）行为完全不变。
+function ackSignals() {
+  if (!ackMode) return;
+  targets.forEach(function(t) {
+    if (/\.signal$/i.test(t)) {
+      try {
+        if (fs.existsSync(t)) {
+          var target = t.replace(/\.signal$/i, ".signal_acked");
+          fs.renameSync(t, target);
+          console.log("ACK: " + path.basename(t) + " -> " + path.basename(target));
+        }
+      } catch(_e) {}
+    }
+  });
+}
+
 // 先检查是否已就位（防"旧文件秒返"——调用方需自行确认目标当前不存在才该等）
 if (allReady()) {
+  ackSignals(); // 13-1：就位即 ack（残留旧信号一并清理防秒返）
   console.log("WAIT_DONE: 目标已就位（" + readySummary() + "）");
   process.exit(0);
 }
@@ -163,6 +185,7 @@ while (Date.now() < deadline) {
     }
   } catch(_we) {}
   if (allReady()) {
+    ackSignals(); // 13-1：命中即 ack
     console.log("WAIT_DONE: 目标已就位（" + readySummary() + "），等待耗时 " + Math.round((Date.now() - startTs) / 1000) + "s");
     process.exit(0);
   }
@@ -179,6 +202,7 @@ while (Date.now() < deadline) {
 
 // 超时兜底：先复查目标是否其实已就位（writer 曾因路径错空等 14 分钟）
 if (allReady()) {
+  ackSignals(); // 13-1：超时复查命中同样 ack
   console.log("WAIT_DONE: 超时复查发现目标已就位（" + readySummary() + "）");
   process.exit(0);
 }
