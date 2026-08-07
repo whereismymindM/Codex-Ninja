@@ -134,8 +134,10 @@ try {
         var _fishHbTime = parseHeartbeat(fs.readFileSync(FISH_HB_FILE, "utf8"));
         if (!isNaN(_fishHbTime)) {
             var _fishHbAge = Date.now() - _fishHbTime;
-            // 阈值：窗口常驻 2 分钟 / run 形态 10 分钟（与角色一致）
-            var _fishTimeoutMs = _fishModeRun ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            // 阈值：窗口常驻 5 分钟 / run 形态 10 分钟（8-5 修复：窗口常驻原 2 分钟对大鱼太短——大鱼回合内轮询
+            //   间隔 55-60s，但两次动作间可能间隔 >2 分钟（读长文档/写报告/思考），2 分钟误判 FISH_DEAD（实测 08-07 误报 5 次）
+            //   5 分钟足够区分"正常节奏"与"真掉线"，又不像 run 形态 10 分钟那么迟钝）
+            var _fishTimeoutMs = _fishModeRun ? 10 * 60 * 1000 : 5 * 60 * 1000;
             if (_fishHbAge > _fishTimeoutMs) {
                 // 复核：大鱼对讲目录近期有新产出 = 写报告/交付中，不算死
                 // ⚠️ 排除 monitor 自写的 需人工干预_*（monitor 写的文件不算大鱼产出，否则死循环抑制 FISH_DEAD）
