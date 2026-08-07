@@ -117,6 +117,114 @@ while (true) {
 }
 
 var boardFile = base + "/我的世界/公告牌_" + String(N).padStart(3,"0") + ".md";
+
+// ── 8-2 大鱼心跳检测（决策者验证，P0-1）────────────────────────────
+//   放在 boardFile 判断之前——扣留期（收工轮被扣、下一张牌不存在）monitor 会在下方提前 WAIT 退出，
+//   这段必须在此执行，否则最需要检测的场景反而检测不到（冒烟实测确认）
+//   大鱼每回合醒来/轮询动作顺带写 火影-大鱼/_heartbeat.txt（模板已加）
+//   判据：心跳 stale 且 无近期产出 → FISH_DEAD；_fish_loop.log 更新 ≠ 大鱼在场（脚本≠决策者，铁律 4）
+var _fishSrcDir = base + "/火影-大鱼";
+var FISH_HB_FILE = _fishSrcDir + "/_heartbeat.txt";
+// 运行形态（自读，不依赖后面的 F_SCHEDULED——本段在 monitor 顶部执行）
+var _fishModeRun = false;
+try { _fishModeRun = fs.existsSync(_fishSrcDir + "/_运行形态.mode") && fs.readFileSync(_fishSrcDir + "/_运行形态.mode", "utf8").trim() === "run"; } catch(_fmr) {}
+var _fishDead = false;
+try {
+    if (fs.existsSync(FISH_HB_FILE)) {
+        var _fishHbTime = parseHeartbeat(fs.readFileSync(FISH_HB_FILE, "utf8"));
+        if (!isNaN(_fishHbTime)) {
+            var _fishHbAge = Date.now() - _fishHbTime;
+            // 阈值：窗口常驻 2 分钟 / run 形态 10 分钟（与角色一致）
+            var _fishTimeoutMs = _fishModeRun ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            if (_fishHbAge > _fishTimeoutMs) {
+                // 复核：大鱼对讲目录近期有新产出 = 写报告/交付中，不算死
+                // ⚠️ 排除 monitor 自写的 需人工干预_*（monitor 写的文件不算大鱼产出，否则死循环抑制 FISH_DEAD）
+                var _fishRecentOutput = false;
+                try {
+                    var _fishCut = Date.now() - _fishTimeoutMs;
+                    var _fishDirs = [base + "/我的世界/大鱼_老渣对讲"];
+                    for (var _fd = 0; _fd < _fishDirs.length; _fd++) {
+                        if (!fs.existsSync(_fishDirs[_fd])) continue;
+                        var _fEntries = fs.readdirSync(_fishDirs[_fd]);
+                        for (var _fe = 0; _fe < _fEntries.length; _fe++) {
+                            if (_fEntries[_fe].indexOf("需人工干预_") === 0) continue; // 8-2 修复：排除 monitor 自写干预文件
+                            try { if (fs.statSync(_fishDirs[_fd] + "/" + _fEntries[_fe]).mtimeMs > _fishCut) { _fishRecentOutput = true; break; } } catch(_fes) {}
+                        }
+                        if (_fishRecentOutput) break;
+                    }
+                } catch(_fsc) {}
+                if (!_fishRecentOutput) _fishDead = true;
+            }
+        }
+    }
+} catch(_fishE) { /* 大鱼目录缺失/心跳损坏，跳过 */ }
+// 收口豁免：上一轮是已完成的收工轮（项目结束，大鱼合法收口心跳停是正常态）
+try {
+    if (_fishDead) {
+        var _prevBf2 = base + "/我的世界/公告牌_" + String(N - 1).padStart(3,"0") + ".md";
+        if (fs.existsSync(_prevBf2)) {
+            var _prevBc2 = fs.readFileSync(_prevBf2, "utf8");
+            if (/模式[：:]\s*收工/.test(_prevBc2)) _fishDead = false; // 上一轮是收工轮 → 项目已收口，不报
+        }
+    }
+} catch(_pe2) {}
+if (_fishDead) {
+    console.log("FISH_DEAD (heartbeat: " + Math.round(_fishHbAge/1000) + "s stale, no recent output)");
+    logMonitor("FISH_DEAD 大鱼心跳 stale");
+    try {
+        var _fishIv = base + "/我的世界/大鱼_老渣对讲/需人工干预_大鱼.md";
+        if (!fs.existsSync(_fishIv)) {
+            var _fishIvContent = "# 需人工干预: 大鱼（决策者掉线）\n\n" +
+                "- 时间: " + new Date().toISOString() + "\n" +
+                "- 现象: 大鱼心跳 stale 且无新产出——大鱼掉线（回合结束/窗口关），扣留收工轮无人补搬，项目可能静默卡死\n" +
+                "- 建议动作: 去大鱼窗口输入「进入角色」重启大鱼（启动铁律第 1 条先看牌 → 校验发布 → 补搬收工轮）\n";
+            fs.writeFileSync(_fishIv, _fishIvContent, "utf8");
+            console.log("INTERVENE 大鱼 -> 大鱼_老渣对讲/需人工干预_大鱼.md");
+        }
+    } catch(_fiv) {}
+}
+
+// ── 8-2 扣留超时报警（STANDBY_OVERDUE，P0-1 状态可区分）──────────
+//   场景：待命轮后收工轮被扣留（大鱼目录仍有收工轮未发布）→ 正常 monitor 输出 WAIT N=收工轮编号（预期），
+//   但"扣留等追加"与"大鱼掉线无人补搬"不可区分——加 OVERDUE 提示
+var _standbyOverdue = false;
+try {
+    // ① 大鱼目录仍扣着收工轮（存在未发布的收工轮 = 扣留中）
+    var _retireKept = fs.readdirSync(_fishSrcDir).some(function(_ff) {
+        return /^公告牌_(\d+)\.md$/.test(_ff) && (function() {
+            try { return /模式[：:]\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff, "utf8")); } catch(_rke) { return false; }
+        })();
+    });
+    if (_retireKept) {
+        // ② 基线：前一轮完成时刻（最后一个 完成_{N}.md mtime）+ 10 分钟
+        var _overdueMs = 10 * 60 * 1000;
+        var _baseTs = 0;
+        try {
+            var _worldDirTop = base + "/我的世界";
+            var _prevSigns = fs.readdirSync(_worldDirTop).filter(function(_d) { return _d.endsWith("_大鱼对讲"); });
+            for (var _psi = 0; _psi < _prevSigns.length; _psi++) {
+                try {
+                    var _sDir = _worldDirTop + "/" + _prevSigns[_psi];
+                    var _sFiles = fs.readdirSync(_sDir);
+                    for (var _sf = 0; _sf < _sFiles.length; _sf++) {
+                        var _sM = String(_sFiles[_sf]).match(/^完成_(\d+)\.md$/);
+                        if (_sM) {
+                            var _sTs = fs.statSync(_sDir + "/" + _sFiles[_sf]).mtimeMs;
+                            if (_sTs > _baseTs) _baseTs = _sTs;
+                        }
+                    }
+                } catch(_se) {}
+            }
+        } catch(_ps) {}
+        // ③ 无新动作判定：超时且无追加信号
+        var _noNewAction = _baseTs > 0 && (Date.now() - _baseTs > _overdueMs);
+        var _appendTask = fs.existsSync(_fishSrcDir + "/追加任务.md");
+        if (_noNewAction && !_appendTask) _standbyOverdue = true;
+    }
+} catch(_soe) {}
+// 收口豁免：上一轮是收工轮则不算扣留（_retireKept 已覆盖——收工轮已发布就不在大鱼目录）
+// 追加豁免：追加任务.md 存在 = 老渣追加中，不报警（_appendTask 已覆盖）
+
 // P2-10: 公告牌不存在时，回看上一轮是否为已完成的收工轮
 if (!fs.existsSync(boardFile)) {
     var prevN = N - 1;
@@ -149,6 +257,11 @@ if (!fs.existsSync(boardFile)) {
             }
             if (allRetired) { console.log("DONE N=" + prevN + " (回看确认: 收工轮 全员退场 " + _retireOk + "/" + _retireTotal + ")"); logMonitor("DONE N=" + prevN); process.exit(0); } // 12-24 摘要
         }
+    }
+    // 8-2 扣留超时报警：扣留期（收工轮被扣、下一张牌不存在）真实输出点——WAIT 前先判 OVERDUE
+    if (_standbyOverdue) {
+        console.log("STANDBY_OVERDUE N=" + N + "（待命轮基线已过 10 分钟无新动作且收工轮仍扣留——大鱼可能掉线，检查 需人工干预_大鱼.md；若大鱼在场请立即补搬收工轮）");
+        logMonitor("STANDBY_OVERDUE N=" + N);
     }
     console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
 }
