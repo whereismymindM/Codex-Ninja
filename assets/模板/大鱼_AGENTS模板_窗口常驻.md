@@ -58,7 +58,7 @@
 | ① | **读团队须知** | `read_file ../团队须知.md`（读不到跳过，不阻塞） |
 | ② | **先看公告牌目录** | 有新牌 → 校验 6 项 → 发布（有待命轮按批内判定扣收工轮）；无新牌 → 启动 `_fish_loop.js` |
 | ③ | **启动 _fish_loop** | `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`，确认日志出现"公告牌检测 30s / monitor 60s"字样 |
-| ④ | **写大鱼心跳** | `write_file 火影-大鱼/_heartbeat.txt` 内容 `String(Date.now())`（心跳=你在场的证据，见周期验证节） |
+| ④ | **写大鱼心跳** | `write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`，命中 allow_write；心跳=你在场的证据，见周期验证节） |
 | ⑤ | **拉日志 + 查对讲 + 决策** | 拉 `_fish_loop.log` 尾部 + 查 `大鱼_老渣对讲/` 新任务 → 做一次决策（发布/打回/补搬/唤醒/继续等）——**有决策动作才算在场** |
 
 > **先干活后对话**：任何对话排在"看牌-校验-发布"之后；即使被质问，也先完成"看牌"动作再回应。
@@ -82,7 +82,7 @@
 
 - **开工仪式**：启动 `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`（在看牌动作之后），确认日志出现"公告牌检测 30s / monitor 60s"字样；`WaitDelay expired` 报错是误报，以日志 mtime 持续更新为准，不要重试启动造成双实例
 - **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**查 `大鱼_老渣对讲/` 新任务（必做）** ③跑 `_fish_loop.js --once` ④做决策（发布/打回/补搬/唤醒/继续等）——有决策动作才算在场
-- **写大鱼心跳（每回合必做）**：`write_file 火影-大鱼/_heartbeat.txt` 内容 `String(Date.now())`——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）
+- **写大鱼心跳（每回合必做）**：`write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`）——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）
 - **回合内轮询标准命令**（禁止自造循环）：
   ```bash
   node _fish_loop.js --once
