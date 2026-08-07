@@ -259,6 +259,10 @@ roles.forEach(function(r) {
         fs.writeFileSync(rd + "/" + dec, decContent, "utf8");
         console.log("OK: " + r.name + "/" + dec + " (解耦四件套)");
     });
+    // 8-4 精简：内联 fallback 独立文件（_工具分类 引用它，需一并复制；含占位符同样替换）
+    var fbContent = fs.readFileSync(assetDir + "/模板/_内联fallback.md", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
+    fs.writeFileSync(rd + "/_内联fallback.md", fbContent, "utf8");
+    console.log("OK: " + r.name + "/_内联fallback.md (8-4 内联 fallback 独立文件)");
 
     // 复制工具文件
     fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
