@@ -57,7 +57,7 @@ node _wakeup.js 测试甲 "sys测试唤醒" >/dev/null 2>&1
 OUT=$(node _reasonix_poll.js 测试甲 0)
 check "poll 检测唤醒 WOKEN" "WOKEN" "$OUT"
 OUT=$(node _reasonix_poll.js 测试甲 0)
-check "唤醒文件改名 _acked" "1" "$(test -f ../我的世界/测试甲_大鱼对讲/_wakeup_acked.md && echo 1 || echo 0)"
+check "唤醒文件已删除（8-1 改：unlink 对齐文档，不再改名 _acked）" "1" "$(test ! -f ../我的世界/测试甲_大鱼对讲/_wakeup.md && test ! -f ../我的世界/测试甲_大鱼对讲/_wakeup_acked.md && echo 1 || echo 0)"
 cd ..
 
 echo ""

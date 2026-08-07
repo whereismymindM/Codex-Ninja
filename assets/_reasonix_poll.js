@@ -186,7 +186,7 @@ function probeOnce() {
     //    快路径必须仍检查下一公告牌（单文件 existsSync，开销可忽略），否则角色永远 TIMEOUT
     writeHeartbeat();
     if (fs.existsSync(wakeFile)) {
-      try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
+      try { fs.unlinkSync(wakeFile); } catch(e) {}   // 8-1 图灵源码级发现：文档说删除、原代码 rename 成 _acked —— 改删除对齐文档意图（删除防残留，monitor 不扫残留）
       log("被唤醒（快路径）");
       console.log("WOKEN");
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
@@ -231,7 +231,7 @@ function probeOnce() {
 
   // ── 5. 唤醒检查（慢路径）──
   if (fs.existsSync(wakeFile)) {
-    try { fs.renameSync(wakeFile, wakeFile.replace(".md", "_acked.md")); } catch(e) {}
+    try { fs.unlinkSync(wakeFile); } catch(e) {}   // 8-1 图灵源码级发现：同上，统一删除
     log("被唤醒");
     console.log("WOKEN");
     console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");

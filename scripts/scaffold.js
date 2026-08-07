@@ -128,6 +128,14 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/_wakeup.js", wakeupPath);
     console.log("OK: _wakeup.js (" + fs.statSync(wakeupPath).size + " bytes)");
 
+    // 8-1 大鱼自评阻断③修正：大鱼也要能交付专属任务产物给老渣——fish 也发 _deliver.js/_sign.js（老渣对讲任务交付用，不走公告牌 monitor）
+    var fishDeliverPath = fishDir + "/_deliver.js";
+    fs.copyFileSync(assetDir + "/_deliver.js", fishDeliverPath);
+    console.log("OK: 火影-大鱼/_deliver.js (" + fs.statSync(fishDeliverPath).size + " bytes)");
+    var fishSignContent = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "火影-大鱼"; });
+    fs.writeFileSync(fishDir + "/_sign.js", fishSignContent, "utf8");
+    console.log("OK: 火影-大鱼/_sign.js (" + fs.statSync(fishDir + "/_sign.js").size + " bytes)");
+
     // 7-1 修复：_fish_loop.js —— 大鱼周期验证循环（公告牌检测 30s + monitor 60s），
     // 第七轮实测发现缺失（大鱼只能自补临时版）——必须随 scaffold 部署
     var fishLoopPath = fishDir + "/_fish_loop.js";
