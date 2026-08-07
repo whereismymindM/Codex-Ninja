@@ -149,6 +149,11 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListPath);
     console.log("OK: _外部环境BUG清单.md (" + fs.statSync(bugListPath).size + " bytes)");
 
+    // 8-4 修复：大鱼公告牌手册.md —— 大鱼模板「公告牌校验+发布」节引用它（发布前必读），必须复制到位
+    var fishManualPath = fishDir + "/大鱼公告牌手册.md";
+    fs.copyFileSync(assetDir + "/模板/大鱼公告牌手册.md", fishManualPath);
+    console.log("OK: 火影-大鱼/大鱼公告牌手册.md (" + fs.statSync(fishManualPath).size + " bytes)");
+
     console.log("DONE: " + projectDir);
     process.exit(0);
 }
@@ -339,6 +344,15 @@ if (!fs.existsSync(bugListDest)) {
     console.log("OK: 火影-大鱼/_外部环境BUG清单.md (new)");
 } else {
     console.log("SKIP: _外部环境BUG清单.md (already exists)");
+}
+
+// 8-4 修复：init 分支也发 大鱼公告牌手册.md（与 fish 分支同逻辑——大鱼模板「公告牌校验+发布」节引用它，init 不发=悬空引用）
+var fishManualDest = fishDir + "/大鱼公告牌手册.md";
+if (!fs.existsSync(fishManualDest)) {
+    fs.copyFileSync(assetDir + "/模板/大鱼公告牌手册.md", fishManualDest);
+    console.log("OK: 火影-大鱼/大鱼公告牌手册.md (new)");
+} else {
+    console.log("SKIP: 火影-大鱼/大鱼公告牌手册.md (already exists)");
 }
 
 // 8-2 修复：init 分支也发 _deliver.js/_sign.js 给大鱼（与 fish 分支同逻辑——大鱼模板「专属任务交付闭环」引用这两个工具，init 不发=悬空引用）
