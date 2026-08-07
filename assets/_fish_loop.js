@@ -32,6 +32,8 @@ monitorPath = path.resolve(monitorPath);
 
 // 已处理过的公告牌（mtime 跟踪：发现新牌 = 文件名不在集合，或 mtime 变化）
 var knownBoards = {};
+// 已处理过的对讲目录文件（老渣任务/回执，mtime 跟踪）
+var knownTasks = {};
 
 function sleepMs(ms) {
   try {
@@ -72,6 +74,41 @@ function checkBoards() {
   }
 }
 
+// 对讲目录监控：检测 我的世界/大鱼_老渣对讲/ 的新文件（老渣发的任务/回执）
+// 背景：大鱼 AI 只在回合内查对讲目录；回合间隙老渣放的任务可能悬空。
+// 本函数让脚本也检测对讲目录——即使大鱼 AI 不在场，老渣放的任务也会被提示，不遗漏。
+// 排除：收工三件套（产出总结/审计报告/项目完成，大鱼自己写的，不算任务）
+function checkTalkDir() {
+  var found = [];
+  var talkDir = path.resolve(__dirname, "..", "我的世界", "大鱼_老渣对讲");
+  try {
+    if (!fs.existsSync(talkDir)) return;
+    var files = fs.readdirSync(talkDir).sort();
+    files.forEach(function(f) {
+      // 排除大鱼自产报告（收工三件套）——那些是大鱼自己写的，不算"新任务"
+      if (f === "产出总结.md" || f === "审计报告_外部观测.md" || f === "项目完成.md") return;
+      var full = path.join(talkDir, f);
+      var mtime;
+      try { mtime = fs.statSync(full).mtimeMs; } catch (_se) { return; }
+      var prev = knownTasks[f];
+      if (prev === undefined) {
+        knownTasks[f] = mtime;
+        found.push(f + " (新)");
+      } else if (prev !== mtime) {
+        knownTasks[f] = mtime;
+        found.push(f + " (更新)");
+      }
+    });
+  } catch (e) {
+    console.log("[" + ts() + "] 对讲目录读取失败: " + e.message);
+    return;
+  }
+  if (found.length > 0) {
+    console.log("[" + ts() + "] NEW_TASK: " + found.join(", ") + " ← 我的世界/大鱼_老渣对讲/");
+    console.log("    → 去读任务并处理（老渣发的任务走交付闭环：读→干→deliver→sign→汇报）");
+  }
+}
+
 function runMonitor() {
   try {
     var out = execSync('node "' + monitorPath + '"', { encoding: "utf8", timeout: 60000, cwd: path.dirname(monitorPath) || boardDir }).trim();
@@ -100,6 +137,16 @@ try {
     }
   });
 } catch (e) {}
+// 初始化：记录对讲目录已有文件（不当作"新任务"）
+try {
+  var _talkInitDir = path.resolve(__dirname, "..", "我的世界", "大鱼_老渣对讲");
+  if (fs.existsSync(_talkInitDir)) {
+    fs.readdirSync(_talkInitDir).forEach(function(f) {
+      if (f === "产出总结.md" || f === "审计报告_外部观测.md" || f === "项目完成.md") return;
+      knownTasks[f] = fs.statSync(path.join(_talkInitDir, f)).mtimeMs;
+    });
+  }
+} catch (e) {}
 
 var tick = 0;
 if (onceMode) {
@@ -113,6 +160,7 @@ if (onceMode) {
   } catch(_lf) {}
   console.log("[" + ts() + "] ONCE 模式：单轮检测汇总（公告牌" + (_bgFresh ? " + monitor 跳过：后台 _fish_loop 在跑" : " + monitor") + "）");
   checkBoards();
+  checkTalkDir(); // 13-y 补充：对讲目录也检测（老渣任务/回执）
   if (!_bgFresh) runMonitor();
   else console.log("[" + ts() + "] 后台 _fish_loop.log 60s 内有更新（后台监控在跑），monitor 段跳过避免并发写监控日志（13-y 大鱼自检 P2-1）");
   process.exit(0);
@@ -120,6 +168,7 @@ if (onceMode) {
 while (true) {
   tick++;
   checkBoards();                 // 每 30s 轻检查公告牌
+  checkTalkDir();                // 每 30s 检查对讲目录（老渣任务/回执）
   if (tick % 2 === 0) runMonitor(); // 每 60s 跑 monitor
   sleepMs(30000);
 }

@@ -49,31 +49,35 @@ while IFS= read -r qfile; do
 done < <(find "$WORLD" -name "对话_*_T*_问.md" 2>/dev/null | sort)
 [ "$FOUND" = "0" ] && LOG "  （无双人对话文件）"
 
-# ── 辩论：01->02->03->04->05->06 单调递增 ──────────
+# ── 辩论：阶段不倒退 + 文件时间序递增 ──────────
 echo ""
-echo "[辩论] 01立论->02立论->03找茬->04找茬->05自由辩论->06总结（mtime 单调递增）"
+echo "[辩论] 阶段推进（01→02→03→04→05→06 不倒退）+ 文件 mtime 递增"
 FOUND=0
 while IFS= read -r bdir; do
     FOUND=1
-    # 收集该任务目录下所有辩论文件，按文件名序号排序
-    files=$(find "$bdir" -maxdepth 1 -name "辩论_*.md" 2>/dev/null | sort)
+    # 收集该任务目录下所有辩论文件，按 mtime 排序（时间序）——同阶段内先手方先写，字典序≠时间序
+    files=$(find "$bdir" -maxdepth 1 -name "辩论_*.md" ! -name "辩论_终结.md" 2>/dev/null | while read f; do echo "$(TS "$f") $f"; done | sort -n | awk '{print $2}')
     if [ -z "$files" ]; then continue; fi
-    prev_t=0; prev_name=""
+    prev_t=0; prev_stage="00"; prev_name=""
     for f in $files; do
         t=$(TS "$f"); name=$(basename "$f")
-        # 辩论_终结.md 是收敛信号，不参与 01-06 顺序（存在即合法提前结束）
-        if [ "$name" = "辩论_终结.md" ]; then
-            LOG "  📌 $(basename "$bdir") 有辩论_终结.md（提前收敛，05 后流程可省略）"
-            break
-        fi
-        if [ "$t" -lt "$prev_t" ]; then
+        # 提取阶段号（辩论_NN_* 的 NN）
+        stage=$(echo "$name" | sed -n 's/^辩论_\([0-9][0-9]*\)_.*/\1/p')
+        if [ -n "$stage" ] && [ "$stage" -lt "$prev_stage" ]; then
+            VIOLATIONS=$((VIOLATIONS+1))
+            LOG "⚠️ $(basename "$bdir"): $name（阶段 $stage）早于 $prev_name（阶段 $prev_stage）——阶段倒退！"
+        elif [ "$t" -lt "$prev_t" ]; then
             VIOLATIONS=$((VIOLATIONS+1))
             LOG "⚠️ $(basename "$bdir"): $name 早于 $prev_name（$name $(date -d @$t +%H:%M:%S) < $prev_name $(date -d @$prev_t +%H:%M:%S)）——跳步！"
         else
-            LOG "✅ $(basename "$bdir")/$name $(date -d @$t +%H:%M:%S)"
+            LOG "✅ $(basename "$bdir")/$name $(date -d @$t +%H:%M:%S)${stage:+ [阶段$stage]}"
         fi
-        prev_t=$t; prev_name="$name"
+        prev_t=$t; prev_name="$name"; [ -n "$stage" ] && prev_stage="$stage"
     done
+    # 检查收敛信号（不参与排序，单独提示）
+    if find "$bdir" -maxdepth 1 -name "辩论_终结.md" 2>/dev/null | grep -q .; then
+        LOG "  📌 $(basename "$bdir") 有辩论_终结.md（提前收敛，05 后流程可省略）"
+    fi
 done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 -name "辩论_01_*.md" 2>/dev/null | grep -q . && echo "$d"
 done)
