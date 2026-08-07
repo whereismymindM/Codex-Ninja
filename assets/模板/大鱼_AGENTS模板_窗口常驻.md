@@ -194,9 +194,15 @@ cp 公告牌_004.md ../我的世界/     ← 收工轮 005 不搬（扣留）
   node _fish_loop.js --once
   sleep 55   # 常规等待 ≤60s（硬性规则）
   # 循环 N 轮：bash while 或 for 包上面的标准命令（只包标准命令，不自造逻辑）
-  for i in 1 2 3 4; do node _fish_loop.js --once; sleep 55; done
+  for i in 1 2 3 4; do
+    node _fish_loop.js --once
+    sleep 55
+    # 🔑 DONE/新牌检测即 break（场景 7 实测：跑满整轮才返回 → 滞后 3.5 分钟）
+    # 检测 --once 输出或 _fish_loop.log 尾部含 DONE / NEW_BOARD → 立即 break 提前返回处理
+    tail -5 _fish_loop.log | grep -q "DONE\|NEW_BOARD" && break
+  done
   ```
-  原则：**循环骨架可以自己写（for/while），但每轮的"检测+monitor"必须用 `--once`**，不能自造 tail/ls 组合替代（监控工具唯一 = _fish_loop.js）。
+  原则：**循环骨架可以自己写（for/while），但每轮的"检测+monitor"必须用 `--once`**，不能自造 tail/ls 组合替代（监控工具唯一 = _fish_loop.js）；**循环内检测到 DONE/新牌必须 break 提前返回**（不要白等剩余轮次，发现延迟压到 1 分钟内）。
 - **硬性规则（13-y 大鱼自检 2-1 彻底统一口径，消 60/65 字面打架）**：常规等待**单次 sleep 上限 60s**（sleep 300 等 5 分钟长等只会出现在没跑 _fish_loop 的场景，直接禁掉）；**唯一例外**：确认 `_fish_loop.log` 出现启动字样后，允许**一次 ≤65s** 的 sleep 等首个 monitor 输出（仅此一次性例外，其余一律 ≤60s）；9-10 明确
 - 机制：`_fish_loop.js` 每 30s 检测公告牌源目录（新牌打印 NEW_BOARD 提示你去校验发布），每 60s 跑一次 `node ../monitor.js`（不做翻篇，角色自己推进，只看输出）。**脚本只检测+报告，校验/发布/打回/唤醒决策全在你**
 - WAIT + SIGN ✓ → 项目正常推进中，继续等
