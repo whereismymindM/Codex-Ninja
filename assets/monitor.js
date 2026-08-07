@@ -509,6 +509,18 @@ if (fs.existsSync(worldDir)) {
                         var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^任务\d+/.test(td); });
                         _taskDirs.forEach(function(td) { _scanDirs.push(worldDir + "/" + td); });
                     } catch(_ts) {}
+                    // 12-29 优化：扫描目录 mtime 门控——无变化时跳过 _scanRecent 深扫（monitor 60s 常驻开销大头：
+                    //   产出/任务目录一旦静止，递归 readdirSync 每次全跑白耗）。门控 key 存 .monitor_state.json。
+                    var _skipDeepScan = false;
+                    try {
+                        var _scanMtimes = [];
+                        _scanDirs.forEach(function(d) { try { _scanMtimes.push(Math.round(fs.statSync(d).mtimeMs)); } catch(_e) {} });
+                        var _mtimeKey = "scan|" + _scanMtimes.join(",");
+                        var _stScan = {};
+                        try { if (fs.existsSync(stateFile)) _stScan = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch(_sr3) {}
+                        if (_stScan.lastScanKey === _mtimeKey) { _skipDeepScan = true; }
+                        else { _stScan.lastScanKey = _mtimeKey; try { fs.writeFileSync(stateFile, JSON.stringify(_stScan), "utf8"); } catch(_w3) {} }
+                    } catch(_sc2) {}
                     var _cutoff = Date.now() - timeoutMs;
                     function _scanRecent(dir) {
                         var entries;
@@ -522,7 +534,7 @@ if (fs.existsSync(worldDir)) {
                             } catch(e) {}
                         }
                     }
-                    _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
+                    if (!_skipDeepScan) _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
                 } catch(_sc) {}
                 if (hasRecentOutput) {
                     // 角色在写文件（干活中），心跳只是没同步——视为活着，不 DEAD 不唤醒
