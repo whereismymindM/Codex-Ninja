@@ -96,12 +96,14 @@ if (isFishMode) {
     var fishRxCfgPath = fishDir + "/reasonix.toml";
     if (!fs.existsSync(fishRxCfgPath)) {
         var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
+        var fishDirAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/火影-大鱼";   // 8-5 修复：大鱼自己的目录也追加可写（心跳 _heartbeat.txt/日志——缺这个大鱼 write_file 写不了自己目录被迫 bash 绕行）
         fs.writeFileSync(fishRxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询（monitor 周期验证 + 调度循环）\n" +
             "\n" +
             "[sandbox]\n" +
-            "workspace_root = \"" + fishRootAbs + "\"   # write_file 沙箱根=项目根，大鱼可直接写 我的世界/，免 bash 绕行\n",
+            "workspace_root = \"" + fishRootAbs + "\"   # write_file 沙箱根=项目根，大鱼可直接写 我的世界/，免 bash 绕行\n" +
+            "allow_write = [\"" + fishDirAbs + "\"]   # 追加可写：大鱼自己的目录（心跳/日志，8-5 修复）\n",
             "utf8");
         console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
     }
@@ -293,12 +295,14 @@ fs.mkdirSync(fishDir, { recursive: true });
 var fishRxCfgPath2 = fishDir + "/reasonix.toml";
 if (!fs.existsSync(fishRxCfgPath2)) {
     var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
+    var fishDirAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/火影-大鱼";   // 8-5 修复：大鱼自己的目录也追加可写（心跳/日志，与 fish 分支同逻辑）
     fs.writeFileSync(fishRxCfgPath2,
         "[tools]\n" +
         "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询\n" +
         "\n" +
         "[sandbox]\n" +
-        "workspace_root = \"" + fishRootAbs2 + "\"   # write_file 沙箱根=项目根\n",
+        "workspace_root = \"" + fishRootAbs2 + "\"   # write_file 沙箱根=项目根\n" +
+        "allow_write = [\"" + fishDirAbs2 + "\"]   # 追加可写：大鱼自己的目录（心跳/日志，8-5 修复）\n",
         "utf8");
     console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
 }
