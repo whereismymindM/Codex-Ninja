@@ -156,6 +156,11 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/模板/大鱼公告牌手册.md", fishManualPath);
     console.log("OK: 火影-大鱼/大鱼公告牌手册.md (" + fs.statSync(fishManualPath).size + " bytes)");
 
+    // 8-5 修复：_大鱼实测教训.md —— 大鱼模板「实测教训」节引用它（运行时沉淀），必须复制到位
+    var fishLessonPath = fishDir + "/_大鱼实测教训.md";
+    fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonPath);
+    console.log("OK: 火影-大鱼/_大鱼实测教训.md (" + fs.statSync(fishLessonPath).size + " bytes)");
+
     console.log("DONE: " + projectDir);
     process.exit(0);
 }
@@ -357,6 +362,15 @@ if (!fs.existsSync(fishManualDest)) {
     console.log("OK: 火影-大鱼/大鱼公告牌手册.md (new)");
 } else {
     console.log("SKIP: 火影-大鱼/大鱼公告牌手册.md (already exists)");
+}
+
+// 8-5 修复：init 分支也发 _大鱼实测教训.md（与 fish 分支同逻辑——大鱼模板「实测教训」节引用它，init 不发=悬空引用）
+var fishLessonDest = fishDir + "/_大鱼实测教训.md";
+if (!fs.existsSync(fishLessonDest)) {
+    fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonDest);
+    console.log("OK: 火影-大鱼/_大鱼实测教训.md (new)");
+} else {
+    console.log("SKIP: 火影-大鱼/_大鱼实测教训.md (already exists)");
 }
 
 // 8-2 修复：init 分支也发 _deliver.js/_sign.js 给大鱼（与 fish 分支同逻辑——大鱼模板「专属任务交付闭环」引用这两个工具，init 不发=悬空引用）
