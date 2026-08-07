@@ -161,6 +161,11 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonPath);
     console.log("OK: 火影-大鱼/_大鱼实测教训.md (" + fs.statSync(fishLessonPath).size + " bytes)");
 
+    // 大鱼工具手册.md —— 大鱼模板「周期验证」节引用它（monitor 21 种输出全解，免翻源码），必须复制到位
+    var fishToolManualPath = fishDir + "/大鱼工具手册.md";
+    fs.copyFileSync(assetDir + "/模板/大鱼工具手册.md", fishToolManualPath);
+    console.log("OK: 火影-大鱼/大鱼工具手册.md (" + fs.statSync(fishToolManualPath).size + " bytes)");
+
     console.log("DONE: " + projectDir);
     process.exit(0);
 }
@@ -371,6 +376,15 @@ if (!fs.existsSync(fishLessonDest)) {
     console.log("OK: 火影-大鱼/_大鱼实测教训.md (new)");
 } else {
     console.log("SKIP: 火影-大鱼/_大鱼实测教训.md (already exists)");
+}
+
+// 大鱼工具手册.md：init 分支也发（与 fish 分支同逻辑——大鱼模板「周期验证」节引用它，init 不发=悬空引用）
+var fishToolManualDest = fishDir + "/大鱼工具手册.md";
+if (!fs.existsSync(fishToolManualDest)) {
+    fs.copyFileSync(assetDir + "/模板/大鱼工具手册.md", fishToolManualDest);
+    console.log("OK: 火影-大鱼/大鱼工具手册.md (new)");
+} else {
+    console.log("SKIP: 火影-大鱼/大鱼工具手册.md (already exists)");
 }
 
 // 8-2 修复：init 分支也发 _deliver.js/_sign.js 给大鱼（与 fish 分支同逻辑——大鱼模板「专属任务交付闭环」引用这两个工具，init 不发=悬空引用）
