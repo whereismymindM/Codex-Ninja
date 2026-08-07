@@ -336,6 +336,23 @@ if (!fs.existsSync(bugListDest)) {
 } else {
     console.log("SKIP: _外部环境BUG清单.md (already exists)");
 }
+
+// 8-2 修复：init 分支也发 _deliver.js/_sign.js 给大鱼（与 fish 分支同逻辑——大鱼模板「专属任务交付闭环」引用这两个工具，init 不发=悬空引用）
+var fishDeliverDest = fishDir + "/_deliver.js";
+if (!fs.existsSync(fishDeliverDest)) {
+    fs.copyFileSync(assetDir + "/_deliver.js", fishDeliverDest);
+    console.log("OK: 火影-大鱼/_deliver.js (new)");
+} else {
+    console.log("SKIP: 火影-大鱼/_deliver.js (already exists)");
+}
+var fishSignDest = fishDir + "/_sign.js";
+if (!fs.existsSync(fishSignDest)) {
+    var fishSignContent2 = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "火影-大鱼"; });
+    fs.writeFileSync(fishSignDest, fishSignContent2, "utf8");
+    console.log("OK: 火影-大鱼/_sign.js (new)");
+} else {
+    console.log("SKIP: 火影-大鱼/_sign.js (already exists)");
+}
 } else {
     console.log("SKIP: 火影-大鱼/AGENTS.md (add 模式)");
     console.log("SKIP: monitor.js (add 模式)");
