@@ -103,6 +103,34 @@ if (parentCheck) {
   }
 }
 
+// ---- 13-2 写方缺信号告警（2026-08-08 实测暴露，评审轮正方 T1/T2 连续漏发）----
+// 隐患 #17：角色写完 .md 后忘了写同名 .signal，搭档 wait_file 空等。
+// 机制化：等待前扫描任务目录，若存在「.md 无同名 .signal / _acked」的产出（最近 5 分钟内写入），
+// 立即告警提示写方补发——靠脚本不靠自觉。
+var _missingSignal = false;
+try {
+  var _waitDirs = targets.map(function(t) { return path.dirname(t); });
+  var _cut13 = Date.now() - 5 * 60 * 1000;
+  _waitDirs.forEach(function(d) {
+    var entries;
+    try { entries = fs.readdirSync(d); } catch(_e) { return; }
+    entries.forEach(function(f) {
+      if (!/\.md$/.test(f)) return;
+      var base = f.replace(/\.md$/, "");
+      var hasSignal = entries.some(function(e) { return e === base + ".signal" || e === base + ".signal_acked" || e === base + ".signal_已处理" || e === base + ".signal_acked.md"; });
+      if (hasSignal) return;
+      try {
+        var full = path.join(d, f);
+        if (fs.statSync(full).mtimeMs > _cut13) {
+          console.log("WARN_MISSING_SIGNAL: " + f + " 是最近 5 分钟内的新产出但缺 .signal——写方可能漏发（隐患 #17）！搭档 wait_file 会空等。写方请补：echo 时间戳 > 同名.signal");
+          _missingSignal = true;
+        }
+      } catch(_e) {}
+    });
+  });
+} catch(_e) {}
+
+
 // ---- 主循环 ----
 var startTs = Date.now();
 var deadline = startTs + timeoutMin * 60 * 1000;
