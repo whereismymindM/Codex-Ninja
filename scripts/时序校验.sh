@@ -58,11 +58,26 @@ while IFS= read -r bdir; do
     # 收集该任务目录下所有辩论文件，按 mtime 排序（时间序）——同阶段内先手方先写，字典序≠时间序
     files=$(find "$bdir" -maxdepth 1 -name "辩论_*.md" ! -name "辩论_终结.md" 2>/dev/null | while read f; do echo "$(TS "$f") $f"; done | sort -n | awk '{print $2}')
     if [ -z "$files" ]; then continue; fi
+    # 终结收敛豁免（2026-08-08 修复）：任务目录存在 辩论_终结.md = 任一方主动终结，
+    # 之后直接进入 06 总结（跳过多余回合）——05→06 的"阶段倒退"是合法收敛，不报违规。
+    term_file="$bdir/辩论_终结.md"
+    if [ -f "$term_file" ]; then
+        term_ts=$(TS "$term_file")
+        LOG "  📌 $(basename "$bdir") 有辩论_终结.md（$(date -d @$term_ts +%H:%M:%S)）——终结收敛，05 后跳步豁免"
+    else
+        term_ts=0
+    fi
     prev_t=0; prev_stage="00"; prev_name=""
     for f in $files; do
         t=$(TS "$f"); name=$(basename "$f")
         # 提取阶段号（辩论_NN_* 的 NN）
         stage=$(echo "$name" | sed -n 's/^辩论_\([0-9][0-9]*\)_.*/\1/p')
+        # 终结后阶段 06 且终结文件晚于上一文件 → 合法提前收敛，豁免阶段倒退检查
+        if [ "$stage" = "06" ] && [ "$term_ts" -gt "$prev_t" ] && [ "$term_ts" -ne 0 ]; then
+            LOG "  ✅ $(basename "$bdir")/$name $(date -d @$t +%H:%M:%S) [阶段06，终结收敛豁免]"
+            prev_t=$t; prev_name="$name"; [ -n "$stage" ] && prev_stage="$stage"
+            continue
+        fi
         if [ -n "$stage" ] && [ "$stage" -lt "$prev_stage" ]; then
             VIOLATIONS=$((VIOLATIONS+1))
             LOG "⚠️ $(basename "$bdir"): $name（阶段 $stage）早于 $prev_name（阶段 $prev_stage）——阶段倒退！"
@@ -74,10 +89,6 @@ while IFS= read -r bdir; do
         fi
         prev_t=$t; prev_name="$name"; [ -n "$stage" ] && prev_stage="$stage"
     done
-    # 检查收敛信号（不参与排序，单独提示）
-    if find "$bdir" -maxdepth 1 -name "辩论_终结.md" 2>/dev/null | grep -q .; then
-        LOG "  📌 $(basename "$bdir") 有辩论_终结.md（提前收敛，05 后流程可省略）"
-    fi
 done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 -name "辩论_01_*.md" 2>/dev/null | grep -q . && echo "$d"
 done)
@@ -92,7 +103,7 @@ while IFS= read -r sdir; do
     # 配对：请审核.md 与 审核结果_第N次.md 按 mtime 就近配对，检查每对 请审 <= 结果
     # 简化判定：收集所有 请审核*.md 和 审核结果*.md（排除 signal/已处理），
     # 按 mtime 排序后，检查"结果文件"是否都晚于"至少一个早于它的请审核文件"
-    ask_files=$(find "$sdir" -maxdepth 1 -name "请审核*.md" ! -name "*.signal*" ! -name "*_已处理*" 2>/dev/null | sort)
+    ask_files=$(find "$sdir" -maxdepth 1 -name "请审核*.md" ! -name "*.signal*" 2>/dev/null | sort)
     result_files=$(find "$sdir" -maxdepth 1 -name "审核结果*.md" ! -name "*.signal*" ! -name "*_已处理*" 2>/dev/null | sort)
     if [ -z "$result_files" ]; then continue; fi
     # 每个结果文件：找 mtime 早于它的最近的请审核文件（视为对应这次打回循环的请审）
