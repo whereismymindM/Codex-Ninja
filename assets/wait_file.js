@@ -165,6 +165,28 @@ if (_missingSignal) {
   process.exit(5);
 }
 
+// ---- 2026-08-09 信号后缀白名单检测（马斯克质询建议②）----
+// 协议只认两种信号状态：.signal（写方已发）/ .signal_acked（读方已读）。
+// 扫描目标任务目录中最近的 .signal* 文件，发现非白名单后缀（如 .signal_ok/.signal_done）→ 告警，
+// 不阻塞等待（防误伤历史遗留），把"角色自创后缀"从静默变可见。
+try {
+  var _cutNS = Date.now() - 5 * 60 * 1000;
+  _waitDirs.forEach(function(d) {
+    var entriesNS;
+    try { entriesNS = fs.readdirSync(d); } catch(_e) { return; }
+    entriesNS.forEach(function(f) {
+      if (!/\.signal/.test(f)) return;
+      // 白名单：.signal / .signal_acked / .signal_已处理（兼容历史协议）——其他后缀 = 违规
+      if (/\.signal(_acked|_已处理)?$/.test(f)) return;
+      try {
+        if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
+          console.error("NONSTANDARD_SIGNAL: " + f + " 是非协议信号后缀——协议只认 .signal（写方已发）与 .signal_acked（读方已读），禁止自定义后缀（如 .signal_ok）！请勿手工创建，若已存在请移入 _acked 或删除。");
+        }
+      } catch(_e) {}
+    });
+  });
+} catch(_eNS) {}
+
 
 // ---- 主循环 ----
 var startTs = Date.now();
@@ -200,6 +222,7 @@ function ackSignals() {
           var target = t.replace(/\.signal$/i, ".signal_acked");
           fs.renameSync(t, target);
           console.log("ACK: " + path.basename(t) + " -> " + path.basename(target));
+          ackLog(t, target); // 2026-08-09 留痕（马斯克质询建议③）
         }
       } catch(_e) {}
     } else if (/\.md$/i.test(t)) {
@@ -213,12 +236,25 @@ function ackSignals() {
               var acked = sig.replace(/\.signal$/i, ".signal_acked");
               fs.renameSync(sig, acked);
               console.log("ACK: " + path.basename(sig) + " -> " + path.basename(acked));
+              ackLog(sig, acked);
             }
           });
         }
       } catch(_e) {}
     }
   });
+}
+
+// 2026-08-09：ACK 动作留痕——追加一行到角色操作日志（我的世界/{角色}_大鱼对讲/{角色}_操作日志.md）
+//   解决"文件出现"与"角色动作"的归因歧义（本次 .signal_ok 质询因缺留痕导致归因困难，马斯克建议③）
+function ackLog(src, dst) {
+  try {
+    var _role = path.basename(roleDir);
+    var _log = path.resolve(roleDir, "..", "我的世界", _role + "_大鱼对讲", _role + "_操作日志.md");
+    fs.mkdirSync(path.dirname(_log), { recursive: true });
+    var _ts = new Date().toISOString().substring(11, 19);
+    fs.appendFileSync(_log, "[" + _ts + "] ACK " + path.basename(src) + " -> " + path.basename(dst) + "\n", "utf8");
+  } catch(_e) {}
 }
 
 // 先检查是否已就位（防"旧文件秒返"——调用方需自行确认目标当前不存在才该等）
