@@ -13,6 +13,7 @@
  *   --timeout 默认 20 分钟（与模板兜底一致）
  *   --watch-hb <对方心跳文件>：等待中监控对方心跳（12-6 搭档失联检测）——对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4（防盲等，双人对话答方等问方用）
  *   --watch-hb-dead <分钟>：失联阈值，默认 15 分钟（心跳 stale 且对方目录无新文件才算失联）
+ *   --ack：目标 .signal 就位后自动 rename 为 _acked；目标为 .md 时就位后自动 ack 同名 .signal（2026-08-09 增补）
  *
  * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
@@ -44,7 +45,7 @@ for (var i = 0; i < args.length; i++) {
   if (a === "--help" || a === "-h") {
     console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any] [--ack]");
     console.log("  --any: 任一目标就位即返回（默认=全部就位）");
-    console.log("  --ack: 目标 .signal 就位后自动 rename 后缀替换为 _acked（xxx.md.signal → xxx.md.signal_acked，原 .signal 消失；防漏改名/追加式改名，13-1）");
+    console.log("  --ack: 目标 .signal 就位后自动 rename 后缀替换为 _acked（xxx.md.signal → xxx.md.signal_acked，原 .signal 消失；防漏改名/追加式改名，13-1）；目标为 .md 时就位后自动 ack 同名 .signal（2026-08-09 增补）");
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
     console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
@@ -186,6 +187,10 @@ function readySummary() {
 // 13-1 修复（信号_acked 协议机制化）：--ack 模式——目标 .signal 就位后自动 rename 后缀替换
 //   xxx.md.signal → xxx.md.signal_acked（原 .signal 消失）。手动改名常漏/常追加错（.signal.signal_acked），脚本代改零手工。
 //   非 .signal 目标忽略（不误改普通文件）；默认（无 --ack）行为完全不变。
+// 2026-08-09 增补（信号质询 007 根因）：目标为 .md 文件时就位后，自动 ack 同名 .signal——
+//   辩论裁判等总结 .md 本体（第 7 步示例），不处理信号 → 反方总结 .signal 残留；
+//   等 .md 就位 = 读到内容 = 读方义务，脚本代 ack 零手工（马斯克/图灵共同建议：工具原子行为）。
+//   兼容两种命名：xxx.md.signal（协议标准）与 xxx.signal（旧/其他玩法）。
 function ackSignals() {
   if (!ackMode) return;
   targets.forEach(function(t) {
@@ -195,6 +200,21 @@ function ackSignals() {
           var target = t.replace(/\.signal$/i, ".signal_acked");
           fs.renameSync(t, target);
           console.log("ACK: " + path.basename(t) + " -> " + path.basename(target));
+        }
+      } catch(_e) {}
+    } else if (/\.md$/i.test(t)) {
+      // 2026-08-09：目标 .md 就位 → ack 同名 .signal（.md.signal 与 .signal 两种命名都查）
+      try {
+        if (fs.existsSync(t)) {
+          var base = t.replace(/\.md$/i, "");
+          var sigCandidates = [t + ".signal", base + ".signal"];
+          sigCandidates.forEach(function(sig) {
+            if (fs.existsSync(sig)) {
+              var acked = sig.replace(/\.signal$/i, ".signal_acked");
+              fs.renameSync(sig, acked);
+              console.log("ACK: " + path.basename(sig) + " -> " + path.basename(acked));
+            }
+          });
         }
       } catch(_e) {}
     }
