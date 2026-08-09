@@ -13,7 +13,7 @@
  *   --timeout 默认 20 分钟（与模板兜底一致）
  *   --watch-hb <对方心跳文件>：等待中监控对方心跳（12-6 搭档失联检测）——对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4（防盲等，双人对话答方等问方用）
  *   --watch-hb-dead <分钟>：失联阈值，默认 15 分钟（心跳 stale 且对方目录无新文件才算失联）
- *   --ack：目标 .signal 就位后自动 rename 为 _acked；目标为 .md 时就位后自动 ack 同名 .signal（2026-08-09 增补）
+ *   --no-ack：禁用自动 ack（默认开启——2026-08-10 改：等 .signal/.md 就位自动 ack 同名 .signal 并留痕，无需带参数；手动 rename 是留痕黑洞）
  *
  * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
@@ -38,14 +38,14 @@ var watchHbDeadMin = 15;   // 12-8：失联阈值默认 15 分钟（原 2 分钟
 var timeoutMin = 20;
 var parentCheck = false;
 var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
-var ackMode = false;   // 13-1：--ack = 目标 .signal 就位后自动 rename 后缀替换为 _acked（机制化，防角色漏改名/追加式改名）
+var ackMode = true;   // 13-1/2026-08-10：自动 ack 默认开启（等 .signal/.md 就位自动 rename 为 _acked + 操作日志留痕）——角色漏带 --ack 导致手动 rename 跳过留痕（林纳斯 003 实测）；--no-ack 显式关闭
 
 for (var i = 0; i < args.length; i++) {
   var a = args[i];
   if (a === "--help" || a === "-h") {
     console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any] [--ack]");
     console.log("  --any: 任一目标就位即返回（默认=全部就位）");
-    console.log("  --ack: 目标 .signal 就位后自动 rename 后缀替换为 _acked（xxx.md.signal → xxx.md.signal_acked，原 .signal 消失；防漏改名/追加式改名，13-1）；目标为 .md 时就位后自动 ack 同名 .signal（2026-08-09 增补）");
+    console.log("  自动 ack 默认开启：目标 .signal 就位自动 rename 为 _acked；目标 .md 就位自动 ack 同名 .signal（含操作日志留痕）——无需带参数；--no-ack 显式关闭");
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
     console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
@@ -61,6 +61,7 @@ for (var i = 0; i < args.length; i++) {
   else if (a === "--parent-check") { parentCheck = true; }
   else if (a === "--any") { anyMode = true; }
   else if (a === "--ack") { ackMode = true; }
+  else if (a === "--no-ack") { ackMode = false; }
   else { targets.push(a); }
 }
 
