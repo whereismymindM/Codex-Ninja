@@ -116,8 +116,17 @@ try {
     try { entries = fs.readdirSync(d); } catch(_e) { return; }
     entries.forEach(function(f) {
       if (!/\.md$/.test(f)) return;
+      // 13-4 修复（稻盛和夫 001 实测）：归档文件（_第N次.md / _已处理.md / _已处理_N.md）
+      // 是旧文件改名留痕，不是写方新产出——跳过错报 MISSING_SIGNAL_ABORT。
+      if (/_第\d+次\.md$/.test(f) || /_已处理(?:_\d+)?\.md$/.test(f)) return;
       var base = f.replace(/\.md$/, "");
-      var hasSignal = entries.some(function(e) { return e === base + ".signal" || e === base + ".signal_acked" || e === base + ".signal_已处理" || e === base + ".signal_acked.md"; });
+      // 13-3 修复（稻盛和夫 001 实测）：协议信号命名是 xxx.md.signal（带 .md），
+      // 原检测只查 base+".signal"（去掉 .md）→ 把已发信号的产出误报 MISSING_SIGNAL_ABORT。
+      // 兼容两种命名：xxx.signal（无 .md）与 xxx.md.signal（协议标准）。
+      var hasSignal = entries.some(function(e) {
+        return e === base + ".signal" || e === base + ".signal_acked" || e === base + ".signal_已处理" || e === base + ".signal_acked.md"
+            || e === f + ".signal" || e === f + ".signal_acked" || e === f + ".signal_已处理" || e === f + ".signal_acked.md";
+      });
       if (hasSignal) return;
       try {
         var full = path.join(d, f);
