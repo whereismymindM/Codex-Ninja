@@ -23,7 +23,7 @@ description: |
 
 ---
 
-## 5步走
+## 6步走
 
 ### 1. 定角色，写 roles.json
 

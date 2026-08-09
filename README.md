@@ -60,7 +60,7 @@ Codex Ninja 是一个 AI Agent 团队协作框架。通过文件系统通信、�
 ## 快速开始
 
 1. 安装 Skill 到 Reasonix skills 目录
-2. 按 SKILL.md 5步流程：定角色、scaffold、部署团队须知、写公告牌、开窗口
+2. 按 SKILL.md 6步流程：定角色、scaffold、部署团队须知、写公告牌、开窗口、收工后待办
 3. 启动方式二选一：
    - **窗口常驻**（推荐，协作复杂）：`reasonix code` 开角色窗口常驻，自己 poll 推进；大鱼负责发布/校验/扣留收工轮。按 启动指南.md「形态一：窗口常驻」
    - **run 拉起**（简单/串行、角色多资源紧）：大鱼按需 `reasonix run --continue` 拉起角色，干完即退。按 启动指南.md「形态二：run 拉起」

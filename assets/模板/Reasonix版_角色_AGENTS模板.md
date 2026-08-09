@@ -25,9 +25,6 @@
 
 ---
 
-
----
-
 {{ROLE_BACKGROUND}}
 
 ---
