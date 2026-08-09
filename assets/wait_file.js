@@ -107,18 +107,40 @@ if (parentCheck) {
 // 隐患 #17：角色写完 .md 后忘了写同名 .signal，搭档 wait_file 空等。
 // 机制化：等待前扫描任务目录，若存在「.md 无同名 .signal / _acked」的产出（最近 5 分钟内写入），
 // 立即报错退出（exit 5）——把"漏发"从静默吞掉变成立即失败（马斯克 v2 建议：工具链根治）。
+// 13-7 修复（泰勒 006 质询实测）：扫描范围收窄——原扫整个任务目录所有 .md（5 分钟内），
+// 搭档正在写的 .md/别人的产出会被误伤（泰勒两场景：signal 被 ack 后扫描误判 + 主笔正在写请审核时误伤）。
+// 修正：只检查"与等待目标同名"的 .md（等 审核结果_角色X.md.signal → 只查 审核结果_角色X.md 是否有信号），
+// 其他 审核结果_别人.md 等无关文件不检查——精确同名，杜绝误伤。
 var _missingSignal = false;
 try {
   var _waitDirs = targets.map(function(t) { return path.dirname(t); });
   var _cut13 = Date.now() - 5 * 60 * 1000;
+  // 等待目标同名 .md 集合：等 xxx.md.signal → 检查 xxx.md；等 xxx.signal → 检查 xxx 与 xxx.md（兼容两种命名）
+  function _targetMds(t) {
+    var base = path.basename(t);
+    var names = [];
+    if (/\.signal(_acked|_已处理)?$/i.test(base)) {
+      var main = base.replace(/\.signal(_acked|_已处理)?$/i, "");
+      if (/\.md$/.test(main)) names.push(main);
+      else { names.push(main); names.push(main + ".md"); }
+    } else if (/\.md$/.test(base)) {
+      names.push(base);
+    }
+    return names;
+  }
+  var _targetMdsList = [];
+  targets.forEach(function(t) { _targetMdsList = _targetMdsList.concat(_targetMds(t)); });
   _waitDirs.forEach(function(d) {
     var entries;
     try { entries = fs.readdirSync(d); } catch(_e) { return; }
     entries.forEach(function(f) {
       if (!/\.md$/.test(f)) return;
+      // 13-7：只检查"等待目标同名"的 .md——无关文件（搭档写的/别人的产出）不检查
+      var inScope = _targetMdsList.indexOf(f) !== -1;
+      if (!inScope) return;
       // 13-4 修复（稻盛和夫 001 实测）：归档文件（_第N次.md / _已处理.md / _已处理_N.md）
       // 是旧文件改名留痕，不是写方新产出——跳过错报 MISSING_SIGNAL_ABORT。
-      if (/_第\d+次\.md$/.test(f) || /_已处理(?:_\d+)?\.md$/.test(f)) return;
+      if (/_第\d+次\.md$/.test(f) || /_已处理(?:\d+)?\.md$/.test(f)) return;
       var base = f.replace(/\.md$/, "");
       // 13-3 修复（稻盛和夫 001 实测）：协议信号命名是 xxx.md.signal（带 .md），
       // 原检测只查 base+".signal"（去掉 .md）→ 把已发信号的产出误报 MISSING_SIGNAL_ABORT。
