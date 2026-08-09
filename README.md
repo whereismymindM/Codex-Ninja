@@ -8,7 +8,7 @@
 | 项目 | 说明 |
 |------|------|
 | 当前分支 | reasonix-f |
-| **运行环境** | **reasonix CLI v1.17.6-rc.1**（2026-08-05 实测；Skill 行为依赖该版本特性，升级 CLI 前先对照本表——`--loop`/`bash_timeout_seconds=0`/单会话常驻均以该版本为准） |
+| **运行环境** | **reasonix CLI v1.17.6-rc.1**（Skill 行为依赖该版本特性，升级 CLI 前先对照本表——`--loop`/`bash_timeout_seconds=0`/单会话常驻均以该版本为准） |
 | 形态 | 窗口常驻（reasonix code，推荐）+ run 拉起（reasonix run --continue，轻量） |
 | 核心能力 | 单次探测轮询 + 回合内循环（`bash_timeout_seconds=0` + 回合内不输出最终回复直到收工） |
 | 轮询方式 | bash while + node _reasonix_poll.js 单次探测；角色持续 poll 到收工轮 |
@@ -50,7 +50,7 @@ Codex Ninja 是一个 AI Agent 团队协作框架。通过文件系统通信、�
 ## 核心机制
 
 - **公告牌驱动**：任务写在 `公告牌_NNN.md`，大鱼全量发布（有待命轮扣留收工轮），角色轮询读取——不需要长连接
-- **角色持续轮询**（可选全自动）：项目 `reasonix.toml` 配 `[tools] bash_timeout_seconds = 0` 后，角色单会话内持续 poll 到收工，全程无人值守（详见角色模板「工作方式」节）
+- **角色持续轮询**（可选全自动）：角色单会话内持续 poll 到收工，全程无人值守（配置由 scaffold 自动生成，详见角色模板）
 - **大鱼守护**：大鱼负责发布前校验公告牌（编号/收工格式/角色枚举/前置依赖/状态流转 5 项）、周期 monitor 验证（不干预推进）、求助具体回复、收工审计（产出总结含逐轮完成矩阵）
 - **角色状态机**：待命 → 活跃 → 休眠 → 退场，公告牌指定每轮谁干活、干完去哪
 - **bash while 轮询**：角色通过 bash while + node _reasonix_poll.js 持续轮询，不依赖 REPL
@@ -107,50 +107,9 @@ codex-ninja/
 
 `设计文档/初代-codex-ninja.md` 包含完整的设计理念、三方协作时序图、各模式流程图、机制详解和审核检查清单。修改 Skill 前先读它。
 
-## 分支说明
+## 分支 / Tag / 测试
 
-```
-main (v1.0.5) ──┐   历史主干（v1.0.x 时代，已冻结）
-dev (v1.0.6) ───┤
-                │
-reasonix (初代迁移线) ──  Codex → Reasonix 平台迁移
-   ├─ reasonix-d   方案分支：D 版（+4 提交，未合并，历史残留）
-   └─ reasonix-e   = reasonix（内容一致）
-                │
-reasonix-f (当前主线) ───  稳定基线（e2e 纳入仓库 2eab352）
-   │
-   ├─ test-实弹修复      +16 提交：实弹事故修复（heredoc/心跳/沙箱/扣留基线/收工轮字段行）
-   ├─ test-loopN         +17：= 实弹修复 + _reasonix_poll --loop N
-   └─ test-monitor-alert +21：= loopN + 警告栏/监控日志/挂死识别/流程体验报告
-```
-
-**约定**：
-- `reasonix-f` = 稳定主线，只有验收过的改动才合入；测试分支一律从它分叉、线性延伸，**不平行乱岔**
-- 测试分支（test-*）可自由提交/验证/跑 e2e；**何时合并回 reasonix-f 由用户决定**，不主动 merge
-- 旧分支（main/dev/reasonix/reasonix-d/reasonix-e）为历史存档，不再维护
-
-## Tag 规范
-
-**tag 含义**（git tag 里看到的标签）：
-
-| 标签 | 含义 |
-|---|---|
-| `tested-<模式>-<日期>` | **实测通过的可运行版本**。模式英文 `solo/duo/review/debate`（单人/双人/主笔/辩论），跑了几种写几种；`tested-all-<日期>` = 全部模式跑通 |
-| `feat-<名称>-<日期>` | 功能提交（改了代码/模板/配置） |
-| `meta-<类型>-<日期>-base-<版本>` | 非功能提交（仅文档/记录），`base-` 标注其基于的功能版本 |
-
-## 测试（e2e）
-
-`e2e/`（本仓库独立子目录，已纳入 git）含端到端自检脚本，覆盖全部玩法模式（单人/双人/主笔/辩论/待命/收工）+ 系统机制（心跳/锁/唤醒/死锁/断点续接/扣留/追加链）。**修改 Skill 后跑一遍确认无回归**：
-
-```bash
-bash e2e/run_e2e.sh           # 单角色链路（14 断言）
-bash e2e/run_e2e_multi.sh     # 多角色玩法模式（19 断言）
-bash e2e/run_e2e_sys.sh       # 系统机制（19 断言）
-```
-
-- 全部在 `mktemp` 临时目录运行、自动清理，不碰任何真实项目
-- 详情见 `e2e/README.md`
+> 开发者视角内容（分支史、tag 规范、e2e 自检用法）见 `CHANGELOG.md` 与 `e2e/README.md`——使用者不需要维护这些，此处不再重复。
 
 ## 设计哲学
 
