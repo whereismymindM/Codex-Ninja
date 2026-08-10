@@ -185,6 +185,28 @@ try {
         }
       } catch(_e) {}
     });
+    // ---- 2026-08-10 手动 rename 检测（马斯克 3 处 bash mv 留痕黑洞实证）----
+    // .signal_acked 存在但角色操作日志近 5 分钟无对应 "ACK" 行 = 可能手动 rename 绕过 ackLog（bash mv），
+    // 审计无法归因"谁在何时 ack"。检测到 → 告警（不阻塞，把静默手动 rename 变可见）。
+    entriesNS.forEach(function(f) {
+      if (!/\.signal_acked$/.test(f)) return;
+      try {
+        if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
+          var _mBase = f.replace(/\.signal_acked$/, "");
+          var _log = path.resolve(roleDir, "..", "我的世界", path.basename(roleDir) + "_大鱼对讲", path.basename(roleDir) + "_操作日志.md");
+          var _hasAck = false;
+          try {
+            if (fs.existsSync(_log)) {
+              var _logContent = fs.readFileSync(_log, "utf8");
+              _hasAck = _logContent.indexOf("ACK " + _mBase + ".signal") !== -1;
+            }
+          } catch(_e) {}
+          if (!_hasAck) {
+            console.error("MANUAL_ACK_DETECTED: " + f + " 是 .signal_acked 但操作日志无对应 ACK 记录——疑似手动 rename（bash mv）绕过 ackLog！必须用 wait_file.js 等/ack（自动 ack + 留痕），手动 rename 是留痕黑洞（2026-08-10 马斯克实证）。");
+          }
+        }
+      } catch(_e) {}
+    });
   });
 } catch(_eNS) {}
 
