@@ -199,7 +199,8 @@ if (!isAddMode) {
         [assetDir + "/_lock.js", "_lock.js"],
         [assetDir + "/_wakeup.js", "_wakeup.js"],
         [assetDir + "/_fish_loop.js", "_fish_loop.js"],
-        [assetDir + "/wait_file.js", "wait_file.js"]
+        [assetDir + "/wait_file.js", "wait_file.js"],
+        [__dirname + "/compose.js", "compose.js"]
     ];
     snapFiles.forEach(function(pair) {
         try {
