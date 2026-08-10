@@ -1,6 +1,8 @@
 // compose.js —— 公告牌编排器 v1.0（2026-08-10）
 // 把"老渣手画状态矩阵 + 手填公告牌"变成"声明式 JSON + 自动生成 + 编译期校验"
-// 用法: node compose.js <编排.json> [输出目录(默认当前目录)]
+// 用法: node compose.js <编排.json> [输出目录]   |   node compose.js --list 看模板
+// 模板: scripts/templates/ 下有 5 个现实团队流程模板（标准软件交付/技术选型决策/知识挖掘/代码审查/质量审计）
+//       ——复制模板 → 替换 {角色X} 占位符 → 喂 compose.js 生成（谁先谁后已按现实流程排好）
 // 输出: 公告牌_001.md ~ 公告牌_NNN.md + 状态矩阵 + 校验报告（流转冲突/格式违规 → 报错不生成）
 // 零依赖（Node 原生），与 codex-ninja 风格一致
 //
@@ -37,8 +39,26 @@ var ROLE_FIELDS = { 辩论: ["正方", "反方", "裁判"], 双人对话: ["问�
 
 // ── 参数 ──
 var args = process.argv.slice(2);
+// --list：列出可用模板
+if (args.indexOf("--list") !== -1) {
+  var tplDir = path.join(__dirname, "templates");
+  try {
+    var tpls = fs.readdirSync(tplDir).filter(function(f) { return f.endsWith(".json"); });
+    console.log("可用流程模板（scripts/templates/）:\n");
+    tpls.forEach(function(f) {
+      try {
+        var t = JSON.parse(fs.readFileSync(path.join(tplDir, f), "utf8"));
+        console.log("  📋 " + f.replace(".json", ""));
+        console.log("     现实流程: " + (t._现实流程 || "-"));
+        console.log("     需要角色: " + (t._角色需求 || []).join(", "));
+      } catch (e) { console.log("  ⚠️ " + f + "（解析失败）"); }
+    });
+    console.log("\n用法: 复制模板 → 替换 {角色X} 占位符 → node compose.js <改好的.json> [输出目录]");
+  } catch (e) { console.error("无 templates/ 目录: " + e.message); }
+  process.exit(0);
+}
 if (args.length < 1) {
-  console.error("用法: node compose.js <编排.json> [输出目录]");
+  console.error("用法: node compose.js <编排.json> [输出目录]   |   node compose.js --list 看模板");
   process.exit(2);
 }
 var cfgFile = args[0];
@@ -112,10 +132,11 @@ cfg.轮次.forEach(function(r, ri) {
     cfg.角色.forEach(function(role) {
       var st = roleStates[role] || (activeRoles.indexOf(role) !== -1 ? "活跃" : state[role]);
       if (STATES.indexOf(st) === -1) errors.push("第" + n + "轮 角色 '" + role + "' 状态非法: " + st);
-      // 流转校验：上轮"本轮后"必须等于本轮状态（退场除外——退场不回头）
+      // 流转校验：只有 休眠/退场 → 活跃 才是真冲突（休眠=确定没你需唤醒，退场=已走）
+      // 待命 → 活跃 是正常（待命=随时接棒，现实团队随时被叫）——v1.1 修正（模板测试暴露第一版太严）
       var prevAfter = prevAfterMap && prevAfterMap[role];
-      if (prevAfter && prevAfter !== "—" && prevAfter !== st && state[role] !== "退场") {
-        errors.push("第" + n + "轮: 角色 '" + role + "' 流转冲突——上轮本轮后=" + prevAfter + " 但本轮状态=" + st);
+      if (prevAfter && (prevAfter === "休眠" || prevAfter === "退场") && st === "活跃" && state[role] !== "退场") {
+        errors.push("第" + n + "轮: 角色 '" + role + "' 流转冲突——上轮本轮后=" + prevAfter + " 但本轮状态=活跃（休眠/退场需唤醒或不可能）");
       }
       var aft = after[role] || (st === "活跃" ? "待命" : "—");
       if (aft !== "—" && STATES.indexOf(aft) === -1) errors.push("第" + n + "轮 角色 '" + role + "' 本轮后非法: " + aft);
