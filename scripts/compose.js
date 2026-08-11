@@ -71,6 +71,23 @@ try { cfg = JSON.parse(fs.readFileSync(cfgFile, "utf8").replace(/^\uFEFF/, ""));
 catch (e) { console.error("ERROR: 读取/解析配置失败: " + e.message); process.exit(2); }
 var errors = [];
 
+// ── 职位化增强（2026-08-11，架构师评审建议）：_角色需求 ×N 防漏展开校验 ──
+//   模板 _角色需求 可写 "{职位}×{N}"（如 "码农×2"）= 该职位需要 N 个实例；
+//   与 cfg.角色 实际实例数比对（=== 职位 或 职位- 开头），不足则警告（不阻塞生成——漏展开由 monitor WAIT 兜底发现，提示提前一轮）
+try {
+  if (cfg._角色需求 && Array.isArray(cfg._角色需求)) {
+    cfg._角色需求.forEach(function(req) {
+      var m = String(req).match(/^(.+?)×(\d+)$/);
+      if (!m) return;
+      var pos = m[1].trim(), need = parseInt(m[2], 10);
+      var have = (cfg.角色 || []).filter(function(r) {
+        return r === pos || r.indexOf(pos + "-") === 0;
+      }).length;
+      if (have < need) console.log("WARN ×N: 职位 '" + pos + "' 需 " + need + " 个实例，角色数组实际 " + have + " 个——请展开实例（如 \"" + pos + "-张三\", \"" + pos + "-李四\"），否则 monitor 按实例数校验 .ready 会漏检");
+    });
+  }
+} catch(_xn) {}
+
 // ── 校验 ──
 if (!cfg.角色 || !Array.isArray(cfg.角色) || cfg.角色.length === 0) errors.push("角色 必须是非空数组");
 if (!cfg.轮次 || !Array.isArray(cfg.轮次) || cfg.轮次.length === 0) errors.push("轮次 必须是非空数组");
