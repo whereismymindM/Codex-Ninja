@@ -55,7 +55,7 @@ Copy-Item <skill路径>/团队须知/团队须知.md <项目根目录>/团队须
 
 ### 4. 写公告牌
 
-读 assets/老渣文档/（格式标准/标准模板/完全指南，README 有索引）。一次性写完，收工轮标退场。
+读 assets/老渣文档/（格式标准/标准模板/完全指南，README 有索引）。一次性写完，收工轮标退场。**可选**：用 `scripts/compose.js` + `scripts/templates/` 声明式编排（JSON → 自动生成公告牌+状态矩阵，编译期校验流转，见完全指南「十」第 7 步）。
 
 ### 5. 开窗口，盯场
 
@@ -105,8 +105,11 @@ N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js �
 
 | 文件 | 用途 |
 |------|------|
-| assets/老渣文档/公告牌标准模板.md | **唯一填空模板**（硬标准标注 + 六种轮型样例 + 填表规则 + 自查清单） |
+| assets/老渣文档/公告牌标准模板.md | **唯一填空模板**（硬标准标注 + 七种轮型样例 + 填表规则 + 自查清单） |
 | assets/老渣文档/公告牌完全指南.md | 格式+状态机+范例+常见错误（完整参考，系统学习用） |
+| assets/老渣文档/README.md | 老渣文档索引（标准模板/完全指南/Multi-pass/goal/示例） |
+| assets/通用公告牌/ | 标准化公告牌模板集（调查轮×4/待命/收工/老渣对讲/流程体验/自检——复制改名 `公告牌_NNN.md` 即用） |
+| scripts/compose.js + scripts/templates/ | 编排自动化：JSON 声明式生成公告牌+状态矩阵+编译期流转校验（5 个现实团队流程模板，`node compose.js --list` 查看） |
 | assets/模板/大鱼_AGENTS模板.md | 大鱼模板·形态选择入口（选一生成） |
 | assets/模板/大鱼_AGENTS模板_窗口常驻.md | 大鱼模板（窗口常驻形态，reasonix code） |
 | assets/模板/大鱼_AGENTS模板_run拉起.md | 大鱼模板（run 拉起形态，调度唤醒） |
@@ -116,5 +119,7 @@ N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js �
 | assets/_隐患清单.md | 已知隐患与修复记录 |
 | scripts/时序校验.sh | 收工后时序校验（双人/辩论/主笔 顺序合规，老渣待办 #3） |
 | assets/老渣文档/完整示例_RSS摘要系统.md | 5角色6轮实战（⚠️历史示例：字段格式过时，只学多轮编排思路） |
+| assets/老渣文档/_Multi-pass_solo.md | 单人换帽子玩法（小项目<2h/代码审查，不需要大鱼和公告牌） |
+| assets/老渣文档/goal模式认知.md | goal 模式接入逐字稿（公告牌警告栏/收工轮，决定开 goal 时复制即用） |
 | assets/_外部环境BUG清单.md | 中文环境避坑 |
 

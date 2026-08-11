@@ -315,7 +315,24 @@ if (activeRoles.length === 0) {
           if (fs.existsSync(hbFile3)) {
             var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
             var hbTimeout3 = (fs.existsSync(base + "/火影-大鱼/_运行形态.mode") && fs.readFileSync(base + "/火影-大鱼/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
-            if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) hbForce = true;
+            if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) {
+              // A-1 判据同步（2026-08-11 修复）：心跳 stale 但对讲目录在 hbTimeout3 窗口内有新文件
+              // （正在写流水账/角色记忆/退场文件而心跳没同步）→ 不算死，不强制退场——
+              // 与主心跳检测区 A-1 判据（"心跳不能单独作为死亡证据"）保持一致；
+              // 真死（心跳 stale + 窗口内无任何新产出）才 hbForce，防止收工轮写长文档被误判提前 DONE
+              var _hbForceRecent = false;
+              try {
+                var _hbfDir = base + "/我的世界/" + role + "_大鱼对讲";
+                var _hbfCut = Date.now() - hbTimeout3;
+                _hbForceRecent = fs.readdirSync(_hbfDir).some(function(_f) {
+                  // 排除 monitor 自写文件（_wakeup 唤醒 / 大鱼回复 自动回复 / 需人工干预）——它们是 monitor 写的不是角色新产出，
+                  // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长（对齐主 A-1 判据 L152 排除逻辑）
+                  if (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0) return false;
+                  try { return fs.statSync(_hbfDir + "/" + _f).mtimeMs > _hbfCut; } catch(_e9) { return false; }
+                });
+              } catch(_e8) {}
+              if (!_hbForceRecent) hbForce = true;
+            }
           }
         } catch(_e4) {}
         if (fs.existsSync(retireFile) || fs.existsSync(retireAcked) || fs.existsSync(sleepFile) || fs.existsSync(sleepAcked) || hbForce) {
