@@ -272,6 +272,7 @@ var board;
 try { board = fs.readFileSync(boardFile, "utf8").replace(/^\uFEFF/, ""); } // P2-6+P0-4: BOM+异常保护
 catch (e) { console.log("READ_ERR " + boardFile + ": " + e.message); logMonitor("READ_ERR " + boardFile); process.exit(0); }
 
+var isTrialRound = false, _trialFbPath = null; // ★ 试用轮判定提升到块外（最终判定区 705/723 行引用）
 // 解析活跃角色——这轮谁在干活
 var activeRoles = [];
 // 解析所有角色——收工轮检查退场文件用
@@ -296,7 +297,26 @@ var allRetired = true; // 收工轮用：所有角色是否都写了退场文件
 if (activeRoles.length === 0) {
     // 无活跃角色：可能是收工轮（全员退场），也可能是待命轮（全员待命、无产出）
     var isRetireRound = /模式[：:]\s*收工/.test(board) || /(?:^|\n)\s*·\s*收工/.test(board); // 第四轮修复：·收工 锚定行首
-    if (!isRetireRound) {
+    // ★ 新增 A1：试用轮识别（放 isRetireRound 判定旁，296 行块内）——变量已由改动点 B（275 行前）统一声明，此处纯赋值
+    isTrialRound = /模式[：:]\s*试用/.test(board);
+    // ★ 新增 A2：试用反馈文件探测（任务目录来自公告牌「任务目录」字段，与 .ready 检查同级）
+    _trialFbPath = null;
+    if (isTrialRound) {
+        var _tdM = board.match(/\n- 任务目录[:：]\s*我的世界\/([^\r\n]+)/);
+        if (_tdM) {
+            var _tdP = base + "/我的世界/" + _tdM[1].trim().replace(/\/+$/, "");
+            if (fs.existsSync(_tdP + "/试用反馈.md") || fs.existsSync(_tdP + "/试用反馈.md.signal")) _trialFbPath = _tdP + "/试用反馈.md";
+        }
+    }
+    if (isTrialRound && !_trialFbPath) {
+        // ★ 试用轮等真人反馈：输出 TRIAL（语义与待命轮 STANDBY 区分，D组#10），阻止误判 DONE
+        console.log("TRIAL N=" + N + " (等真人反馈: 试用反馈.md 未就位)");
+        logMonitor("TRIAL N=" + N);
+        allRetired = false;
+    } else if (isTrialRound) {
+        // ★ 反馈已到（_trialFbPath 非空）：不输出 STANDBY、不设 allRetired——放行到最终判定区（707 行），
+        //   由产出就位与否决定 WAIT（反馈已到，角色处理中）/ DONE（产出就位）——v2 修复（审核 DHH/图灵 P0）：防误报 STANDBY + 防阻塞 DONE
+    } else if (!isRetireRound) {
         // H2 修复：待命轮不要求退场文件——输出 STANDBY 供大鱼识别（避免误报 SIGN [收工]/RETIRE MISS），并阻止误判 DONE
         console.log("STANDBY N=" + N);
         allRetired = false;
@@ -714,6 +734,7 @@ if (outputReady && allRetired) {
 } else {
     // 12-24 判定摘要：WAIT 带等待原因（大鱼 002 自检最卡②——"WAIT N=3 得读源码才懂"）
     var _why = [];
+    if (isTrialRound && _trialFbPath && !outputReady) _why.push("试用反馈已到，角色处理中"); // ★ 试用轮反馈已到未完成原因（v2：push 移至产出原因之前，与 §2.2 表顺序一致）
     if (!outputReady && outputProgress.length > 0) {
         var _totNeed = 0, _totHave = 0;
         outputProgress.forEach(function(_p) { _totNeed += _p.need; _totHave += _p.have; });
@@ -723,12 +744,18 @@ if (outputReady && allRetired) {
     // 8-3 产出卡轮熔断（WAIT_OVERDUE，P0 窗口常驻版）：当前轮产出不齐持续 WAIT 超 30 分钟 → 机器自动报警
     //   角色心跳正常但在干活+产出路径错/deliver 参数错 → .ready 永不齐 → 无限 WAIT 无升级（run 形态已有熔断，窗口常驻补上）
     //   只报警不干预（写 需人工干预 提示大鱼核查产出路径/deliver 参数），与干预阶梯（大鱼肉眼）互补
+    // ★ 试用轮等真人反馈阶段豁免 WAIT_OVERDUE：等真人点程序是预期长等待（几十分钟到几小时），产出未就位 ≠ 卡轮（D组#10）
+    var _trialWaiting = isTrialRound && !_trialFbPath;
     var _waitOverdue = false;
     try {
         var _st2 = {};
         try { if (fs.existsSync(stateFile)) _st2 = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch(_sr2) {}
         var _WAIT_OVERDUE_MS = 30 * 60 * 1000;
-        if (_st2.waitSinceN !== N || !_st2.waitSince) {
+        if (_trialWaiting) {
+            // 等反馈阶段：重置计时基准，不触发熔断（反馈就位后从新基准起算）
+            _st2.waitSinceN = N; _st2.waitSince = Date.now();
+            try { fs.writeFileSync(stateFile, JSON.stringify(_st2), "utf8"); } catch(_w2) {}
+        } else if (_st2.waitSinceN !== N || !_st2.waitSince) {
             // 首次进入当前轮 WAIT → 记录起始时间
             _st2.waitSinceN = N; _st2.waitSince = Date.now();
             try { fs.writeFileSync(stateFile, JSON.stringify(_st2), "utf8"); } catch(_w2) {}
