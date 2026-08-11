@@ -127,14 +127,17 @@ cfg.轮次.forEach(function(r, ri) {
       state[role] = "待命";
     });
   } else {
-    // 任务轮：提及角色默认活跃，未提及保持上轮状态
+    // 任务轮：提及角色默认活跃，未提及用上轮本轮后（2026-08-11 修复：原用上轮当前状态——上轮活跃的未提及角色会永远显示活跃，
+    //   四阶段模板暴露：拆缝后架构师/产品经理在后续轮误显"状态：活跃"，角色会误以为自己这轮要干活）
     var activeRoles = r.角色 ? Object.keys(r.角色) : (roleStates ? Object.keys(roleStates) : []);
     cfg.角色.forEach(function(role) {
-      var st = roleStates[role] || (activeRoles.indexOf(role) !== -1 ? "活跃" : state[role]);
+      var prevAfter = prevAfterMap && prevAfterMap[role];
+      var st = roleStates[role]
+        || (activeRoles.indexOf(role) !== -1 ? "活跃"
+           : (prevAfter === "待命" || prevAfter === "休眠" ? prevAfter : state[role]));
       if (STATES.indexOf(st) === -1) errors.push("第" + n + "轮 角色 '" + role + "' 状态非法: " + st);
       // 流转校验：只有 休眠/退场 → 活跃 才是真冲突（休眠=确定没你需唤醒，退场=已走）
       // 待命 → 活跃 是正常（待命=随时接棒，现实团队随时被叫）——v1.1 修正（模板测试暴露第一版太严）
-      var prevAfter = prevAfterMap && prevAfterMap[role];
       if (prevAfter && (prevAfter === "休眠" || prevAfter === "退场") && st === "活跃" && state[role] !== "退场") {
         errors.push("第" + n + "轮: 角色 '" + role + "' 流转冲突——上轮本轮后=" + prevAfter + " 但本轮状态=活跃（休眠/退场需唤醒或不可能）");
       }
