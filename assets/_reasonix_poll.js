@@ -1,5 +1,5 @@
 // _reasonix_poll.js —— 单次探测版（无内部循环，毫秒级退出）+ --loop N 循环版（2026-08-03）
-// 用法: node _reasonix_poll.js <角色名> <当前N> [--standby] [--loop N]
+// 用法: node _reasonix_poll.js <角色名> <lastN> [--standby] [--loop N]
 //   --loop N：一次进程内循环探测 N 次（每次探测 + sleep 间隔），减少外层 bash spawn 开销
 //             （待命期 spawn 15次/分 → --loop 60 时 1次/分）；任一次命中即退出；N 次全无事 → exit 3
 //   不带 --loop = 单次探测（兼容原行为），循环和休眠由 Agent 外层 bash while 管理
@@ -12,7 +12,7 @@ var path = require("path");
 
 var args = process.argv.slice(2);
 if (args.length < 2) {
-  console.log("用法: node _reasonix_poll.js <角色名> <当前N> [--standby] [--loop N]");
+  console.log("用法: node _reasonix_poll.js <角色名> <lastN> [--standby] [--loop N]");
   process.exit(4);
 }
 
