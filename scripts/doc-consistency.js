@@ -60,6 +60,7 @@ const EXEMPT_FILES = [
   'assets/_隐患清单.md',          // 修复记录本体（保留例外）
   'assets/老渣文档/goal模式认知.md', // 实测知识库类（保留例外）
   'assets/模板/_大鱼实测教训.md', // 实测知识库类（保留例外）
+  'scripts/doc-consistency-审核指南.md', // 元文档：内容就是讲校验器怎么查（示例占位/行号/已知漂移提及是内容本身）
 ];
 const EXEMPT_DIRS = ['e2e'];      // e2e 文档（维护者信息）
 function isExempt(p) {
@@ -369,8 +370,8 @@ reg('C1 仓库内文件引用', '文档中 assets/scripts/团队须知 引用必
       const text = read(p);
       const refs = new Set(text.match(re) || []);
       for (const r of refs) {
-        // 排除含占位符的引用
-        if (r.includes('<') || r.includes('{{') || r.includes('${')) continue;
+        // 排除含占位符的引用（<任务目录>/{{xxx}}/xxx.md 示例占位）
+        if (r.includes('<') || r.includes('{{') || r.includes('${') || r.includes('xxx')) continue;
         const target = path.join(ROOT, r);
         if (!exists(target)) fail('C1', p, 0, '死引用: ' + r);
       }
@@ -443,11 +444,13 @@ reg('C5 裸行号引用', '非代码块/非表格文本中的 ":NNN" / "N-N 行"
         lines.forEach((l, i) => {
           if (l.trim().startsWith('|')) return;         // 表格行（编号/数据是内容）
           if (l.includes('行号') || l.includes('L1') || /https?:\/\//.test(l)) return;
-          // 时间 HH:MM 排除：冒号前是 1-2 位数字且后是 2 位数字
+          // 时间 HH:MM 排除：冒号前是 1-2 位数字且后是 2 位数字；具名引用（文件.md:NNN）豁免——那是文件名+行号不是裸行号
           let m1;
           while ((m1 = re1.exec(l)) !== null) {
             const before = l.slice(Math.max(0, m1.index - 3), m1.index);
             if (/\d$/.test(before)) continue;            // 前面是数字 = 时间/版本
+            const beforeFile = l.slice(Math.max(0, m1.index - 30), m1.index);
+            if (/\.md$|\.js$|\.sh$/.test(beforeFile)) continue; // 具名引用（文件.md:46）
             fail('C5', p, i + 1, '裸行号引用 :' + m1[1] + '（应用具名引用）: ' + l.trim().slice(0, 50));
             break;
           }

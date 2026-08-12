@@ -78,3 +78,4 @@ node scripts/doc-consistency.js --smoke        # wait_file 命令实测
 
 - 计划书（双审通过，含设计取舍/备选对比/验收标准）：`阅览室/doc-consistency校验脚本-计划书.md`
 - 审核标准接入（第 5/6 步改为跑脚本）：`阅览室/Skill三方视角审核.md`
+- **审本工具**（元审核，行为验证优先 + 4 处关键源码抽查）：同目录 `doc-consistency-审核指南.md`
