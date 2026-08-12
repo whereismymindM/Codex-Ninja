@@ -62,6 +62,8 @@ while (true) {
         var fpSelf = omSelf[1].trim();
         if (/[\{\}]/.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 产出路径含占位符（{}）: " + fpSelf + "——公告牌产出行应为具体文件名或尾斜杠目录，占位符永不匹配（12-1 fail-loud）"); }
         var lsSelf = fpSelf.lastIndexOf("/");
+        // 2026-08-13（机制审查 #22）：自检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
+        if (/\.\./.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 自检产出路径含 ..（拒绝）: " + fpSelf); continue; }
         // F-11 修复：格式A/B 判定改按"尾斜杠"（目录形式带 /）而非"含点"——无扩展名产出文件（如 …/任务001/说明）不再误判为目录
         if (lsSelf !== -1 && !fpSelf.endsWith("/")) {
             var odSelf = fpSelf.substring(0, lsSelf);
@@ -340,11 +342,13 @@ var re = /- (.+?)[（(].*状态[:：]\s*活跃/g; // P1-2: 同时匹配全角和
 var allRe = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g; // 第五轮修复：allRoles 状态限定（与自检 retireRe 一致）——`- 备注（补充）: xxx` 等自定义字段行不再被当角色（黑名单只覆盖已知 6 字段，限定正则根治任意字段行）
 var m;
 var am;
-while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); activeRoles.push(rn); }
+while ((m = re.exec(headerPart)) !== null) { var rn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, ''); if (/[\\/]|\.\./.test(rn)) { console.log("OUTPUT-FORMAT ⚠️ 角色名含路径分隔符/..（拒绝）: " + rn); continue; } activeRoles.push(rn); }
 while ((am = allRe.exec(headerPart)) !== null) {
     var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, '');
     // 第四轮修复：字段行黑名单——带括号的字段行（如 `- 模式: 收工（全员确认）`）不当角色，防收工轮查不存在的退场文件卡死
     if (arn === "模式" || arn === "任务" || arn === "产出" || arn === "产出负责人" || arn === "任务目录" || arn === "辩论轮数" || arn.indexOf(":") !== -1 || arn.indexOf("：") !== -1) continue;
+    // 2026-08-13（机制审查 #22）：角色名含路径分隔符/.. 拒绝（防拼路径写出 我的世界/）——compose 已净化，此层防手写公告牌绕过
+    if (/[\\/]|\.\./.test(arn)) { console.log("OUTPUT-FORMAT ⚠️ 角色名含路径分隔符/..（拒绝）: " + arn); continue; }
     allRoles.push(arn);
 }
 
@@ -491,6 +495,11 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         outDir = fullPath.replace(/\/$/, "");
         fileNames = null;
     }
+    // 2026-08-13（机制审查 #22）：产出路径禁止 ..（防拼路径写出 我的世界/）——compose 已净化，此层防手写公告牌绕过
+    if (/\.\./.test(outDir) || /\.\./.test(fileNames ? fileNames.join(",") : "")) {
+        console.log("OUTPUT-FORMAT ⚠️ 产出路径含 ..（拒绝）: " + fullPath + "——公告牌产出行应为 我的世界/产出/ 下路径，禁止相对路径逃逸");
+        continue;
+    }
     
     var ready = false;
     var outDirPath = base + "/我的世界/" + outDir;
@@ -546,7 +555,26 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         try { readyFiles = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rd) {}
         var _ownerMatch = board.match(/\n- 产出负责人[:：]\s*(.+)/);
         var _ownerEach = _ownerMatch && _ownerMatch[1].trim() === "各自";
-        ready = _ownerEach ? readyFiles.length >= activeRoles.length : readyFiles.length > 0;
+        // 2026-08-13（机制审查 #25）：格式 B 各自场景校验 producer 归属——不再只数数量（任一角色重复交付可凑数）。
+        //   .ready 内容含 `producer: <角色名>`（_deliver.js:118 写入，目录名=协议角色名）；每个活跃角色需有带自己 producer 的 .ready。
+        //   ⚠️ 兼容旧版 .ready（无 producer 行，2026-08-12 前历史交付）：归属未知的按"计入"处理，避免历史轮次误判卡轮
+        if (_ownerEach) {
+            var _producers = {};
+            var _unknownReady = 0;
+            readyFiles.forEach(function(_rf) {
+                try {
+                    var _rc = fs.readFileSync(outDirPath + "/" + _rf, "utf8");
+                    var _pm = _rc.match(/^producer:\s*(.+)$/m);
+                    if (_pm && _pm[1]) { _producers[_pm[1].trim()] = true; return; }
+                } catch(_rd2) {}
+                _unknownReady++; // 无 producer 行（历史 .ready）→ 归属未知，计入（不卡轮）
+            });
+            var _missingOwner = activeRoles.filter(function(_ar) { return !_producers[_ar]; });
+            ready = _missingOwner.length === 0 || _unknownReady >= _missingOwner.length; // 未知归属可顶缺
+            if (!ready) console.log("OUTPUT-WARN " + outDir + " 各自场景 producer 未覆盖: 缺 " + (_missingOwner.join(",") || "?") + "（.ready 无对应 producer，疑似一人重复交付凑数）");
+        } else {
+            ready = readyFiles.length > 0;
+        }
         console.log("OUTPUT " + outDir + " " + (ready ? "\u2713" : "\u2717") + (_ownerEach ? " (" + readyFiles.length + "/" + activeRoles.length + " .ready)" : ""));
         outputProgress.push({ ok: ready, need: _ownerEach ? activeRoles.length : 1, have: _ownerEach ? readyFiles.length : (ready ? 1 : 0) }); // 12-24 摘要
     }
@@ -802,6 +830,8 @@ if (!outputReady && activeRoles.length > 0) {
                 while ((outputMatch = outputRe.exec(board)) !== null) {
                     _anyOutput = true;
                     var _fullPath2 = outputMatch[1];
+                    // 2026-08-13（机制审查 #22）：快速复检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
+                    if (/\.\./.test(_fullPath2)) { console.log("OUTPUT-FORMAT ⚠️ 复检产出路径含 ..（拒绝）: " + _fullPath2); continue; }
                     var _lastSlash2 = _fullPath2.lastIndexOf("/");
                     var _outDir2, _fileNames2;
                     if (_lastSlash2 !== -1 && !_fullPath2.endsWith("/")) { // F-11 修复：复检同样按尾斜杠判定格式A/B

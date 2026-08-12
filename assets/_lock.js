@@ -41,14 +41,14 @@ if (action !== "acquire") {
 
 // acquire: 原子抢锁（wx = 不存在才创建）
 var start = Date.now();
-// F-15 修复：等锁期间续心跳（防 monitor 2min 误判 DEAD——等锁最长 180s > 120s 阈值）；角色名从 AGENTS.md 头部读取
+// F-15 修复：等锁期间续心跳（防 monitor 2min 误判 DEAD——等锁最长 180s > 120s 阈值）；角色名从目录名推导
+// 2026-08-13（机制审查 #23）：原从 AGENTS.md 首行 # (.+) 读取——全仓库唯一残留此推导（_deliver 注释已记录
+//   该方案坑：鱼形态首行 `# 大鱼（窗口常驻形态）`≠目录名 → 心跳写进错误目录）；统一为 basename(__dirname)（与 :82 同款）
 var _hbCtr15 = 0;
 function heartbeatDuringWait() {
     if (++_hbCtr15 % 12 !== 0) return; // 每 12 次循环（约 60s）写一次
     try {
-        var ag15 = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
-        var rm15 = ag15.match(/^# (.+)$/m);
-        var roleName15 = rm15 ? rm15[1].trim() : "";
+        var roleName15 = path.basename(__dirname);
         if (!roleName15) return;
         var hbDir15 = path.resolve(__dirname, "..", "我的世界", roleName15 + "_大鱼对讲");
         fs.mkdirSync(hbDir15, { recursive: true });

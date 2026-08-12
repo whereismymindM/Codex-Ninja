@@ -227,9 +227,20 @@ var deadline = startTs + timeoutMin * 60 * 1000;
 var lastHbTs = 0;
 
 function allReady() {
+  // 2026-08-13（机制审查 #24）：.md 目标就位判定加非空校验（size>0）——写方先建空占位再填充会秒返误判完成；
+  //   .signal 目标保持"存在即就位"（信号文件可能为空，内容在对应 .md 里），不改
+  function _ready(t) {
+    try {
+      if (!fs.existsSync(t)) return false;
+      if (/\.md$/i.test(t)) {
+        return fs.statSync(t).size > 0;
+      }
+      return true;
+    } catch(_e) { return false; }
+  }
   return anyMode
-    ? targets.some(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } })
-    : targets.every(function(t) { try { return fs.existsSync(t); } catch(_e) { return false; } });
+    ? targets.some(_ready)
+    : targets.every(_ready);
 }
 
 // 12-28 纳特 002 自检问题12：--any 命中时打印全部目标误导（实测答方误以为'结束信号与新问同时就位'）——改为标注实际触发目标

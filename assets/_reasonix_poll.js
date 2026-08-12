@@ -17,6 +17,11 @@ if (args.length < 2) {
 }
 
 var roleName = args[0];
+// 2026-08-13（机制审查 #21）：角色名禁止路径分隔符/相对路径/纯点号——防在 我的世界/ 之外建目录（对齐 _wakeup.js 同款校验，scaffold M-4 同类漏洞另一入口）
+if (/[\\/]|\.\.|^\.+$/.test(roleName)) {
+  console.log("用法错误: 角色名不能包含路径分隔符（/ \\）或 ..（当前: " + roleName + "）");
+  process.exit(4);
+}
 var lastN = parseInt(args[1], 10) || 0;
 var isStandby = args.indexOf("--standby") !== -1;   // N-3 修复：indexOf 匹配，与 --loop 组合顺序无关
 // --loop N：进程内循环 N 次；缺省 = 1（单次，兼容）
