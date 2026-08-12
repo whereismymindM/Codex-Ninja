@@ -190,8 +190,16 @@ try {
     // ---- 2026-08-10 手动 rename 检测（马斯克 3 处 bash mv 留痕黑洞实证）----
     // .signal_acked 存在但角色操作日志近 5 分钟无对应 "ACK" 行 = 可能手动 rename 绕过 ackLog（bash mv），
     // 审计无法归因"谁在何时 ack"。检测到 → 告警（不阻塞，把静默手动 rename 变可见）。
+    // 2026-08-13 收窄（对齐 13-7，机制审查 MANUAL_ACK 跨角色误报）：只检查"等待目标同名"的 .signal_acked——
+    // 搭档 wait_file ack 的无关信号（快节奏对话/打回同目录交换）不在检查范围，杜绝跨角色误报；手动 rename 必落在等待目标上，检测不失效。
+    var _targetAckedList = [];
+    targets.forEach(function(t) {
+      var _tb = path.basename(t).replace(/\.signal(_acked|_已处理)?$/i, "");
+      if (_targetAckedList.indexOf(_tb) === -1) _targetAckedList.push(_tb);
+    });
     entriesNS.forEach(function(f) {
       if (!/\.signal_acked$/.test(f)) return;
+      if (_targetAckedList.indexOf(f.replace(/\.signal_acked$/, "")) === -1) return; // 2026-08-13：非等待目标同名不检查
       try {
         if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
           var _mBase = f.replace(/\.signal_acked$/, "");

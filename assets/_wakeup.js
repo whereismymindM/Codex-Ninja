@@ -38,10 +38,15 @@ var wakeContent = '# 大鱼唤醒信号\n\n' +
 
 // L-12 修复：已有未确认的 _wakeup.md 时不覆盖（可能是 monitor 自动唤醒），追加补充原因保留原信号
 if (fs.existsSync(wakeFile)) {
-  fs.appendFileSync(wakeFile, '\n- 补充唤醒 (' + timestamp + '): ' + reason + '\n');
-  console.log('WAKEUP(append): ' + roleName + '（已有唤醒信号，追加原因）');
-  console.log('文件: ' + wakeFile);
-  process.exit(0);
+  // 2026-08-13：append 分支包 try（对齐原子分支）——竞态：monitor 写 _wakeup.md → 角色 poll 已删 → 本脚本 append → ENOENT 裸崩
+  try {
+    fs.appendFileSync(wakeFile, '\n- 补充唤醒 (' + timestamp + '): ' + reason + '\n');
+    console.log('WAKEUP(append): ' + roleName + '（已有唤醒信号，追加原因）');
+    console.log('文件: ' + wakeFile);
+    process.exit(0);
+  } catch(_aw2) {
+    console.log('WARN: 追加唤醒原因失败（文件可能已被角色删除确认）: ' + (_aw2 && _aw2.message ? _aw2.message : _aw2));
+  }
 }
 
 // 原子写入

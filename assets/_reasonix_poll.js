@@ -231,6 +231,9 @@ function probeOnce() {
 
   // ── 5. 唤醒检查（慢路径）──
   if (fs.existsSync(wakeFile)) {
+    // 2026-08-13：WOKEN 分支在 return 前先写心跳（对齐快路径 :187 先写后删）——原顺序漏写一次心跳，
+    //   若恰逢 monitor 2min 阈值可能补写唤醒文件（低概率无害，但非对称）
+    try { writeHeartbeat(); } catch(_hb1) {}
     try { fs.unlinkSync(wakeFile); } catch(e) {}   // 8-1 图灵源码级发现：同上，统一删除
     log("被唤醒");
     console.log("WOKEN");

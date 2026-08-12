@@ -725,6 +725,7 @@ if (fs.existsSync(worldDir)) {
             var __role = dir.replace("_大鱼对讲", "");
             console.log("DEADLOCK " + __role);
             var __bf = base + "/我的世界/公告牌_" + String(N).padStart(3,"0") + ".md";
+            var __dlConsumed = false;   // 2026-08-13：死锁信号解析失败不静默删除——找不到搭档=无法唤醒，保留信号+显式告警
             if (fs.existsSync(__bf)) {
               var __bc = fs.readFileSync(__bf, "utf8");
               // 找搭档：搜索角色名所在行，提取"搭档：XXX"
@@ -748,12 +749,18 @@ if (fs.existsSync(worldDir)) {
                     } else {
                         try { fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8"); console.log("WAKE " + __partner + " (deadlock)"); } catch(_pw2) {}
                     }
+                    __dlConsumed = true;
                   }
-                  break;
                 }
               }
             }
-            fs.unlinkSync(__dlFile);
+            if (!__dlConsumed) {
+              // 2026-08-13：公告牌不存在 / 无"角色+搭档"同行 / 搭档正则不匹配 → 无法定位搭档，保留信号待下次重试，并显式告警（原无条件 unlink 静默丢信号）
+              console.log("DEADLOCK " + __role + " WARN: 未找到搭档（公告牌缺失或无搭档字段）——保留 _deadlock.md 待下轮重试，请人工核查公告牌角色行");
+              logMonitor("DEADLOCK " + __role + " WARN: 未找到搭档，信号保留待重试");
+            } else {
+              fs.unlinkSync(__dlFile);
+            }
           } catch(__e6) {}
         }
 
