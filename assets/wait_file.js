@@ -17,7 +17,7 @@
  *   --watch-hb-dead <分钟>：失联阈值，默认 15 分钟（心跳 stale 且对方目录无新文件才算失联）
  *   --no-ack：禁用自动 ack（默认开启——2026-08-10 改：等 .signal/.md 就位自动 ack 同名 .signal 并留痕，无需带参数；手动 rename 是留痕黑洞）
  *
- * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）
+ * 退出码：0 = 目标就位；2 = 超时（目标未就位）；3 = 父目录不存在（--parent-check）；4 = 对方失联（--watch-hb 触发）；5 = 写方漏发信号（目标 .md 新产出但缺 .signal）
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
  *
  * 9-1 修复（2026-08-05 第九轮）：路径自动锚定，与 CWD 无关——
@@ -53,7 +53,7 @@ for (var i = 0; i < args.length; i++) {
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
     console.log("  --watch-hb-dead: 失联阈值分钟数（默认 15）");
     console.log("  --timeout: 默认 20 分钟");
-    console.log("  退出码: 0=就位 2=超时 3=父目录缺失 4=对方失联");
+    console.log("  退出码: 0=就位 2=超时 3=父目录缺失 4=对方失联 5=写方漏发信号");
     process.exit(0);
   }
   if (a === "--hb") { hbFile = args[++i]; }
