@@ -9,7 +9,7 @@
 // 退出码：0=全部一致  1=有漂移（stdout 列清单）  2=脚本自身错误
 // 原则  ：事实源唯一（能枚举的从代码/文件系统枚举）；断言 文档==事实；
 //         白名单带理由；不改文档内容（只报告）。
-// 校验器：A 枚举(5) + B 数字(4) + C 引用(5) + D 卫生(3) + E 口径(3) = 20 个
+// 校验器：A 枚举(5) + B 数字(5) + C 引用(5) + D 卫生(3) + E 口径(3) = 21 个
 // ============================================================================
 'use strict';
 const fs = require('fs');
@@ -359,6 +359,41 @@ reg('B4 参数语义', '--loop/--any/--hb/--watch-hb/--standby 文档描述 == �
     }
   });
 
+// B5 发布校验项数：_fish_loop.js 代码事实 == 文档四处口径（README/团队须知/大鱼模板×2）
+//   2026-08-13 元审核发现：README 校验项数 5 vs 6 曾漂移且脚本漏网（上轮人工抓到）——
+//   根因 = 无校验器覆盖"发布校验项数"这个口径（B 类只查阈值/退出码/参数语义）。
+//   本校验器从 _fish_loop.js:73 "校验 N 项" 提取代码事实 N，断言文档四处写的 N 全部一致。
+reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/团队须知/大鱼模板×2 口径',
+  () => {
+    const fish = read(path.join(ROOT, 'assets/_fish_loop.js'));
+    const mFish = fish.match(/校验\s*(\d+)\s*项/);
+    if (!mFish) {
+      fail('B5', path.join(ROOT, 'assets/_fish_loop.js'), 0, '_fish_loop.js 缺"校验 N 项"事实源（无法断言）');
+      return;
+    }
+    const N = mFish[1];
+    // 文档四处：README / 团队须知 / 大鱼模板窗口常驻 / 大鱼模板 run 拉起
+    const docSpots = [
+      { p: 'README.md', re: /校验公告牌（[^）]*?\d+ 项）/ },
+      { p: '团队须知/团队须知.md', re: /校验公告牌（\d+ 项）/ },
+      { p: 'assets/模板/大鱼_AGENTS模板_窗口常驻.md', re: /校验\s*(\d+)\s*项/ },
+      { p: 'assets/模板/大鱼_AGENTS模板_run拉起.md', re: /校验\s*(\d+)\s*项/ },
+    ];
+    for (const s of docSpots) {
+      const text = read(path.join(ROOT, s.p));
+      const m = text.match(s.re);
+      if (!m) {
+        fail('B5', path.join(ROOT, s.p), 0, '缺"校验 N 项"口径（应写 ' + N + ' 项）');
+        continue;
+      }
+      // 提取行内数字：优先捕获组（\d+ 项），否则取括号内最后的 N 项
+      const nText = (m[1] || (m[0].match(/(\d+)\s*项/) || [])[1] || '');
+      if (nText && nText !== N) {
+        fail('B5', path.join(ROOT, s.p), 0, '校验项数写 ' + nText + ' 项，_fish_loop 事实源为 ' + N + ' 项');
+      }
+    }
+  });
+
 // ---------------------------------------------------------------------------
 // C 类：引用一致性（文件系统事实）
 // ---------------------------------------------------------------------------
@@ -701,6 +736,10 @@ function selfTest() {
   cases.push({
     name: 'D1 轨迹关键词必抓', file: 'assets/模板/_启动多步曲.md',
     from: /(## 第 0 步：确认现场)/, to: '## 第 0 步：确认现场（灵魂舱测试）', expect: 'D1',
+  });
+  cases.push({
+    name: 'B5 校验项数漂移必抓', file: 'README.md',
+    from: /(校验公告牌（[^）]*?)\d+( 项）)/, to: '$15$2', expect: 'B5',
   });
 
   for (const c of cases) {
