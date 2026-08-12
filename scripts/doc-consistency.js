@@ -42,13 +42,14 @@ function splitFences(text) {
   const parts = [];
   const re = /^(\s*```[^\n]*\n?)/gm;
   let last = 0, m, inFence = false;
+  // 绝对定位：pos 处的全局行号（1-based）——CRLF/末尾无换行/围栏吞空行全部免疫
+  const lineOf = (pos) => (text.slice(0, pos).match(/\n/g) || []).length + 1;
   while ((m = re.exec(text)) !== null) {
-    if (!inFence) { parts.push({ code: false, text: text.slice(last, m.index) }); }
-    else { parts.push({ code: true, text: text.slice(last, m.index) }); }
+    parts.push({ code: inFence, text: text.slice(last, m.index), offset: lineOf(last) });
     inFence = !inFence;
     last = m.index + m[0].length;
   }
-  parts.push({ code: inFence, text: text.slice(last) });
+  parts.push({ code: inFence, text: text.slice(last), offset: lineOf(last) });
   return parts;
 }
 
@@ -268,23 +269,24 @@ reg('B1 铁律编号引用', '全仓库"铁律 N"引用语义命中模板主表�
       { kw: ['证据', '置信'], n: 11 },
       { kw: ['第一原则'], n: 12 },
     ];
-    // 扫描全仓库 .md 的"铁律 N"引用
+    // 扫描全仓库 .md 的"铁律 N"引用（逐行：正确行号 + 同号多处全查）
     for (const p of walk(ROOT, '.md')) {
       if (isExempt(p)) continue;
-      const text = read(p);
-      const refs = text.match(/铁律 (\d+)/g) || [];
-      for (const ref of new Set(refs)) {
-        const n = parseInt(ref.match(/\d+/)[0], 10);
-        const lineText = text.split(/\r?\n/).find(l => l.includes(ref)) || '';
-        if (lineText.includes('详解')) continue; // 引用详解节（编号正确，跳过）
-        let hit = null, hitCount = 0;
-        for (const e of kwMap) {
-          if (e.kw.some(k => lineText.includes(k))) { hit = e; hitCount++; }
+      const lines = read(p).split(/\r?\n/);
+      lines.forEach((lineText, i) => {
+        const refs = lineText.match(/铁律 (\d+)/g) || [];
+        for (const ref of refs) {
+          const n = parseInt(ref.match(/\d+/)[0], 10);
+          if (lineText.includes('详解')) continue; // 引用详解节（编号正确，跳过）
+          let hit = null, hitCount = 0;
+          for (const e of kwMap) {
+            if (e.kw.some(k => lineText.includes(k))) { hit = e; hitCount++; }
+          }
+          if (hitCount === 1 && hit.n !== n) {
+            fail('B1', p, i + 1, '铁律 ' + n + ' 引用与语义不符（应为 ' + hit.n + '）：' + lineText.trim().slice(0, 60));
+          }
         }
-        if (hitCount === 1 && hit.n !== n) {
-          fail('B1', p, 0, '铁律 ' + n + ' 引用与语义不符（应为 ' + hit.n + '）：' + lineText.trim().slice(0, 60));
-        }
-      }
+      });
     }
   });
 
@@ -451,12 +453,12 @@ reg('C5 裸行号引用', '非代码块/非表格文本中的 ":NNN" / "N-N 行"
             if (/\d$/.test(before)) continue;            // 前面是数字 = 时间/版本
             const beforeFile = l.slice(Math.max(0, m1.index - 30), m1.index);
             if (/\.md$|\.js$|\.sh$/.test(beforeFile)) continue; // 具名引用（文件.md:46）
-            fail('C5', p, i + 1, '裸行号引用 :' + m1[1] + '（应用具名引用）: ' + l.trim().slice(0, 50));
+            fail('C5', p, seg.offset + i, '裸行号引用 :' + m1[1] + '（应用具名引用）: ' + l.trim().slice(0, 50));
             break;
           }
           let m2;
           while ((m2 = re2.exec(l)) !== null) {
-            fail('C5', p, i + 1, '裸行号引用 ' + m2[0] + '（应用具名引用）: ' + l.trim().slice(0, 50));
+            fail('C5', p, seg.offset + i, '裸行号引用 ' + m2[0] + '（应用具名引用）: ' + l.trim().slice(0, 50));
           }
         });
       });
@@ -482,7 +484,7 @@ reg('D1 开发轨迹', '使用者文档 0 残留 开发轨迹关键词',
           if (l.includes('_大鱼实测教训')) return; // 文件名引用（教训文件本体，非轨迹残留）
           if (badRe.test(l)) {
             const hit = (l.match(badRe) || [''])[0];
-            fail('D1', p, i + 1, '轨迹关键词 [' + hit + ']: ' + l.trim().slice(0, 50));
+            fail('D1', p, seg.offset + i, '轨迹关键词 [' + hit + ']: ' + l.trim().slice(0, 50));
           }
         });
       });
@@ -503,7 +505,7 @@ reg('D2 全角冒号', '字面匹配字段（模式/产出/警告）全角冒号
         lines.forEach((l, i) => {
           if (l.includes('全角')) return; // 说明性文字（如"不要期望全角模式：待命"）
           if (badRe.test(l)) {
-            fail('D2', p, i + 1, '全角冒号字段: ' + l.trim().slice(0, 50));
+            fail('D2', p, seg.offset + i, '全角冒号字段: ' + l.trim().slice(0, 50));
           }
         });
       });
