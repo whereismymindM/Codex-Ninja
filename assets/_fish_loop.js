@@ -70,7 +70,7 @@ function checkBoards() {
   }
   if (found.length > 0) {
     console.log("[" + ts() + "] NEW_BOARD: " + found.join(", ") + " ← " + boardDir);
-    console.log("    → 去校验并发布（校验 5 项 / 打回 / 扣留判断——决策归你）");
+    console.log("    → 去校验并发布（校验 6 项 / 打回 / 扣留判断——决策归你）");
   }
 }
 

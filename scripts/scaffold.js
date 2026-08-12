@@ -207,9 +207,25 @@ if (!isAddMode) {
             if (fs.existsSync(pair[0])) fs.copyFileSync(pair[0], srcSnap + "/" + pair[1]);
         } catch(_sn) {}
     });
+    // 外部审核修复（2026-08-12）：_Multi-pass_solo.md（单人输出终审格式参考）分发到 我的世界/skill文档/——
+    //   角色玩法文件 _单人输出模式.md 引用它（../我的世界/skill文档/_Multi-pass_solo.md），不分发 = 悬空引用；已存在不覆盖（与 scaffold 风格一致）
+    try {
+        var _mpsDestInit = projectDir + "/我的世界/skill文档/_Multi-pass_solo.md";
+        if (!fs.existsSync(_mpsDestInit)) fs.copyFileSync(assetDir + "/老渣文档/_Multi-pass_solo.md", _mpsDestInit);
+    } catch(_mps) {}
     fs.writeFileSync(srcSnap + "/版本戳.txt", "快照时间: " + new Date().toISOString() + "\n来源: codex-ninja scaffold init（B-8 只读快照，角色可读不可写；更新=重跑 scaffold）\n", "utf8");
     console.log("OK: 我的世界/skill文档/工具源码/ (B-8 只读快照 + 版本戳)");
 } else {
+    // add 模式：不重建基础目录，但补全 _Multi-pass_solo.md 分发——新增角色引用它，老项目（旧版 scaffold 建的）可能没有，
+    //   不补 = 新角色 _单人输出模式.md 的引用悬空（外部审核修复 2026-08-12）
+    try {
+        var _mpsDestAdd = projectDir + "/我的世界/skill文档/_Multi-pass_solo.md";
+        if (!fs.existsSync(_mpsDestAdd)) {
+            fs.mkdirSync(projectDir + "/我的世界/skill文档", { recursive: true });
+            fs.copyFileSync(assetDir + "/老渣文档/_Multi-pass_solo.md", _mpsDestAdd);
+            console.log("OK: 我的世界/skill文档/_Multi-pass_solo.md (add 补全分发)");
+        }
+    } catch(_mpsA) {}
     console.log("SKIP: 我的世界/ (add 模式不重建)");
 }
 
