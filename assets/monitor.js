@@ -498,6 +498,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     // 2026-08-13（机制审查 #22）：产出路径禁止 ..（防拼路径写出 我的世界/）——compose 已净化，此层防手写公告牌绕过
     if (/\.\./.test(outDir) || /\.\./.test(fileNames ? fileNames.join(",") : "")) {
         console.log("OUTPUT-FORMAT ⚠️ 产出路径含 ..（拒绝）: " + fullPath + "——公告牌产出行应为 我的世界/产出/ 下路径，禁止相对路径逃逸");
+        allOutputReady = false; // 2026-08-13 review：被拒产出行视为未就位（否则 outputCount 已计但 allOutputReady 未置 false → 全部被拒时 DONE 误放行）
         continue;
     }
     
@@ -847,11 +848,28 @@ if (!outputReady && activeRoles.length > 0) {
                             if (!fs.existsSync(_odp + "/" + _fileNames2[_fi].trim() + ".ready")) { _allOk = false; break; }
                         }
                     } else {
-                        // 12-15 大鱼自检：快速复检格式 B 同步数量校验（产出负责人=各自 → 需 .ready ≥ 活跃角色数）
+                        // 12-15 大鱼自检：快速复检格式 B 校验（产出负责人=各自 → 需 .ready ≥ 活跃角色数）
                         var _rfs = fs.existsSync(_odp) ? fs.readdirSync(_odp).filter(function(f) { return f.endsWith(".ready"); }) : [];
                         var _ownerR = board.match(/\n- 产出负责人[:：]\s*(.+)/);
                         var _ownerEachR = _ownerR && _ownerR[1].trim() === "各自";
-                        if (_ownerEachR ? _rfs.length < activeRoles.length : _rfs.length === 0) _allOk = false;
+                        // 2026-08-13 review：复检格式 B 各自场景同步 producer 归属校验（与主判断 :558 同逻辑）——
+                        //   否则一人重复交付凑数时主判断 WAIT、10s 内复检直接放行，归属校验被旁路
+                        if (_ownerEachR) {
+                            var _producersR = {};
+                            var _unknownReadyR = 0;
+                            _rfs.forEach(function(_rf2) {
+                                try {
+                                    var _rc2 = fs.readFileSync(_odp + "/" + _rf2, "utf8");
+                                    var _pm2 = _rc2.match(/^producer:\s*(.+)$/m);
+                                    if (_pm2 && _pm2[1]) { _producersR[_pm2[1].trim()] = true; return; }
+                                } catch(_rd5) {}
+                                _unknownReadyR++; // 无 producer 行（历史 .ready）→ 归属未知，计入（不卡轮）
+                            });
+                            var _missingOwnerR = activeRoles.filter(function(_ar2) { return !_producersR[_ar2]; });
+                            if (!(_missingOwnerR.length === 0 || _unknownReadyR >= _missingOwnerR.length)) _allOk = false;
+                        } else {
+                            if (_rfs.length === 0) _allOk = false;
+                        }
                     }
                 }
                 if (_anyOutput && _allOk) { outputReady = true; console.log("RETRY: 产出就绪（第" + (_retry+1) + "次复检）"); break; }
