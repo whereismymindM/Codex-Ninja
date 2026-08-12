@@ -144,7 +144,8 @@ reasonix run --dir ../{角色目录} --model deepseek-v4-flash --max-steps 120 "
 - **开工仪式**：启动 `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`（在看牌动作之后），确认日志出现"公告牌检测 30s / monitor 60s"字样；`WaitDelay expired` 报错是 bash 后台 I/O 句柄误报，以日志 mtime 持续更新为准，不要重试启动造成双实例
 - **硬性规则**：常规等待**单次 sleep 上限 60s**；唯一例外 = 确认脚本首次输出后，允许一次 ≤65s 的 sleep 等首个 monitor 输出
 - **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**查 `大鱼_老渣对讲/` 新任务（必做）** ③跑 `_fish_loop.js --once` ④做决策——有决策动作才算在场
-- **写大鱼心跳（每回合必做）**：`write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`）——**心跳 = 你在场的证据**（monitor 判你掉线与否；心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）。脚本在跑 ≠ 你在场——只有你亲手写的心跳才是"决策者在场"的可验证证据
+- **写大鱼心跳（每回合必做）**：`write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`）——**心跳 = 你在场的证据**（monitor 判你掉线与否；心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）。
+  脚本在跑 ≠ 你在场——只有你亲手写的心跳才是"决策者在场"的可验证证据
 - **循环内检测到 DONE/新牌必须 break 提前返回**（bash 工具调用要整轮跑完才返回，循环 N 次卡 N×55s；检测到 `DONE`/`NEW_BOARD` 立即 break）
 
 **monitor 输出解读**：
@@ -205,7 +206,9 @@ reasonix run --dir ../{角色目录} --model deepseek-v4-flash --max-steps 120 "
 
 > **对讲目录是双向的**——你写求助给老渣，**老渣也会把大鱼要做的任务发到这里**（可能以 `大鱼对话_NNN.md`、`老渣回执_NNN.md` 等命名出现）。**查 `大鱼_老渣对讲/` 是每回合必做动作**（见「周期验证」节）——老渣发来的任务要处理，不要错过。
 
-> **🔑 大鱼专属任务交付闭环**：老渣发到对讲目录的任务走**标准交付**——①读任务 → ②干 → ③产出文件放到任务指定目录（通常 `../我的世界/产出/` 下）→ ④`node _deliver.js <产出文件名> <任务目录>` 生成 `.ready` → ⑤`node _sign.js <轮次>` 生成 `完成_NNN.md` 签字 → ⑥在对讲目录写 `大鱼对话_NNN.md` 汇报。**交付不走公告牌 monitor**（monitor 只验角色），老渣看 `_ready/_sign/对话` 三件套验收。
+> **🔑 大鱼专属任务交付闭环**：老渣发到对讲目录的任务走**标准交付**——①读任务 → ②干 → ③产出文件放到任务指定目录（通常 `../我的世界/产出/` 下）→ ④`node _deliver.js <产出文件名> <任务目录>` 生成 `.ready`
+> ⑤`node _sign.js <轮次>` 生成 `完成_NNN.md` 签字 → ⑥在对讲目录写 `大鱼对话_NNN.md` 汇报。
+> **交付不走公告牌 monitor**（monitor 只验角色），老渣看 `_ready/_sign/对话` 三件套验收。
 
 | 场景 | 做法 |
 |------|------|
