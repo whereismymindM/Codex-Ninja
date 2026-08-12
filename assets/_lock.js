@@ -55,6 +55,10 @@ function heartbeatDuringWait() {
         fs.writeFileSync(hbDir15 + "/_heartbeat.txt", String(Date.now()), "utf8");
     } catch(e) {}
 }
+// 2026-08-13 security review 信任边界注明：锁内容仅存 PID，回收时 process.kill(pid,0) 校验存活——
+//   这是"防正常角色长任务被误回收"的护栏，**不是防恶意**（信任域内角色可预置活 PID 锁文件导致
+//   永不过期回收=DoS，或直接 unlink 他人锁——两者同为信任域固有攻击面，内容校验无法硬防御）。
+//   团队模型：所有角色互信（协作对象），本锁只防"误用并发"，不防"恶意角色"。
 while (true) {
     try {
         fs.writeFileSync(lockFile, process.pid.toString(), { flag: "wx" });

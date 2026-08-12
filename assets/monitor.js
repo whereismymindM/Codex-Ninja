@@ -63,7 +63,11 @@ while (true) {
         if (/[\{\}]/.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 产出路径含占位符（{}）: " + fpSelf + "——公告牌产出行应为具体文件名或尾斜杠目录，占位符永不匹配（12-1 fail-loud）"); }
         var lsSelf = fpSelf.lastIndexOf("/");
         // 2026-08-13（机制审查 #22）：自检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
-        if (/\.\./.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 自检产出路径含 ..（拒绝）: " + fpSelf); continue; }
+        if (/\.\./.test(fpSelf)) {
+          console.log("OUTPUT-FORMAT ⚠️ 自检产出路径含 ..（拒绝）: " + fpSelf);
+          outOkSelf = false; // 2026-08-13 security review：被拒行必须置未就位——否则自检 continue 后 outOkSelf 不变，含 .. 的轮次被 N++ 跳过绕过检查
+          continue;
+        }
         // F-11 修复：格式A/B 判定改按"尾斜杠"（目录形式带 /）而非"含点"——无扩展名产出文件（如 …/任务001/说明）不再误判为目录
         if (lsSelf !== -1 && !fpSelf.endsWith("/")) {
             var odSelf = fpSelf.substring(0, lsSelf);
@@ -366,8 +370,12 @@ if (activeRoles.length === 0) {
     if (isTrialRound) {
         var _tdM = board.match(/\n- 任务目录[:：]\s*我的世界\/([^\r\n]+)/);
         if (_tdM) {
-            var _tdP = base + "/我的世界/" + _tdM[1].trim().replace(/\/+$/, "");
-            if (fs.existsSync(_tdP + "/试用反馈.md") || fs.existsSync(_tdP + "/试用反馈.md.signal")) _trialFbPath = _tdP + "/试用反馈.md";
+            if (/\.\./.test(_tdM[1])) {
+              console.log("OUTPUT-FORMAT ⚠️ 试用轮任务目录含 ..（拒绝）: " + _tdM[1]); // 2026-08-13 security review：与产出路径同款净化（防拼路径逃出 我的世界/）
+            } else {
+              var _tdP = base + "/我的世界/" + _tdM[1].trim().replace(/\/+$/, "");
+              if (fs.existsSync(_tdP + "/试用反馈.md") || fs.existsSync(_tdP + "/试用反馈.md.signal")) _trialFbPath = _tdP + "/试用反馈.md";
+            }
         }
     }
     if (isTrialRound && !_trialFbPath) {
@@ -765,6 +773,13 @@ if (fs.existsSync(worldDir)) {
                   var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)(?=[，,;；\)）。！？]|\s*$)/); // L12 修复：搭档名在行尾/句号结尾也能匹配；第四轮修复：补句号终止符
                   if (__m && __m[1]) {
                     var __partner = __m[1].trim();
+                    // 2026-08-13 security review：搭档名净化（与角色名同款 [\\/]|\.\. 拒绝）——公告牌文本可注入，`产出/../../..` 等会拼出项目根外路径写唤醒
+                    if (/[\\/]|\.\./.test(__partner)) {
+                      console.log("DEADLOCK " + __role + " WARN: 搭档名含路径分隔符/..（拒绝）: " + __partner + "——保留 _deadlock.md 待下轮，请人工核查公告牌角色行");
+                      logMonitor("DEADLOCK " + __role + " WARN: 搭档名非法（" + __partner + "），信号保留");
+                      __dlConsumed = true; // 本行已处理（拒绝），不重复告警；信号保留（下方 !__dlConsumed 分支不触发）
+                      continue;
+                    }
                     console.log("DEADLOCK partner=" + __partner);
                     var __pw = worldDir + "/" + __partner + "_大鱼对讲/_wakeup.md";
                     // 第四轮修复：写唤醒前重读搭档心跳——刚恢复则跳过（与主唤醒路径 :318 一致）
@@ -775,10 +790,17 @@ if (fs.existsSync(worldDir)) {
                     } catch(_ph) {}
                     if (__partnerAlive) {
                         console.log("SKIP " + __partner + " (just recovered, deadlock)");
+                        __dlConsumed = true; // 搭档刚恢复=已处理（无需唤醒），信号可消费
                     } else {
-                        try { fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8"); console.log("WAKE " + __partner + " (deadlock)"); } catch(_pw2) {}
+                        try {
+                          fs.writeFileSync(__pw, "auto-wakeup: partner deadlock", "utf8");
+                          console.log("WAKE " + __partner + " (deadlock)");
+                          __dlConsumed = true; // 2026-08-13 security review：只有唤醒**写成功**才置位消费——原在写前置位，写失败被 catch 吞后信号仍被 unlink（静默丢信号，抵消 f8bc06b 保留意图）
+                        } catch(_pw2) {
+                          console.log("DEADLOCK " + __role + " WARN: 写唤醒文件失败（" + (_pw2 && _pw2.message ? _pw2.message : _pw2) + "）——保留 _deadlock.md 待下轮重试");
+                          logMonitor("DEADLOCK " + __role + " WARN: 写唤醒失败，信号保留");
+                        }
                     }
-                    __dlConsumed = true;
                   }
                 }
               }
@@ -832,7 +854,11 @@ if (!outputReady && activeRoles.length > 0) {
                     _anyOutput = true;
                     var _fullPath2 = outputMatch[1];
                     // 2026-08-13（机制审查 #22）：快速复检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
-                    if (/\.\./.test(_fullPath2)) { console.log("OUTPUT-FORMAT ⚠️ 复检产出路径含 ..（拒绝）: " + _fullPath2); continue; }
+                    if (/\.\./.test(_fullPath2)) {
+                      console.log("OUTPUT-FORMAT ⚠️ 复检产出路径含 ..（拒绝）: " + _fullPath2);
+                      _allOk = false; // 2026-08-13 security review：被拒行必须置未就位——否则 _anyOutput=true 且 _allOk 不变，10s 复检 DONE 旁路主判断
+                      continue;
+                    }
                     var _lastSlash2 = _fullPath2.lastIndexOf("/");
                     var _outDir2, _fileNames2;
                     if (_lastSlash2 !== -1 && !_fullPath2.endsWith("/")) { // F-11 修复：复检同样按尾斜杠判定格式A/B
