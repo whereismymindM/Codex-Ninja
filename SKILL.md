@@ -123,7 +123,7 @@ N 个角色各开独立窗口 `reasonix code`，bash while + _reasonix_poll.js �
 | assets/_工具速查.md | 工具用法速查（按老渣/大鱼/角色分类） |
 | assets/_隐患清单.md | 已知隐患与修复记录 |
 | scripts/时序校验.sh | 收工后时序校验（双人/辩论/主笔 顺序合规，老渣待办 #3） |
-| scripts/doc-consistency.js | 文档一致性校验——**改文档/模板后跑一次查漂移**；**用前先读 scripts/doc-consistency-使用说明.md**（计划书 阅览室/doc-consistency校验脚本-计划书.md） |
+| scripts/doc-consistency.js | 文档一致性校验——**改文档/模板后跑一次查漂移**；**用前先读 scripts/doc-consistency-使用说明.md** |
 | assets/老渣文档/完整示例_RSS摘要系统.md | 5角色6轮实战（⚠️历史示例：字段格式过时，只学多轮编排思路） |
 | assets/老渣文档/_Multi-pass_solo.md | 单人换帽子玩法（小项目<2h/代码审查，不需要大鱼和公告牌） |
 | assets/老渣文档/goal模式认知.md | goal 模式接入逐字稿（公告牌警告栏/收工轮，决定开 goal 时复制即用） |
