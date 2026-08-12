@@ -102,7 +102,7 @@ codex-ninja/
 │   ├── _deliver.js          # 交付工具
 │   ├── _wakeup.js           # 唤醒工具
 │   └── wait_file.js         # 标准等文件（取代 _poll.js）
-├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）
+├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）+ 校验（doc-consistency.js：**改文档/模板后跑**，用前先读 scripts/doc-consistency-使用说明.md）
 └── 团队须知/                # 注入所有角色窗口的通用规则（团队须知.md）
 ```
 
