@@ -307,6 +307,9 @@ while (Date.now() < deadline) {
         try {
           var _cut = Date.now() - watchHbDeadMin * 60 * 1000;
           _working = fs.readdirSync(_pDir).some(function(f) {
+            // 2026-08-12 修复：排除 monitor 自写文件（_wakeup 唤醒 / 大鱼回复 自动回复 / 需人工干预）——
+            // 它们是 monitor 刚写入的不是对方新产出，不排除会把"monitor 刚写过"误判成"对方在干活"而延迟 PARTNER_DEAD（对齐 monitor A-1 排除逻辑）
+            if (f.indexOf("_wakeup") === 0 || f.indexOf("大鱼回复") === 0 || f.indexOf("需人工干预") === 0) return false;
             try { return fs.statSync(path.join(_pDir, f)).mtimeMs > _cut; } catch(_e) { return false; }
           });
         } catch(_ph2) {}

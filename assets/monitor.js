@@ -191,16 +191,32 @@ if (_fishDead) {
 //   但"扣留等追加"与"大鱼掉线无人补搬"不可区分——加 OVERDUE 提示
 var _standbyOverdue = false;
 try {
-    // ① 大鱼目录仍扣着收工轮（存在未发布的收工轮 = 扣留中）
+    // ① 大鱼目录仍扣着收工轮（存在未发布的收工轮 = 扣留中）——兼容 模式:收工 与 ·收工 两种写法（2026-08-12 修复）
     var _retireKept = fs.readdirSync(_fishSrcDir).some(function(_ff) {
         return /^公告牌_(\d+)\.md$/.test(_ff) && (function() {
-            try { return /模式[：:]\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff, "utf8")); } catch(_rke) { return false; }
+            try { return /模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff, "utf8")); } catch(_rke) { return false; }
         })();
     });
     if (_retireKept) {
         // ② 基线：前一轮完成时刻（最后一个 完成_{N}.md mtime）+ 10 分钟
+        //    降级（手册承诺，2026-08-12 补实现）：无任何签字文件时，退回用 我的世界/ 已发布的待命轮公告牌 mtime
         var _overdueMs = 10 * 60 * 1000;
         var _baseTs = 0;
+        // 扣留的收工轮编号 → 待命轮编号 = 收工轮编号 - 1（用于"无新动作"的完成文件范围判定）
+        var _keptRetireN = 0;
+        try {
+            fs.readdirSync(_fishSrcDir).forEach(function(_ff2) {
+                var _rm2 = String(_ff2).match(/^公告牌_(\d+)\.md$/);
+                if (_rm2) {
+                    try {
+                        if (/模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff2, "utf8"))) {
+                            var _n2 = parseInt(_rm2[1], 10);
+                            if (_n2 > _keptRetireN) _keptRetireN = _n2;
+                        }
+                    } catch(_rk2) {}
+                }
+            });
+        } catch(_rk3) {}
         try {
             var _worldDirTop = base + "/我的世界";
             var _prevSigns = fs.readdirSync(_worldDirTop).filter(function(_d) { return _d.endsWith("_大鱼对讲"); });
@@ -218,8 +234,50 @@ try {
                 } catch(_se) {}
             }
         } catch(_ps) {}
-        // ③ 无新动作判定：超时且无追加信号
+        // 基线降级：无任何签字文件 → 用已发布的待命轮公告牌 mtime（我的世界/ 那份，非源目录）
+        if (_baseTs === 0 && _keptRetireN > 1) {
+            try {
+                var _standbyBoard = base + "/我的世界/公告牌_" + String(_keptRetireN - 1).padStart(3, "0") + ".md";
+                if (fs.existsSync(_standbyBoard)) _baseTs = fs.statSync(_standbyBoard).mtimeMs;
+            } catch(_sb2) {}
+        }
+        // ③ 无新动作判定：基线后未出现追加轮次的新签字/新产出（.ready），且超时无追加信号
+        //    （2026-08-12 修复：手册承诺"新 完成_{N}.md / .ready"均算新动作，原只查完成文件）
         var _noNewAction = _baseTs > 0 && (Date.now() - _baseTs > _overdueMs);
+        if (_noNewAction) {
+            var _hasNewAction = false;
+            var _newCut = _baseTs;
+            try {
+                var _top2 = base + "/我的世界";
+                fs.readdirSync(_top2).filter(function(_d2) { return _d2.endsWith("_大鱼对讲"); }).forEach(function(_d2) {
+                    try {
+                        fs.readdirSync(_top2 + "/" + _d2).forEach(function(_f2) {
+                            var _m2 = String(_f2).match(/^完成_(\d+)\.md$/);
+                            if (_m2 && parseInt(_m2[1], 10) > _keptRetireN - 1) {
+                                try { if (fs.statSync(_top2 + "/" + _d2 + "/" + _f2).mtimeMs > _newCut) _hasNewAction = true; } catch(_e2) {}
+                            }
+                        });
+                    } catch(_e2b) {}
+                });
+                // 产出/ 下新增 .ready（mtime > 基线 = 待命轮之后的新交付；递归支持 _deliver 子路径，2026-08-12）
+                var _outBase2 = base + "/我的世界/产出";
+                function _scanReadyNew(dir) {
+                    var _entries2;
+                    try { _entries2 = fs.readdirSync(dir); } catch(_e2e) { return false; }
+                    for (var _ri3 = 0; _ri3 < _entries2.length; _ri3++) {
+                        var _full2 = dir + "/" + _entries2[_ri3];
+                        try {
+                            var _st2 = fs.statSync(_full2);
+                            if (_st2.isDirectory()) { if (_scanReadyNew(_full2)) return true; }
+                            else if (_full2.endsWith(".ready") && _st2.mtimeMs > _newCut) return true;
+                        } catch(_e2f) {}
+                    }
+                    return false;
+                }
+                if (fs.existsSync(_outBase2) && _scanReadyNew(_outBase2)) _hasNewAction = true;
+            } catch(_ps2) {}
+            if (_hasNewAction) _noNewAction = false;
+        }
         var _appendTask = fs.existsSync(_fishSrcDir + "/追加任务.md");
         if (_noNewAction && !_appendTask) _standbyOverdue = true;
     }
@@ -336,20 +394,46 @@ if (activeRoles.length === 0) {
             var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
             var hbTimeout3 = (fs.existsSync(base + "/火影-大鱼/_运行形态.mode") && fs.readFileSync(base + "/火影-大鱼/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) {
-              // A-1 判据同步（2026-08-11 修复）：心跳 stale 但对讲目录在 hbTimeout3 窗口内有新文件
-              // （正在写流水账/角色记忆/退场文件而心跳没同步）→ 不算死，不强制退场——
+              // A-1 判据同步（2026-08-11 修复 + 2026-08-12 范围统一）：心跳 stale 但窗口内有新文件
+              // （正在写流水账/角色记忆/退场文件/补交产出而心跳没同步）→ 不算死，不强制退场——
               // 与主心跳检测区 A-1 判据（"心跳不能单独作为死亡证据"）保持一致；
-              // 真死（心跳 stale + 窗口内无任何新产出）才 hbForce，防止收工轮写长文档被误判提前 DONE
+              // 真死（心跳 stale + 窗口内无任何新产出）才 hbForce，防止收工轮写长文档/补交被误判提前 DONE。
+              // 扫描范围与主区一致：对讲目录 + 产出 + 任务*（补交场景角色写 产出/任务 区同样算活着）
               var _hbForceRecent = false;
               try {
-                var _hbfDir = base + "/我的世界/" + role + "_大鱼对讲";
                 var _hbfCut = Date.now() - hbTimeout3;
-                _hbForceRecent = fs.readdirSync(_hbfDir).some(function(_f) {
-                  // 排除 monitor 自写文件（_wakeup 唤醒 / 大鱼回复 自动回复 / 需人工干预）——它们是 monitor 写的不是角色新产出，
-                  // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长（对齐主 A-1 判据 L152 排除逻辑）
-                  if (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0) return false;
-                  try { return fs.statSync(_hbfDir + "/" + _f).mtimeMs > _hbfCut; } catch(_e9) { return false; }
-                });
+                var _hbfDirs = [base + "/我的世界/" + role + "_大鱼对讲"];
+                try {
+                  var _hbfTaskDirs = fs.readdirSync(base + "/我的世界").filter(function(td) { return /^任务\d+/.test(td); });
+                  _hbfTaskDirs.forEach(function(td) { _hbfDirs.push(base + "/我的世界/" + td); });
+                } catch(_htd) {}
+                if (fs.existsSync(base + "/我的世界/产出")) _hbfDirs.push(base + "/我的世界/产出");
+                function _hbfRecent(dir) {
+                  var entries;
+                  try { entries = fs.readdirSync(dir); } catch(e) { return false; }
+                  return entries.some(function(_f) {
+                    // 排除 monitor 自写文件（仅对讲目录内存在）——它们是 monitor 写的不是角色新产出，
+                    // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长
+                    if (dir.indexOf("_大鱼对讲") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0)) return false;
+                    try {
+                      var _st = fs.statSync(dir + "/" + _f);
+                      if (_st.isDirectory()) return _hbfRecent(dir + "/" + _f);
+                      if (_st.mtimeMs <= _hbfCut) return false;
+                      // 2026-08-12 归属限定：共享区（产出/任务*）只认 producer 匹配本角色的 .ready——
+                      // 否则角色 A 真死但角色 B 在共享区补交时，A 的 hbForce 永不触发（收工轮 DONE 无限阻塞）；
+                      // 对讲目录是角色自有，任意新文件即算该角色活着
+                      if (dir.indexOf("_大鱼对讲") === -1) {
+                        if (!_f.endsWith(".ready")) return false;
+                        try {
+                          var _rc = fs.readFileSync(dir + "/" + _f, "utf8");
+                          return _rc.indexOf("producer: " + role) !== -1;
+                        } catch(_e9b) { return false; }
+                      }
+                      return true;
+                    } catch(_e9) { return false; }
+                  });
+                }
+                _hbfDirs.forEach(function(d) { if (fs.existsSync(d) && _hbfRecent(d)) _hbForceRecent = true; });
               } catch(_e8) {}
               if (!_hbForceRecent) hbForce = true;
             }
@@ -551,7 +635,24 @@ if (fs.existsSync(worldDir)) {
                     var _skipDeepScan = false;
                     try {
                         var _scanMtimes = [];
-                        _scanDirs.forEach(function(d) { try { _scanMtimes.push(Math.round(fs.statSync(d).mtimeMs)); } catch(_e) {} });
+                        _scanDirs.forEach(function(d) {
+                            try {
+                                _scanMtimes.push(Math.round(fs.statSync(d).mtimeMs));
+                                // 门控盲区修复（2026-08-12）：目录 mtime 不随"原地覆写已有文件"变化（代码类产出源文件原地改），
+                                // 只靠目录 mtime 门控会跳过深扫 → 新产出检测不到 → 假 DEAD。key 叠加顶层条目最大 mtime——原地改文件也能触发深扫
+                                var _topMax = 0;
+                                try {
+                                    var _topEntries = fs.readdirSync(d);
+                                    for (var _te = 0; _te < _topEntries.length; _te++) {
+                                        try {
+                                            var _teMs = Math.round(fs.statSync(d + "/" + _topEntries[_te]).mtimeMs);
+                                            if (_teMs > _topMax) _topMax = _teMs;
+                                        } catch(_te2) {}
+                                    }
+                                } catch(_te3) {}
+                                _scanMtimes.push(_topMax);
+                            } catch(_e) {}
+                        });
                         var _mtimeKey = "scan|" + _scanMtimes.join(",");
                         var _stScan = {};
                         try { if (fs.existsSync(stateFile)) _stScan = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch(_sr3) {}

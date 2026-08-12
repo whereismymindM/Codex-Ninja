@@ -75,11 +75,11 @@ if (taskDirHint) {
 var outputDir = projRoot + "/我的世界/产出/" + taskDir;
 
 // A-2 修复：行为日志——交付动作写一行到角色操作日志（实弹反馈 #2：干活过程对脚本不可见，只有 poll 事件）
+// 2026-08-12 修复：角色名=目录名（path.basename(__dirname)），与 _sign 焊死名一致——
+//   原读 AGENTS.md 首行，鱼形态首行是"# 大鱼（窗口常驻形态）"≠"火影-大鱼" → 日志写进错误目录（脏目录+审计链断裂）
 function _logAction(actionMsg) {
     try {
-        var _ag = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
-        var _rm = _ag.match(/^# (.+)$/m);
-        var _rn = _rm ? _rm[1].trim() : "";
+        var _rn = path.basename(__dirname);
         if (!_rn) return;
         var _logDir = path.resolve(__dirname, "..", "我的世界", _rn + "_大鱼对讲");
         fs.mkdirSync(_logDir, { recursive: true });
@@ -97,10 +97,12 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 // 5-6 修复（升级计划 5-6，2026-08-04）：fileName 含 / 时视为子路径——在 outputDir 下建子目录，.ready 与源文件同目录
 // 例：deliver("lib/validate-patterns.js", ...) → 产出/任务NNN/lib/validate-patterns.js.ready（之前斜杠被拼进文件名，语义丢失）
+// 2026-08-12 路径穿越修复：拆分后过滤空段/./..——防 "a/../../x" 逃出 产出/ 目录（原拼接直接进 readySubDir，多个 .. 可出项目根）
 var readySubDir = outputDir;
 var readyName = fileName;
 if (fileName.indexOf("/") !== -1 || fileName.indexOf("\\") !== -1) {
-    var _parts = fileName.split(/[\\/]/);
+    var _parts = fileName.split(/[\\/]/).filter(function(p) { return p !== "" && p !== "." && p !== ".."; });
+    if (_parts.length === 0) { console.error("DELIVER_ERR: fileName 路径拆分后为空——" + fileName); process.exit(1); }
     readyName = _parts.pop();
     readySubDir = outputDir + "/" + _parts.join("/");
     fs.mkdirSync(readySubDir, { recursive: true });
@@ -113,9 +115,7 @@ var readyFile = readySubDir + "/" + readyName + ".ready";
 var _dlContent = "OK " + new Date().toISOString();
 if(sourcePath) _dlContent = "source: " + sourcePath + "\n" + _dlContent;
 try {
-    var _ag2 = fs.readFileSync(path.resolve(__dirname, "AGENTS.md"), "utf8");
-    var _rm2 = _ag2.match(/^# (.+)$/m);
-    var _producer = _rm2 ? _rm2[1].trim() : "";
+    var _producer = path.basename(__dirname);  // 2026-08-12 修复：与 _logAction 同源（目录名=协议角色名，鱼形态不再用 AGENTS 首行）
     if (_producer) _dlContent += "\nproducer: " + _producer;
     if (!sourcePath) {
         var _target = readySubDir + "/" + readyName;
@@ -129,8 +129,14 @@ try {
     }
 } catch(_lg3) {}
 // 原子写入——先写 .tmp 再 rename，读 .ready 时不会读到半截文件
-fs.writeFileSync(readyFile + ".tmp", _dlContent, "utf8");
-fs.renameSync(readyFile + ".tmp", readyFile);
+// 2026-08-12 修复：包 try——Windows rename 目标被占用 EPERM 时不裸崩（与 _sign 一致）
+try {
+    fs.writeFileSync(readyFile + ".tmp", _dlContent, "utf8");
+    fs.renameSync(readyFile + ".tmp", readyFile);
+} catch(_aw) {
+    console.error("DELIVER_ERR: 写入 .ready 失败: " + (_aw && _aw.message ? _aw.message : _aw));
+    process.exit(1);
+}
 console.log("SIGNAL: " + readyFile + " 已就绪");
 console.log("DELIVERED: " + fileName + " (" + outputDir + ")");
 _logAction("DELIVER " + fileName + " -> " + outputDir); // A-2 行为日志

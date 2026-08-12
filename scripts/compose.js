@@ -92,6 +92,11 @@ try {
 if (!cfg.角色 || !Array.isArray(cfg.角色) || cfg.角色.length === 0) errors.push("角色 必须是非空数组");
 if (!cfg.轮次 || !Array.isArray(cfg.轮次) || cfg.轮次.length === 0) errors.push("轮次 必须是非空数组");
 var roleSet = (cfg.角色 || []).map(String);
+// 2026-08-12 修复：角色名净化（与 scaffold 同规则）——防路径分隔符/.. 与 monitor 路径拼接联动（monitor 用角色名拼退场/心跳路径）
+(cfg.角色 || []).forEach(function(_rn) {
+    var _rs = String(_rn);
+    if (/[\\/]|\.\.|^\.+$/.test(_rs)) errors.push("角色名不能包含路径分隔符（/ \\）、'..' 或纯点号: " + _rs);
+});
 cfg.轮次 && cfg.轮次.forEach(function(r, ri) {
   var n = ri + 1;
   if (!r.模式) errors.push("第" + n + "轮缺 模式");
@@ -104,7 +109,8 @@ cfg.轮次 && cfg.轮次.forEach(function(r, ri) {
     if (!r.产出) errors.push("第" + n + "轮 缺 产出");
     if (!r.任务目录) errors.push("第" + n + "轮 缺 任务目录");
   }
-  if (r.产出 && r.产出.indexOf("我的世界/产出/") !== 0) errors.push("第" + n + "轮 产出 必须以 '我的世界/产出/' 开头");
+  if (r.产出 && (r.产出.indexOf("我的世界/产出/") !== 0 || r.产出.indexOf("\\") !== -1 || r.产出.indexOf("..") !== -1)) errors.push("第" + n + "轮 产出 必须以 '我的世界/产出/' 开头且不含 \\ 或 ..（防路径逃逸）");
+  if (r.任务目录 && (r.任务目录.indexOf("我的世界/") !== 0 || r.任务目录.indexOf("\\") !== -1 || r.任务目录.indexOf("..") !== -1)) errors.push("第" + n + "轮 任务目录 必须以 '我的世界/' 开头且不含 \\ 或 ..（防路径逃逸）"); // 2026-08-12 修复：任务目录字段补前缀/逃逸校验（原无校验）
   if (r.产出 && r.产出.indexOf("{}") !== -1) errors.push("第" + n + "轮 产出 含占位符 {}");
   if (r.产出 && !/\.md$/.test(r.产出) && !/\/$/.test(r.产出)) errors.push("第" + n + "轮 产出 应为 .md 文件名或以 / 结尾目录（格式 A/B）");
   if ((r.模式 === "收工" || r.模式 === "待命") && (r.产出负责人 || r.产出 || r.任务目录)) errors.push("第" + n + "轮（" + r.模式 + "）不该有 产出负责人/产出/任务目录");

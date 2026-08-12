@@ -45,8 +45,14 @@ if (fs.existsSync(wakeFile)) {
 }
 
 // 原子写入
-fs.writeFileSync(wakeFile + '.tmp', wakeContent, 'utf8');
-fs.renameSync(wakeFile + '.tmp', wakeFile);
+// 2026-08-12 修复：包 try——Windows rename 目标被占用 EPERM 时不裸崩（与 _sign/_deliver 一致）
+try {
+  fs.writeFileSync(wakeFile + '.tmp', wakeContent, 'utf8');
+  fs.renameSync(wakeFile + '.tmp', wakeFile);
+} catch(_aw) {
+  console.log('ERROR: 写入唤醒文件失败: ' + (_aw && _aw.message ? _aw.message : _aw));
+  process.exit(1);
+}
 
 // 自检
 if (fs.existsSync(wakeFile) && fs.statSync(wakeFile).size > 30) {

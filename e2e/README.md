@@ -42,7 +42,7 @@ bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加�
 |------|--------|
 | 心跳 | `_reasonix_poll` 写 `_heartbeat.txt` + `_hb_state.json`，monitor 存活角色不报 DEAD |
 | 锁 | `_lock.js` acquire/release/再 acquire |
-| 唤醒 | `_wakeup.js` → poll 检测 `WOKEN` → 文件改名 `_wakeup_acked.md` |
+| 唤醒 | `_wakeup.js` → poll 检测 `WOKEN` → 文件删除（unlink，8-1 修复；wait_file 等待中检测则改名 `_wakeup_acked.md`） |
 | 死锁 | `_deadlock.md` → monitor 输出 `DEADLOCK partner=xx` → 搭档 `_wakeup.md`（需公告牌含搭档字段——临时换双人公告牌测） |
 | 断点续接 | 签字已存在 → 重启自检 N++ → poll 直接到下一张牌 |
 | 待命轮全路径 | 无产出行待命轮 → `WAIT N+1`（不误报 STANDBY）；有产出行 → `STANDBY`（见 run_e2e.sh） |

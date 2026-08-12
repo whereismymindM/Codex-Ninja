@@ -64,7 +64,16 @@ while (true) {
         if (e.code === "EEXIST") {
             // 锁被占用——用固定的 LOCK_STALE_SEC 判断是否过期
             // 不再跟 waitTimeout 共用，避免短超时误吞锁
-            var stat = fs.statSync(lockFile);
+            var stat;
+            try { stat = fs.statSync(lockFile); }
+            catch(_st2) {
+              // 2026-08-12 修复：并发 release 后 statSync ENOENT——锁瞬间消失，走正常等待节奏（防病态锁抖动忙等）再重试
+              var _elapsed2 = (Date.now() - start) / 1000;
+              if (_elapsed2 > waitTimeout) { console.log("LOCK_TIMEOUT (等了 " + Math.floor(_elapsed2) + "s)"); process.exit(1); }
+              heartbeatDuringWait();
+              try { var _sab2 = new SharedArrayBuffer(4); var _v2 = new Int32Array(_sab2); Atomics.wait(_v2, 0, 0, 5000); } catch(_es2) { var _w4 = Date.now() + 5000; while (Date.now() < _w4) {} }
+              continue;
+            }
             var age = (Date.now() - stat.mtimeMs) / 1000;
             if (age > LOCK_STALE_SEC) {
                 // M9 修复：先校验持有进程是否还活着——活着（长任务）不回收，死了才回收；unlink 包 try-catch 防并发 ENOENT
@@ -77,7 +86,7 @@ while (true) {
                         try { process.kill(holderPid, 0); holderAlive = true; }
                         catch(_kp) { if (_kp.code !== "ESRCH") holderAlive = true; }
                     }
-                } catch(_eh) { holderAlive = false; }
+                } catch(_eh) { holderAlive = true; } // 2026-08-12 修复：锁内容读取失败按"存活"保守处理（不回收），与 EPERM 分支一致——防误回收活锁致双写竞态
                 if (holderAlive) {
                     console.log("LOCK_STALE 但持有进程存活 (pid=" + holderPid + ")，视为长任务继续等待");
                 } else {
