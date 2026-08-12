@@ -14,6 +14,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 
@@ -506,33 +507,117 @@ reg('D2 全角冒号', '字面匹配字段（模式/产出/警告）全角冒号
     }
   });
 
-// D3 排版判据（审核标准第 5 步脚本化）
-reg('D3 排版判据', '围栏配对/超长行/表格片段/标题/空壳代码块',
+// D3 排版判据（审核标准第 5 步脚本化：①超长行 ②围栏配对 ③表格卫生 ④标题 ⑤缩进断裂 ⑥代码块卫生 ⑦空壳代码块）
+reg('D3 排版判据', '围栏配对/超长行/表格/标题/缩进/代码块卫生/空壳代码块',
   () => {
+    const tmpDir = path.join(ROOT, '.dc_tmp');
+    try { fs.mkdirSync(tmpDir, { recursive: true }); } catch (e) {}
+    const sanitize = (lang, content) => {
+      let c = content;
+      c = c.replace(/\{\{ROLE_NAME\}\}/g, '测试角色');
+      c = c.replace(/\{\{[^}]+\}\}/g, '测试');
+      c = c.replace(/<lastN>/g, '2');
+      c = c.replace(/<当前N>/g, '2');
+      c = c.replace(/<任务目录>/g, '../我的世界/任务001_测试');
+      c = c.replace(/YOUR_FILE_PATH/g, 'x');
+      c = c.replace(/YOUR_TASK_DIR/g, 'x');
+      c = c.replace(/FILE_A/g, 'x').replace(/FILE_B/g, 'x');
+      c = c.replace(/<[^>]+>/g, 'x'); // 其余尖括号占位（<心跳>/<目标>/<角色名> 等）
+      return c;
+    };
+    const checkBash = (p, idx, content) => {
+      const f = path.join(tmpDir, 'd3_' + idx + '.sh');
+      try {
+        fs.writeFileSync(f, sanitize('bash', content), 'utf8');
+        execSync('bash -n "' + f + '"', { stdio: 'pipe' });
+      } catch (e) {
+        fail('D3', p, 0, 'bash 骨架 bash -n 失败（照抄必错——`;;` 放 # 注释后被吞 / `<lastN>` 重定向）: ' + String(e.stderr || e.message).trim().slice(0, 80));
+      }
+    };
+    const checkJs = (p, idx, content) => {
+      const f = path.join(tmpDir, 'd3_' + idx + '.js');
+      try {
+        // 包 async IIFE：内联轮询示例含顶层 await（角色照抄进临时脚本前会包 async 或用函数内 await）
+        const wrapped = '(async () => {\n' + sanitize('js', content) + '\n})();';
+        fs.writeFileSync(f, wrapped, 'utf8');
+        execSync('"' + process.execPath + '" --check "' + f + '"', { stdio: 'pipe' });
+      } catch (e) {
+        fail('D3', p, 0, 'JS 模板代码块 node --check 失败（照抄不可运行）: ' + String(e.stderr || e.message).trim().slice(0, 80));
+      }
+    };
+
     for (const p of walk(ROOT, '.md')) {
-      if (rel(p) === 'CHANGELOG.md') continue;
+      if (isExempt(p) || rel(p) === 'CHANGELOG.md') continue; // 保留例外文件豁免（含 D1/D3）
       const raw = read(p);
       const lines = raw.split(/\r?\n/);
-      // 围栏配对
+      // ②围栏配对
       const fences = lines.filter(l => /^\s*```/.test(l)).length;
       if (fences % 2 !== 0) fail('D3', p, 0, '代码围栏奇数（' + fences + '）');
-      // 超长行
+      // ①超长行 + ③表格卫生 + ⑤缩进断裂（同一遍扫描）
       let inFence = false;
+      let blockIdx = 0, blockLang = '', blockStart = 0;
+      const fenceContent = {}; // 收集代码块 {lang, start, content}
+      const blocks = [];
       lines.forEach((l, i) => {
-        if (/^\s*```/.test(l)) { inFence = !inFence; return; }
+        if (/^\s*```/.test(l)) {
+          if (!inFence) { inFence = true; blockLang = l.trim().slice(3).trim(); blockStart = i + 1; fenceContent[blockStart] = []; }
+          else { inFence = false; blocks.push({ lang: blockLang, start: blockStart, content: fenceContent[blockStart].join('\n') }); }
+          return;
+        }
+        if (inFence) { fenceContent[blockStart].push(l); return; }
+        // ①超长行
         if (l.trim().startsWith('|')) {
           for (const seg of l.split('<br>')) {
             if (seg.length > 200) fail('D3', p, i + 1, '表格 <br> 片段超长 ' + seg.length);
           }
-        } else if (!inFence && l.length > 200) {
+        } else if (l.length > 200) {
           fail('D3', p, i + 1, '非表格超长行 ' + l.length + ' 字符');
         }
+        // ③表格卫生（表格连续区）
+        if (l.trim().startsWith('|') && !l.trim().endsWith('|')) {
+          fail('D3', p, i + 1, '表格行尾缺 |: ' + l.trim().slice(0, 30));
+        }
+        // ⑤缩进断裂：4 空格缩进正文（非列表续行/引用/表格/空行）
+        if (/^    \S/.test(l)) {
+          const prev = i > 0 ? lines[i - 1] : '';
+          const isListCont = /^\s*[-*+]\s/.test(prev) || /^\s*(\d+\.)+\s/.test(prev); // 1. / 4.5. 子编号列表续行
+          if (!isListCont && !/^>/.test(l) && !/^\s*\|/.test(l) && !/^\s*```/.test(l)) {
+            fail('D3', p, i + 1, '代码块外 4 空格缩进（渲染成代码块风险）: ' + l.trim().slice(0, 30));
+          }
+        }
       });
-      // 标题 # 后空格
+      // ③表头分隔行（每个表格首行后必须跟分隔行；跳过围栏内行）
+      let _inFence = false;
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i].trim();
+        if (/^```/.test(lines[i])) { _inFence = !_inFence; continue; }
+        if (_inFence) continue;
+        if (!l.startsWith('|')) continue;
+        const prev = i > 0 ? lines[i - 1].trim() : '';
+        if (!prev.startsWith('|')) {
+          const next = i + 1 < lines.length ? lines[i + 1].trim() : '';
+          if (!/^\|[\s:|-]+\|$/.test(next)) fail('D3', p, i + 1, '表头后缺分隔行');
+        }
+      }
+      // ④标题 # 后空格
       lines.forEach((l, i) => {
         if (/^#{1,6}[^#\s]/.test(l)) fail('D3', p, i + 1, '标题 # 后缺空格: ' + l.trim().slice(0, 30));
       });
+      // ⑥代码块卫生（bash -n / node --check）+ ⑦空壳代码块
+      blocks.forEach((b, bi) => {
+        const stripped = b.content.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^#.*$/gm, '').trim();
+        if (b.lang.startsWith('bash') && stripped !== '' && b.content.trim() !== '') {
+          checkBash(p, bi, b.content);
+        } else if (b.lang === 'js' || b.lang === 'javascript') {
+          if (stripped === '') {
+            fail('D3', p, b.start, '注释空壳代码块（```' + b.lang + ' 内只有注释无代码）→ 改引用块');
+          } else {
+            checkJs(p, bi, b.content);
+          }
+        }
+      });
     }
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
   });
 
 // ---------------------------------------------------------------------------
