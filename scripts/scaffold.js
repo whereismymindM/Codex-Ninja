@@ -161,7 +161,7 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonPath);
     console.log("OK: 火影-大鱼/_大鱼实测教训.md (" + fs.statSync(fishLessonPath).size + " bytes)");
 
-    // 大鱼工具手册.md —— 大鱼模板「周期验证」节引用它（monitor 21 种输出全解，免翻源码），必须复制到位
+    // 大鱼工具手册.md —— 大鱼模板「周期验证」节引用它（monitor 22 种输出全解，免翻源码），必须复制到位
     var fishToolManualPath = fishDir + "/大鱼工具手册.md";
     fs.copyFileSync(assetDir + "/模板/大鱼工具手册.md", fishToolManualPath);
     console.log("OK: 火影-大鱼/大鱼工具手册.md (" + fs.statSync(fishToolManualPath).size + " bytes)");
