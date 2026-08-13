@@ -78,6 +78,7 @@ const VALIDATORS = [];
 function reg(name, desc, check) { VALIDATORS.push({ name, desc, check }); }
 
 let FAIL = []; // 全局失败收集 {validator, file, line, msg}
+let SCRIPT_ERROR = false; // 校验器内部异常标记——兑现使用说明"退出码 2 = 脚本自身错误"（防"脚本坏了当全过"）
 let SELFTEST_MODE = false; // self-test 模式跳过 D3 spawn 排版校验（与反向用例无关，省 10×11s）
 function fail(v, file, line, msg) {
   FAIL.push({ validator: v, file: file ? rel(file) : null, line: line || null, msg });
@@ -760,7 +761,7 @@ reg('F2 compose 头注释', 'compose.js 头注释（被完全指南指引为读�
 // F3 盘符绝对路径：使用者文档禁 [A-Za-z]:[\\/]（配置示例照抄即配错）
 reg('F3 盘符绝对路径', '使用者文档（SKILL/启动指南/README/模板/老渣文档/通用公告牌/团队须知/玩法）禁盘符绝对路径（相对路径/占位符替代）',
   () => {
-    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式'];
+    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式', 'assets/_工具速查.md']; // 2026-08-13 全量审核：补 _工具速查.md（曾漏网盘符 D:/Codex/…）
     const re = /[A-Za-z]:[\\/]/;
     for (const d of dirs) {
       const files = d.endsWith('.md') ? [path.join(ROOT, d)] : walk(path.join(ROOT, d), '.md');
@@ -994,6 +995,7 @@ function runAll(verbose) {
     try {
       v.check();
     } catch (e) {
+      SCRIPT_ERROR = true; // 校验器内部异常 = 脚本自身错误（exit 2），与普通漂移（exit 1）区分
       fail(v.name, null, 0, '脚本错误: ' + e.message);
     }
   }
@@ -1037,7 +1039,7 @@ function main() {
     }
   }
   console.log('== doc-consistency: ' + (fails.length === 0 ? '全部一致 ✓' : total + ' 处漂移 ✗') + '（校验器 ' + VALIDATORS.length + ' 个）');
-  process.exit(fails.length === 0 ? 0 : 1);
+  process.exit(SCRIPT_ERROR ? 2 : (fails.length === 0 ? 0 : 1)); // 0=全过 / 1=漂移 / 2=脚本自身错误（使用说明承诺）
 }
 
 main();

@@ -90,11 +90,36 @@ while (true) {
             // F-10 修复：自检格式B readdirSync 包 try（目录并发被删不 CRASH，与主流程 :251 一致）
             var rfsSelf = [];
             try { rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rds) {}
-            // 12-15 大鱼自检：自检格式 B 同步严格判定——产出负责人=各自 时需 .ready ≥ 活跃角色数
-            //   （否则自检提前推进 N，主流程严格检查形同虚设——本轮 002 图灵先交、自检 15:25 判完成即此路径）
             var _ownerSelf = boardContent.match(/\n- 产出负责人[:：]\s*(.+)/);
             var _ownerEachSelf = _ownerSelf && _ownerSelf[1].trim() === "各自";
-            if (_ownerEachSelf ? rfsSelf.length < actCount : rfsSelf.length === 0) { outOkSelf = false; break; }
+            // 2026-08-13（全量审核 #5）：自检格式 B 各自场景补 producer 归属校验（对齐主判断 :567-583）——
+            //   不再只数数量（一人重复交付凑数可绕过自检提前推进 N）；无 producer 行的旧版 .ready 按未知顶缺不卡轮
+            var _producersSelf = {};
+            var _unknownSelf = 0;
+            var _ownerOkSelf = true;
+            if (_ownerEachSelf) {
+                var _actReSelf = /- (.+?)[（(].*状态[:：]\s*活跃/g;
+                var _amSelf, _actNamesSelf = [];
+                while ((_amSelf = _actReSelf.exec(headerPart)) !== null) {
+                    var _arnSelf = _amSelf[1].replace(/^组[A-Z]\s*[:：]\s*/, "");
+                    if (/[\\/]|\.\./.test(_arnSelf)) { console.log("OUTPUT-FORMAT ⚠️ 自检角色名含路径分隔符/..（拒绝）: " + _arnSelf); continue; } // 与主流程告警对齐（security review LOW）
+                    _actNamesSelf.push(_arnSelf);
+                }
+                rfsSelf.forEach(function(_rfs) {
+                    try {
+                        var _rcs = fs.readFileSync(dp2Self + "/" + _rfs, "utf8");
+                        var _pms = _rcs.match(/^producer:\s*(.+)$/m);
+                        if (_pms && _pms[1]) { _producersSelf[_pms[1].trim()] = true; return; }
+                    } catch(_rcsE) {}
+                    _unknownSelf++; // 无 producer 行（历史 .ready）→ 归属未知，计入（不卡轮）
+                });
+                var _missSelf = _actNamesSelf.filter(function(_a) { return !_producersSelf[_a]; });
+                _ownerOkSelf = _missSelf.length === 0 || _unknownSelf >= _missSelf.length;
+                if (!_ownerOkSelf) console.log("OUTPUT-WARN " + od2Self + " 自检各自场景 producer 未覆盖: 缺 " + (_missSelf.join(",") || "?") + "（.ready 无对应 producer，疑似一人重复交付凑数）");
+            } else {
+                _ownerOkSelf = rfsSelf.length > 0;
+            }
+            if (!_ownerOkSelf) { outOkSelf = false; break; }
         }
     }
     if (hasOutSelf && !outOkSelf) allDone = false; // 有产出行但未就位 → 该轮未完成

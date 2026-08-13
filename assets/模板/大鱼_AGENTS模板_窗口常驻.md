@@ -138,7 +138,7 @@
 ## 唤醒休眠角色
 
 有休眠角色时：逐个 `node _wakeup.js 角色名 原因`。在对讲目录创建 `_wakeup.md`，角色检测到后切活跃。**闭环**：角色 ack = **删除 `_wakeup.md`**（以文件消失为判据）；**窗口形态心跳超时的唤醒由 monitor 自动写**（auto-wakeup，见上「DEAD 先复核再唤醒」）。
-`_wakeup.md` 存在超时未 ack → monitor 报 STUCK + 写 `需人工干预`（按工具手册响应写求助老渣）；收口后清理残留 `_wakeup.md`。
+`_wakeup.md` 存在超时未 ack **且仍无产出** → monitor 报 STUCK + 写 `需人工干预`（按工具手册响应写求助老渣）；收口后清理残留 `_wakeup.md`。
 
 ---
 

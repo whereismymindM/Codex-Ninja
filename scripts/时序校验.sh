@@ -11,7 +11,7 @@
 
 if [ -z "$1" ]; then
     echo "用法: bash 时序校验.sh <项目根目录>"
-    echo "例:   bash 时序校验.sh \"D:/Codex/workspace/口袋忍者/大鱼号/一号舱室-软件开发部\""
+    echo "例:   bash 时序校验.sh \"<项目根目录绝对路径>\""
     exit 2
 fi
 WORLD="$1/我的世界"
