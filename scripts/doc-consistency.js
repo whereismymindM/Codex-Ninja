@@ -9,7 +9,7 @@
 // 退出码：0=全部一致  1=有漂移（stdout 列清单）  2=脚本自身错误
 // 原则  ：事实源唯一（能枚举的从代码/文件系统枚举）；断言 文档==事实；
 //         白名单带理由；不改文档内容（只报告）。
-// 校验器：A 枚举(5) + B 数字(5) + C 引用(5) + D 卫生(3) + E 口径(3) + F 机制化(5) = 26 个
+// 校验器：A 枚举(5) + B 数字(5) + C 引用(5) + D 卫生(3) + E 口径(3) + F 机制化(6) = 27 个
 // ============================================================================
 'use strict';
 const fs = require('fs');
@@ -838,6 +838,34 @@ reg('F5 通用公告牌计数/编号', 'README"通用公告牌 N 个模板"=实�
     }
   });
 
+// F6 示例 JSON 可执行性：使用者文档"复制即用"示例 JSON 照抄必可运行
+//   2026-08-13 全量重审 #8 实证：完全指南"配置格式示例" 角色 ["A","B"] 但辩论轮含裁判 C + 产出负责人 C——
+//   照抄 compose.js:104 编译期校验"第N轮 角色 'C' 不在角色名单"报错退出（errors.push 不生成）。
+//   示例是"复制即用"面，必须真能跑；本校验器复刻 compose.js 最易错的两条编译期校验
+//   （轮次角色对象键 ⊆ 角色名单；产出负责人 ∈ 角色名单），断言示例不违反。
+//   ⚠️ 与 compose.js 校验规则同源（compose.js:92-110）：compose 改规则时本校验器须同步。
+reg('F6 示例 JSON 可执行', '完全指南「配置格式示例」JSON 照抄必可运行（轮次角色/产出负责人 ⊆ 角色名单）',
+  () => {
+    const guide = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+    const idx = guide.indexOf('配置格式示例');
+    if (idx === -1) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '缺「配置格式示例」锚点（无法断言）'); return; }
+    const m = /```json\s*([\s\S]*?)```/.exec(guide.slice(idx));
+    if (!m) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '「配置格式示例」后缺 ```json 代码块'); return; }
+    let cfg;
+    try { cfg = JSON.parse(m[1]); }
+    catch (e) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '示例 JSON 解析失败（照抄必失败）: ' + String(e.message).trim().slice(0, 80)); return; }
+    if (!Array.isArray(cfg.角色) || cfg.角色.length === 0) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '示例 角色 必须是非空数组'); return; }
+    const roleSet = cfg.角色;
+    (cfg.轮次 || []).forEach((r, i) => {
+      if (r.角色 && typeof r.角色 === 'object' && !Array.isArray(r.角色)) {
+        for (const k of Object.keys(r.角色)) {
+          if (!roleSet.includes(k)) fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '第' + (i + 1) + '轮 角色 [' + k + '] 不在角色名单（照抄 compose 编译期校验必失败）');
+        }
+      }
+      if (r.产出负责人 && !roleSet.includes(r.产出负责人)) fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '第' + (i + 1) + '轮 产出负责人 [' + r.产出负责人 + '] 不在角色名单（照抄 compose 编译期校验必失败）');
+    });
+  });
+
 // ---------------------------------------------------------------------------
 // --self-test：反向用例（防脚本自身腐化）
 //   策略：对每个校验器做"篡改内存文本 → 断言必失败 → 还原"，不碰真实文件。
@@ -888,6 +916,10 @@ function selfTest() {
   cases.push({
     name: 'F5 模板计数漂移必抓', file: 'README.md',
     from: /(通用公告牌[^\n]*?)(\d+)( 个模板)/, to: '$199$3', expect: 'F5',
+  });
+  cases.push({
+    name: 'F6 示例 JSON 必抓', file: 'assets/老渣文档/公告牌完全指南.md',
+    from: /("角色": \["A", "B", "C"\])/, to: '"角色": ["A", "B"]', expect: 'F6',
   });
 
   for (const c of cases) {

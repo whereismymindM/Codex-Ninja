@@ -10,9 +10,9 @@
 
 ```bash
 # 在 codex-ninja 仓库根目录下
-node scripts/doc-consistency.js              # 跑一次查漂移（默认全量 26 个校验器）
+node scripts/doc-consistency.js              # 跑一次查漂移（默认全量 27 个校验器）
 node scripts/doc-consistency.js --verbose    # 每个校验器都显示（含通过项）
-node scripts/doc-consistency.js --self-test  # 反向用例：10 个用例必被抓（A2/A3/E3/D1/B5 + F1-F5）
+node scripts/doc-consistency.js --self-test  # 反向用例：11 个用例必被抓（A2/A3/E3/D1/B5 + F1-F6）
 node scripts/doc-consistency.js --smoke      # wait_file 命令实测：抽取玩法文件命令验证路径解析
 ```
 
@@ -27,7 +27,7 @@ node scripts/doc-consistency.js --smoke      # wait_file 命令实测：抽取�
 | **提交前** | 老渣/开发者 | 防把漂移带进仓库 |
 | **接入新功能后** | 开发者 | 新增枚举（模式/模板/调查轮/输出）后文档数字自动漂移，脚本自动报警 |
 
-## 校验器清单（26 个，六类）
+## 校验器清单（27 个，六类）
 
 | 类 | 校验器 | 查什么 |
 |---|---|---|
@@ -36,7 +36,7 @@ node scripts/doc-consistency.js --smoke      # wait_file 命令实测：抽取�
 | **C 引用**（5） | C1 仓库内文件引用 / C2 仓库外标注 / C3 scaffold 分发 / C4 占位符残留 / C5 裸行号引用 | 文档引用的文件/路径真实存在 |
 | **D 卫生**（3） | D1 开发轨迹关键词 / D2 全角冒号字段 / D3 排版判据 | 轨迹残留 + 排版 7 项判据（超长行/围栏/表格/标题/缩进/代码块卫生/空壳代码块，含 bash -n 与 node --check 实测） |
 | **E 口径**（3） | E1 _deadlock 口径 / E2 信号后缀声明 / E3 wait_file 命令路径前缀 | 同一规则跨文档同口径 |
-| **F 机制化**（5） | F1 收工任务栏顺序 / F2 compose 头注释 / F3 盘符绝对路径 / F4 节引用有效性 / F5 通用公告牌计数编号 | 全量重审机制化新增：模板库同步 / 头注释文档 / 盘符禁令 / 跨文档节引用 / 模板内部一致性 |
+| **F 机制化**（6） | F1 收工任务栏顺序 / F2 compose 头注释 / F3 盘符绝对路径 / F4 节引用有效性 / F5 通用公告牌计数编号 / **F6 示例 JSON 可执行** | 全量重审机制化新增：模板库同步 / 头注释文档 / 盘符禁令 / 跨文档节引用 / 模板内部一致性<br>**示例 JSON 照抄必可运行**（角色名单覆盖，2026-08-13 #8 实证） |
 
 ## 白名单与豁免
 
@@ -53,13 +53,14 @@ node scripts/doc-consistency.js --smoke      # wait_file 命令实测：抽取�
 - **A4 monitor 输出**：前缀自动提取，但"独立语义类别 vs 日志/家族变体"的归类是人工清单
 - **新增校验器**：需评审（像审核标准追加易错点一样走流程），避免范围蔓延
 - **F 类维护**（机制化新增）：F1 只判普通任务栏（goal 行含 `touch .reasonix-done` 自动跳过）；F4 节匹配"任意行含节名"宁松勿紧（防误报，多命中不判）；F3 豁免教学提及（行含"解析成"）；F5 计数以实际模板文件数为准（排除 README 索引）
+- **F6 维护**：F6 示例 JSON 与 compose.js 校验规则同源（compose.js:92-110）——compose 改校验规则时 F6 须同步
 
 ## 验证方法（改完脚本必做）
 
 ```bash
 node --check scripts/doc-consistency.js        # 语法
 node scripts/doc-consistency.js                # 正向：当前仓库应只有已知漂移（如实报告）
-node scripts/doc-consistency.js --self-test    # 反向：4 个代表性用例必被抓
+node scripts/doc-consistency.js --self-test    # 反向：11 个代表性用例必被抓
 node scripts/doc-consistency.js --smoke        # wait_file 命令实测
 ```
 
