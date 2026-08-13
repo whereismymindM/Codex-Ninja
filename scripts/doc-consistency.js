@@ -9,7 +9,7 @@
 // 退出码：0=全部一致  1=有漂移（stdout 列清单）  2=脚本自身错误
 // 原则  ：事实源唯一（能枚举的从代码/文件系统枚举）；断言 文档==事实；
 //         白名单带理由；不改文档内容（只报告）。
-// 校验器：A 枚举(5) + B 数字(5) + C 引用(5) + D 卫生(3) + E 口径(3) = 21 个
+// 校验器：A 枚举(5) + B 数字(5) + C 引用(5) + D 卫生(3) + E 口径(3) + F 机制化(5) = 26 个
 // ============================================================================
 'use strict';
 const fs = require('fs');
@@ -78,6 +78,7 @@ const VALIDATORS = [];
 function reg(name, desc, check) { VALIDATORS.push({ name, desc, check }); }
 
 let FAIL = []; // 全局失败收集 {validator, file, line, msg}
+let SELFTEST_MODE = false; // self-test 模式跳过 D3 spawn 排版校验（与反向用例无关，省 10×11s）
 function fail(v, file, line, msg) {
   FAIL.push({ validator: v, file: file ? rel(file) : null, line: line || null, msg });
 }
@@ -711,6 +712,133 @@ reg('E3 wait_file 路径前缀', '玩法文件 wait_file 命令目标必须带 <
   });
 
 // ---------------------------------------------------------------------------
+// F 类：机制化新增（2026-08-13 全量重审外部报告根因闭环——模板库同步/
+//   头注释文档/盘符路径/节引用/模板计数，五类人工必漏机制化）
+// ---------------------------------------------------------------------------
+
+// F1 收工任务栏顺序：普通任务栏"创建退场文件"必须先于"写流水账"（标准模板:68 为事实源）
+reg('F1 收工任务栏顺序', '收工任务栏步骤序：普通任务栏 ②创建退场文件 → ③写流水账（标准模板:68 事实源）；goal 批次行（含 touch .reasonix-done）跳过',
+  () => {
+    const files = walk(path.join(ROOT, 'assets'), '.md').concat(walk(path.join(ROOT, '团队须知'), '.md'));
+    for (const p of files) {
+      if (isExempt(p)) continue;
+      const lines = read(p).split('\n');
+      lines.forEach((line, i) => {
+        if (!line.includes('全员退场') || !line.includes('①')) return; // 收工任务栏特征行
+        if (line.includes('touch .reasonix-done')) return; // goal 批次行
+        const idxExit = line.indexOf('创建退场文件');
+        const idxLedger = line.indexOf('写流水账');
+        if (idxExit === -1 || idxLedger === -1) return;
+        if (idxExit > idxLedger) {
+          fail('F1', p, i + 1, '收工任务栏顺序错：创建退场文件 在 写流水账 之后（普通任务栏应为 ②创建退场文件→③写流水账，goal 顺序仅在 goal 批次行允许）');
+        }
+      });
+    }
+  });
+
+// F2 compose.js 头注释文档性检查：模板数/命名 == templates/*.json 实际；角色名零残留
+reg('F2 compose 头注释', 'compose.js 头注释（被完全指南指引为读者文档）：模板数=实际 json 数、列出名与实际一致、角色名零残留',
+  () => {
+    const composePath = path.join(ROOT, 'scripts/compose.js');
+    const head = read(composePath).split('\n').slice(0, 60).join('\n');
+    const actual = walk(path.join(ROOT, 'scripts/templates'), '.json').map(p => path.basename(p, '.json')).sort();
+    const m = head.match(/templates\/ 下有 (\d+) 个现实团队流程模板/);
+    if (!m) fail('F2', composePath, 0, '头注释找不到"templates/ 下有 N 个现实团队流程模板"');
+    else if (parseInt(m[1], 10) !== actual.length) {
+      fail('F2', composePath, 0, '头注释写 ' + m[1] + ' 个模板 ≠ 实际 ' + actual.length + ' 个（' + actual.join('/') + '）');
+    }
+    const lm = head.match(/下有 \d+ 个现实团队流程模板（([^）]+)）/);
+    if (lm) {
+      for (const l of lm[1].split('/').map(s => s.trim()).filter(Boolean)) {
+        if (!actual.includes(l)) fail('F2', composePath, 0, '头注释列出模板名 [' + l + '] 与实际不符（实际: ' + actual.join('/') + '）');
+      }
+    }
+    const rm = head.match(/林纳斯|马斯克|辛顿|DHH|维纳|图灵|乔布斯/);
+    if (rm) fail('F2', composePath, 0, '头注释角色名残留: [' + rm[0] + ']（角色名示例应通用化——完全指南指引老渣读此注释）');
+  });
+
+// F3 盘符绝对路径：使用者文档禁 [A-Za-z]:[\\/]（配置示例照抄即配错）
+reg('F3 盘符绝对路径', '使用者文档（SKILL/启动指南/README/模板/老渣文档/通用公告牌/团队须知/玩法）禁盘符绝对路径（相对路径/占位符替代）',
+  () => {
+    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式'];
+    const re = /[A-Za-z]:[\\/]/;
+    for (const d of dirs) {
+      const files = d.endsWith('.md') ? [path.join(ROOT, d)] : walk(path.join(ROOT, d), '.md');
+      for (const p of files) {
+        if (isExempt(p)) continue;
+        const lines = read(p).split('\n');
+        lines.forEach((line, i) => {
+          if (re.test(line) && !/解析成/.test(line)) fail('F3', p, i + 1, '盘符绝对路径: ' + line.trim().slice(0, 70) + '（应改相对路径/占位符，照抄会配错）');
+        });
+      }
+    }
+  });
+
+// F4 "见 文件「节名」"引用有效性：文件可解析（精确/子目录/模糊唯一）+ 节名在文件中出现（宁松勿紧）
+reg('F4 节引用有效性', '"`文件.md`「节名」"引用：文件必须可解析（精确/子目录/模糊唯一）、节名必须在文件中出现（防悬空引用）',
+  () => {
+    const readCache = new Map();
+    const readC = (p) => { if (!readCache.has(p)) readCache.set(p, read(p)); return readCache.get(p); };
+    const existCache = new Map();
+    const existC = (p) => { if (!existCache.has(p)) existCache.set(p, exists(p)); return existCache.get(p); };
+    const walkCache = new Map();
+    const walkC = (dir) => { if (!walkCache.has(dir)) walkCache.set(dir, walk(dir, '.md')); return walkCache.get(dir); };
+    function resolveDocRef(target) {
+      const candidates = [path.join(ROOT, target)];
+      for (const sub of ['assets', 'assets/老渣文档', 'assets/模板', 'assets/玩法模式', 'assets/通用公告牌', '团队须知', 'scripts']) {
+        candidates.push(path.join(ROOT, sub, target));
+      }
+      for (const c of candidates) if (existC(c)) return c;
+      const base = target.replace(/\.md$/, '');
+      const hits = walkC(path.join(ROOT, 'assets')).filter(p => path.basename(p).includes(base));
+      if (hits.length === 1) return hits[0];
+      return null; // 多命中=引用含糊，跳过不判（宁松勿紧）
+    }
+    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式', 'assets/_外部环境BUG清单.md', 'assets/_工具速查.md'];
+    for (const d of dirs) {
+      const files = d.endsWith('.md') ? [path.join(ROOT, d)] : walk(path.join(ROOT, d), '.md');
+      for (const p of files) {
+        if (isExempt(p)) continue;
+        const text = readC(p).replace(/```[\s\S]*?```/g, ''); // 跳过代码块（O(n) replace，避免 splitFences O(n²)）
+        const re = /(?:见|详见|参考|同口径|配合|标准文本见|流程见|骨架见|铁律见|与[^。\n]{0,5}|\|\s{0,2})\s*`([^`]+\.md)`[^。\n]{0,30}「([^」]+)」/g;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+          const target = m[1];
+          if (target.startsWith('../') || target.startsWith('D:') || target.startsWith('YOUR_')) continue;
+          const full = resolveDocRef(target);
+          if (!full) { fail('F4', p, 0, '引用文件无法解析: `' + target + '`（原文: ' + m[0].slice(0, 50) + '）'); continue; }
+          const section = m[2].trim();
+          if (/^\d+$/.test(section)) continue; // 数字节号（如 goal模式认知.md 四）不验
+          const hasSection = readC(full).split('\n').some(l => l.includes(section));
+          if (!hasSection) fail('F4', p, 0, '引用节不存在: `' + target + '`「' + section + '」（文件存在但无此节名）');
+        }
+      }
+    }
+  });
+
+// F5 通用公告牌模板计数 + 内部编号一致性
+reg('F5 通用公告牌计数/编号', 'README"通用公告牌 N 个模板"=实际模板数（除 README 索引）；模板"第00X轮"占位符全局一致',
+  () => {
+    const dir = path.join(ROOT, 'assets/通用公告牌');
+    const files = walk(dir, '.md').filter(p => path.basename(p) !== 'README.md');
+    const count = files.length;
+    const readme = read(path.join(ROOT, 'README.md'));
+    const rm = readme.match(/通用公告牌[^\n]*?(\d+) 个模板/);
+    if (rm && parseInt(rm[1], 10) !== count) fail('F5', path.join(ROOT, 'README.md'), 0, 'README 写 通用公告牌 ' + rm[1] + ' 个模板 ≠ 实际 ' + count + ' 个');
+    const vals = [];
+    const re = /第(00[^\d「」\n]*?)轮/g;
+    for (const f of files) {
+      const text = read(f);
+      let m;
+      while ((m = re.exec(text)) !== null) vals.push({ f: f, v: m[1] });
+    }
+    if (vals.length) {
+      const first = vals[0].v;
+      for (const v of vals) if (v.v !== first) fail('F5', v.f, 0, '模板轮号占位符 [' + v.v + '] ≠ 其他模板 [' + first + ']（应统一，如 00N）');
+    }
+  });
+
+// ---------------------------------------------------------------------------
 // --self-test：反向用例（防脚本自身腐化）
 //   策略：对每个校验器做"篡改内存文本 → 断言必失败 → 还原"，不碰真实文件。
 //   实现：校验器核心逻辑已在 reg() 闭包内直接跑文件系统——self-test 改为
@@ -740,6 +868,26 @@ function selfTest() {
   cases.push({
     name: 'B5 校验项数漂移必抓', file: 'README.md',
     from: /(校验公告牌（[^）]*?)\d+( 项）)/, to: '$15$2', expect: 'B5',
+  });
+  cases.push({
+    name: 'F1 收工顺序漂移必抓', file: 'assets/老渣文档/公告牌标准模板.md',
+    from: /②创建退场文件([^③]*?)③写流水账/, to: '②写流水账$1③创建退场文件', expect: 'F1',
+  });
+  cases.push({
+    name: 'F2 compose 头注释漂移必抓', file: 'scripts/compose.js',
+    from: /(下有 )(\d+)( 个现实团队流程模板)/, to: '$13$3', expect: 'F2',
+  });
+  cases.push({
+    name: 'F3 盘符路径必抓', file: '启动指南.md',
+    from: /(^# .+)$/m, to: '$1\n\n> F3自测盘符 D:/Codex/Test/绝对路径', expect: 'F3',
+  });
+  cases.push({
+    name: 'F4 节引用必抓', file: 'assets/模板/_干活流程.md',
+    from: /(见 `_启动多步曲\.md`「)待命轮询(」)/, to: '$1不存在节$2', expect: 'F4',
+  });
+  cases.push({
+    name: 'F5 模板计数漂移必抓', file: 'README.md',
+    from: /(通用公告牌[^\n]*?)(\d+)( 个模板)/, to: '$199$3', expect: 'F5',
   });
 
   for (const c of cases) {
@@ -810,6 +958,7 @@ function smokeTest() {
 function runAll(verbose) {
   clean();
   for (const v of VALIDATORS) {
+    if (SELFTEST_MODE && v.name.startsWith('D3')) continue; // self-test 不重跑 D3 spawn（排版校验与反向用例无关）
     try {
       v.check();
     } catch (e) {
@@ -825,7 +974,9 @@ function main() {
   const isSelfTest = args.includes('--self-test');
   const isSmoke = args.includes('--smoke');
   if (isSelfTest) {
+    SELFTEST_MODE = true;
     const ok = selfTest();
+    SELFTEST_MODE = false;
     process.exit(ok ? 0 : 1);
     return;
   }
