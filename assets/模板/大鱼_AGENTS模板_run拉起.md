@@ -59,7 +59,7 @@
 | ① | **读团队须知** | `read_file ../团队须知.md`（读不到跳过，不阻塞） |
 | ② | **先看公告牌目录** | 有新牌 → 校验 6 项 → 发布（有待命轮按批内判定扣收工轮）；无新牌 → 启动 `_fish_loop.js` |
 | ③ | **启动 _fish_loop** | `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`，确认日志出现"公告牌检测 30s / monitor 60s"字样 |
-| ④ | **写大鱼心跳** | `write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`，命中 allow_write；心跳=你在场的证据，见周期验证节） |
+| ④ | **写大鱼心跳** | `write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`，命中 allow_write；心跳=你在场的证据，见周期验证节；回合内长等待 sleep ≥90s 时每次工具动作顺带刷新） |
 | ⑤ | **拉日志 + 查对讲 + 决策** | 拉 `_fish_loop.log` 尾部 + 查 `大鱼_老渣对讲/` 新任务 + 核对**自己 CWD 里的公告牌数量**：`ls 公告牌_*.md`（>1 = 老渣追加了 → 走「校验→发布」；正常发布后应 ≤1（CWD 里公告牌数 − 已发布公告牌数量））→ 做一次决策（发布/打回/补搬/唤醒/继续等）——**有决策动作才算在场** |
 
 > **先干活后对话**：任何对话排在"看牌-校验-发布"之后；即使被质问，也先完成"看牌"动作再回应。
@@ -148,6 +148,7 @@ reasonix run --dir ../{角色目录} --model <模型名> --max-steps 120 "进入
 - **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**查 `大鱼_老渣对讲/` 新任务 + 核对**自己 CWD 里的公告牌数量**：`ls 公告牌_*.md`（>1 = 老渣追加了 → 走「校验→发布」；正常发布后应 ≤1（CWD 里公告牌数 − 已发布公告牌数量））（必做）** ③跑 `_fish_loop.js --once` ④做决策——有决策动作才算在场
 - **写大鱼心跳（每回合必做）**：`write_file _heartbeat.txt` 内容 `String(Date.now())`（CWD=大鱼目录，写裸文件名即落在 `火影-大鱼/_heartbeat.txt`）——**心跳 = 你在场的证据**（monitor 判你掉线与否；心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）。
   脚本在跑 ≠ 你在场——只有你亲手写的心跳才是"决策者在场"的可验证证据
+- **回合内长等待防误报**：回合内 sleep ≥90s / 连续多步等待期间，**每次工具动作顺带刷新心跳**（`write_file _heartbeat.txt`）——不穿插 = monitor 心跳阈值误判 FISH_DEAD（你在场但被当掉线）
 - **循环内检测到 DONE/新牌必须 break 提前返回**（bash 工具调用要整轮跑完才返回，循环 N 次卡 N×55s；检测到 `DONE`/`NEW_BOARD` 立即 break）
 
 **monitor 输出解读**：
