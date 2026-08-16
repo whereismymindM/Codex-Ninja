@@ -311,6 +311,7 @@ function main() {
     process.exit(0);
   } else {
     console.log("结论: ❌ 发现 " + allIssues.length + " 处异常——按上面对照产出总结.md 的逐轮矩阵核对");
+    console.log("> 提示: 若批次**尚未收工**（monitor 未 DONE / 两件套未落盘），产出/签字/退场缺失属预期推进状态，非故障——收工后再跑才是全绿场景");
     process.exit(1);
   }
 }
