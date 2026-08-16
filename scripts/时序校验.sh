@@ -145,7 +145,7 @@ while IFS= read -r sdir; do
         VIOLATIONS=$((VIOLATIONS+1))
         LOG "⚠️ $(basename "$sdir"): $(basename "$bad") 追加式改名（应为 xxx.md.signal_acked，原 .signal 应消失）"
     done < <(find "$sdir" -maxdepth 1 -name "*.signal.signal_acked" 2>/dev/null)
-done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     cnt=$(find "$d" -maxdepth 1 \( -name "*.signal" -o -name "*.signal.signal_acked" \) ! -name "*_已处理.signal" 2>/dev/null | grep -c .)
     [ "$cnt" -gt 0 ] && echo "$d"
 done)
