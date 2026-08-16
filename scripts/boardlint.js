@@ -170,11 +170,12 @@ function checkRoles(boards) {
       if (!st) { issues.push("第" + pad3(b.n) + "轮 角色 '" + r.name + "' 缺 状态 字段（角色行必填）"); return; }
       if (STATES.indexOf(st) === -1) issues.push("第" + pad3(b.n) + "轮 角色 '" + r.name + "' 状态非法: '" + st + "'（允许: " + STATES.join("/") + "）");
     });
-    // 协作模式角色字段（辩论/双人/主笔 须带 角色：+ 搭档：）
+    // 协作模式角色字段（辩论/双人/主笔 须带 角色：+ 搭档：）——仅限活跃角色（待命/休眠只需 状态：待命，见标准模板）
     if (COOP_ROLES[b.mode]) {
       b.roles.forEach(function(r) {
+        if (r.fields["状态"] !== "活跃") return; // 待命/休眠角色不需要角色字段
         var rf = r.fields["角色"];
-        if (!rf) issues.push("第" + pad3(b.n) + "轮（" + b.mode + "）角色 '" + r.name + "' 缺「角色：」字段（应为 " + COOP_ROLES[b.mode].join("/") + " 之一）");
+        if (!rf) issues.push("第" + pad3(b.n) + "轮（" + b.mode + "）活跃角色 '" + r.name + "' 缺「角色：」字段（应为 " + COOP_ROLES[b.mode].join("/") + " 之一）");
       });
     }
   });
