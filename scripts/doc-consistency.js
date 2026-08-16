@@ -403,7 +403,7 @@ reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/团队须知/大
 // C1 仓库内文件引用存在
 reg('C1 仓库内文件引用', '文档中 assets/scripts/团队须知 引用必须真实存在',
   () => {
-    const re = /(?:assets|scripts|团队须知)\/[A-Za-z0-9_\-\u4e00-\u9fa5]+(?:\/[A-Za-z0-9_\-\u4e00-\u9fa5.]+)*\.(?:md|js|sh|json|ps1)/g;
+    const re = /(?:assets|scripts|团队须知)\/[A-Za-z0-9_\-\u4e00-\u9fa5]+(?:\/[A-Za-z0-9_\-\u4e00-\u9fa5.]+)*\.(?:json|md|js|sh|ps1)/g; // 2026-08-16: json 放 js 前——备选顺序 js 在前会把 .json 截胡成 .js（前缀匹配不消费剩余）→ .json 模板引用死引用误报
     for (const p of walk(ROOT, '.md')) {
       if (isExempt(p)) continue;
       const text = read(p);
