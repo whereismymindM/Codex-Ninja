@@ -74,6 +74,7 @@ Copy-Item <skill路径>/团队须知/团队须知.md <项目根目录>/团队须
 ### 4. 写公告牌
 
 读 assets/老渣文档/（格式标准/标准模板/完全指南，README 有索引）。一次性写完，收工轮标退场。**可选**：用 `scripts/compose.js` + `scripts/templates/` 声明式编排（JSON → 自动生成公告牌+状态矩阵，编译期校验流转，见完全指南「十」第 7 步）。
+**写完放大鱼目录前跑 `node <skill路径>/scripts/boardlint.js <公告牌目录>` 契约校验**——编号/模式/角色/流转/产出/铁律8 等 9 项（🔴 阻断必改再发，🟡 警告建议规范化），发布前把格式违规拦在源头。
 
 ### 5. 开窗口，盯场
 
@@ -128,6 +129,7 @@ N 个角色各开独立窗口 `reasonix code`，角色窗口自动轮询公告�
 | assets/老渣文档/README.md | 老渣文档索引（标准模板/完全指南/Multi-pass/goal/示例） |
 | assets/通用公告牌/ | 标准化公告牌模板集（调查轮×6/待命/收工/老渣对讲/流程体验/自检——复制改名 `公告牌_NNN.md` 即用） |
 | scripts/compose.js + scripts/templates/ | 编排自动化：JSON 声明式生成公告牌+状态矩阵+编译期流转校验（7 个现实团队流程模板，`node compose.js --list` 查看） |
+| scripts/boardlint.js | 公告牌契约校验（发布前，协议合规工具族 P0 第一件）——编号连续/模式枚举/收工轮格式/角色枚举/状态流转/产出格式/铁律8/前置依赖/第一原则 9 项，🔴 阻断必改再发 🟡 警告建议规范化；判据与 compose/monitor/大鱼手册同源 |
 | assets/模板/大鱼_AGENTS模板.md | 大鱼模板·形态选择入口（选一生成） |
 | assets/模板/大鱼_AGENTS模板_窗口常驻.md | 大鱼模板（窗口常驻形态，reasonix code） |
 | assets/模板/大鱼_AGENTS模板_run拉起.md | 大鱼模板（run 拉起形态，调度唤醒） |
