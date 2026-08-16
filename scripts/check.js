@@ -129,7 +129,9 @@ function checkOutputs(root, boards) {
     var pb = parseBoard(b.content);
     if (pb.mode === "收工" || pb.mode === "待命") return; // 无产出轮
     if (!pb.hasOutput) { issues.push("第" + pad3(b.n) + "轮（" + pb.mode + "）无产出行——任务轮漏写产出 = monitor 死等（格式硬标准）"); return; }
-    if (pb.activeRoles.length === 0) { issues.push("第" + pad3(b.n) + "轮无活跃角色但有产出行——公告牌角色行状态可能写错"); return; }
+    // 试用轮特殊：角色行状态=待命等通知（标准模板试用轮写法），产出由角色在真人反馈后汇总交付——不报"无活跃角色"
+    if (pb.activeRoles.length === 0 && pb.mode !== "试用") { issues.push("第" + pad3(b.n) + "轮无活跃角色但有产出行——公告牌角色行状态可能写错"); return; }
+    if (pb.activeRoles.length === 0 && pb.mode === "试用") { pb.activeRoles = pb.allRoles; } // 试用轮按全员校验产出（等反馈后角色交付）
     pb.outputs.forEach(function(o) {
       var outDirPath = path.join(worldDir, o.dir);
       var ready = false;
