@@ -320,20 +320,46 @@ while (Date.now() < deadline) {
       var _pRaw = fs.readFileSync(watchHbFile, "utf8");
       var _pTs = parseInt(String(_pRaw || "").trim(), 10);
       if (_pTs && Date.now() - _pTs > watchHbDeadMin * 60 * 1000) {
-        // M7 宽容：心跳 stale 但对方最近 watchHbDeadMin 分钟内有新文件 = 在干活/长思考，不算失联（对齐 monitor A-1 判据）
-        var _pDir = path.dirname(watchHbFile);
+        // M7 宽容 + 2026-08-16 扩展（隐患#19 实弹：马斯克写 001 盘点被误判失联）：
+        // 心跳 stale 但对方最近 watchHbDeadMin 分钟内有新文件 = 在干活/长思考，不算失联（对齐 monitor A-1 + 主区判据）。
+        // 扫描范围 = 对讲目录 + 产出目录 + 任务*目录——干活期角色只在产出/任务写文件、对讲静默，
+        // 只查对讲目录会误判干活中的搭档（本批次架构师按失联分支收尾的根因）。
+        var _pDir = path.dirname(watchHbFile);          // 对方 对讲目录
+        var _worldDir = path.resolve(_pDir, "..");      // 我的世界/
+        var _scanDirs = [_pDir];
+        try {
+          if (fs.existsSync(_worldDir + "/产出")) _scanDirs.push(_worldDir + "/产出");
+          fs.readdirSync(_worldDir).forEach(function(_d2) {
+            if (/^任务\d+/.test(_d2) && fs.existsSync(_worldDir + "/" + _d2)) _scanDirs.push(_worldDir + "/" + _d2);
+          });
+        } catch(_psd) {}
         var _working = false;
+        var _isMonitorFile = function(_f) {
+          return _f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0 ||
+            _f === "_heartbeat.txt" || _f === "_hb_state.json" || _f === "_mtime.txt"; // 心跳文件内容 stale 但文件 mtime 最近写入——不算活动证据（monitor 同款防自指）
+        };
         try {
           var _cut = Date.now() - watchHbDeadMin * 60 * 1000;
-          _working = fs.readdirSync(_pDir).some(function(f) {
-            // 2026-08-12 修复：排除 monitor 自写文件（_wakeup 唤醒 / 大鱼回复 自动回复 / 需人工干预）——
-            // 它们是 monitor 刚写入的不是对方新产出，不排除会把"monitor 刚写过"误判成"对方在干活"而延迟 PARTNER_DEAD（对齐 monitor A-1 排除逻辑）
-            if (f.indexOf("_wakeup") === 0 || f.indexOf("大鱼回复") === 0 || f.indexOf("需人工干预") === 0) return false;
-            try { return fs.statSync(path.join(_pDir, f)).mtimeMs > _cut; } catch(_e) { return false; }
-          });
+          for (var _sd = 0; _sd < _scanDirs.length && !_working; _sd++) {
+            (function scanRecent(dir, isTalkDir) {
+              var entries;
+              try { entries = fs.readdirSync(dir); } catch(_e) { return; }
+              for (var _si = 0; _si < entries.length && !_working; _si++) {
+                var _full = dir + "/" + entries[_si];
+                try {
+                  var _st = fs.statSync(_full);
+                  if (_st.isDirectory()) { if (entries[_si] !== "_回收站") scanRecent(_full, isTalkDir); }
+                  else if (_st.mtimeMs > _cut) {
+                    if (isTalkDir && _isMonitorFile(entries[_si])) continue;
+                    _working = true; return;
+                  }
+                } catch(_e2) {}
+              }
+            })(_scanDirs[_sd], _sd === 0);
+          }
         } catch(_ph2) {}
         if (!_working) {
-          console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）且无新文件——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
+          console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）且产出/任务/对讲均无新文件——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
           process.exit(4);
         }
       }
