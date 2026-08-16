@@ -734,8 +734,32 @@ if (fs.existsSync(worldDir)) {
                             } catch(e) {}
                         }
                     }
-                    if (!_skipDeepScan) _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
+                    // 隐患#19 修复（2026-08-16 实弹第 2/3 例：架构师/马斯克干活轮长任务间歇停顿被误判 DEAD/STUCK）：
+                    // 门控盲区——12-29 mtime 门控（_skipDeepScan）只优化正常 60s 轮；角色长任务间歇停顿期
+                    // （思考间隙不写文件）目录 mtime 静止 → 门控跳过深扫 → 新产出检测不到 → 误判死。
+                    // 心跳已 stale = 低频事件，放弃门控强制深扫确认是否真死。
+                    if (!_skipDeepScan || hbAge > timeoutMs) _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
                 } catch(_sc) {}
+                // 隐患#19 修复②：深扫无产出时叠加"对讲目录近期活动文件"检查（双保险）——
+                // 角色干活必写 操作日志/轮询日志/流水账（对讲目录自有文件），有新文件 = 活着（心跳只是没同步）。
+                // 排除 monitor 自写文件（_wakeup/需人工干预/大鱼回复——非角色活动）。
+                if (!hasRecentOutput) {
+                    try {
+                        var _talkDir = worldDir + "/" + dir;
+                        var _talkCut = Date.now() - timeoutMs;
+                        var _talkEntries = fs.readdirSync(_talkDir);
+                        for (var _ti = 0; _ti < _talkEntries.length; _ti++) {
+                            var _tf = _talkEntries[_ti];
+                            // 排除 monitor 自写文件（_wakeup/需人工干预/大鱼回复）与心跳/轮询状态文件
+                            // （_heartbeat.txt 内容 stale 正是判据来源，其文件 mtime 却是最近写入——算活动证据会永远 SKIP 导致真死检测失效）
+                            if (_tf.indexOf("_wakeup") === 0 || _tf.indexOf("需人工干预") === 0 || _tf.indexOf("大鱼回复") === 0 ||
+                                _tf === "_heartbeat.txt" || _tf === "_hb_state.json" || _tf === "_mtime.txt") continue;
+                            try {
+                                if (fs.statSync(_talkDir + "/" + _tf).mtimeMs > _talkCut) { hasRecentOutput = true; break; }
+                            } catch(_te4) {}
+                        }
+                    } catch(_te5) {}
+                }
                 if (hasRecentOutput) {
                     // 角色在写文件（干活中），心跳只是没同步——视为活着，不 DEAD 不唤醒
                     console.log("SKIP " + roleName + " (心跳超时但窗口内有新产出文件——干活中)");
