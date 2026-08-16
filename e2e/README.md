@@ -9,10 +9,24 @@
 bash run_e2e.sh                      # 单角色链路（默认测上级 codex-ninja/）
 bash run_e2e_multi.sh                # 多角色协作链路（3 角色 × 4 轮）
 bash run_e2e_sys.sh                  # 系统机制链路（心跳/锁/唤醒/死锁/断点/待命/扣留/追加）
+bash run_e2e_tools.sh                # 工具链路（boardlint/check/ecoscope——9 新工具中 Skill 侧 3 个；工具舱 7 个由发布门禁 run-all-checks.sh 覆盖）
 bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加引号）
 ```
 
+> 总断言：14 + 19 + 19 + 9 + 17 = **78**（2026-08-16 新增 run_e2e_tools.sh 17 断言）
+
 ## 覆盖链路
+
+### run_e2e_tools.sh（工具链路，6 步 17 断言）
+
+| 步骤 | 验证点 |
+|------|--------|
+| 1. boardlint 标准批次 | 6 张合规牌 → 无阻断项 exit 0 |
+| 2. boardlint 异常批次 | 模式外值/编号断档/占位符 → 全部检出 exit 1 |
+| 3. check 收工批次 | 产出 .ready/签字/退场/两件套齐全 → 全绿 exit 0 |
+| 4. check 缺项 | 缺签字/缺退场 → 检出 exit 1 |
+| 5. ecoscope --html | DOCTYPE/30s 自动刷新/角色存活表（自包含单文件） |
+| 6. ecoscope CLI | 角色存活表 + 心跳判定列 |
 
 ### run_e2e.sh（单角色，8 步 14 断言）
 
