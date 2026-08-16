@@ -117,3 +117,16 @@ if (newContent === content) {
 - 临时脚本/中间文件写自己的 `临时脚本/` 目录，用 **write_file 原生直写**（零 shell、零转义问题）
 - 含反引号/正则/反斜杠的内容禁用 heredoc
 - 纯简单文本才可用 heredoc，且优先 write_file
+
+---
+
+## 7. write_file 写"字面文本"不执行表达式（心跳/时间戳坑，2026-08-16 实弹）
+
+**现象**：用 `write_file 文件.txt 内容 String(Date.now())` 想写当前时间戳 → 文件内容变成字面字符串 `String(Date.now())`（不是数字时间戳）——write_file 把内容**原样写入**，不执行其中的 JS 表达式。同理任何"想写表达式结果"的场景都会中招（心跳/时间戳/计算结果）。
+
+**案例**：二号舱室内容生产批次，角色用 write_file 写心跳 → 心跳文件内容为字面文本 → monitor `parseHeartbeat` parseInt 得 NaN → 心跳无效（等于无心跳）→ STUCK/FISH_DEAD 误判风险。角色自查发现并修正（模板已改：大鱼心跳用 `date +%s%3N > _heartbeat.txt`）。
+
+**规避**：
+- **要写表达式结果 → 用 bash 执行**（`node -e "require('fs').writeFileSync('x', String(Date.now()))"` 或 `date +%s%3N > x`），不是 write_file 写内容
+- write_file 只用于写**静态文本/代码内容**（不涉及执行）
+- 写心跳/时间戳类：**一律 bash**（模板已统一）
