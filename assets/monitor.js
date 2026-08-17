@@ -723,6 +723,10 @@ if (fs.existsSync(worldDir)) {
                     } catch(_sc2) {}
                     var _cutoff = Date.now() - timeoutMs;
                     function _scanRecent(dir) {
+                        // 2026-08-17 P1 修复：共享区归属限定（对齐收工轮 hbForce :462-467 只认 producer 归属）——
+                        // 任意 mtime 新文件算"该角色活着"会把真死角色掩盖（角色 B 在共享区干活 = A 永不 DEAD）。
+                        // 该角色相关证据 = ①文件名含角色名（产出/对话文件带名）②.ready 内容 producer 归属该角色；
+                        // "正在写未交付"由下方对讲目录活动文件检查兜底（角色干活必写操作日志/轮询日志/流水账）。
                         var entries;
                         try { entries = fs.readdirSync(dir); } catch(e) { return; }
                         for (var i = 0; i < entries.length; i++) {
@@ -730,7 +734,15 @@ if (fs.existsSync(worldDir)) {
                             try {
                                 var st = fs.statSync(full);
                                 if (st.isDirectory()) { _scanRecent(full); }
-                                else if (st.mtimeMs > _cutoff) { hasRecentOutput = true; return; }
+                                else if (st.mtimeMs > _cutoff) {
+                                    if (entries[i].indexOf(roleName) !== -1) { hasRecentOutput = true; return; } // ① 文件名归属
+                                    if (/\.ready$/.test(entries[i])) {
+                                        try {
+                                            var _pc = fs.readFileSync(full, "utf8");
+                                            if (new RegExp("producer\\s*[:：]\\s*" + roleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(_pc)) { hasRecentOutput = true; return; } // ② .ready producer 归属
+                                        } catch(_pc2) {}
+                                    }
+                                }
                             } catch(e) {}
                         }
                     }
@@ -826,8 +838,7 @@ if (fs.existsSync(worldDir)) {
                     if (/[\\/]|\.\./.test(__partner)) {
                       console.log("DEADLOCK " + __role + " WARN: 搭档名含路径分隔符/..（拒绝）: " + __partner + "——保留 _deadlock.md 待下轮，请人工核查公告牌角色行");
                       logMonitor("DEADLOCK " + __role + " WARN: 搭档名非法（" + __partner + "），信号保留");
-                      __dlConsumed = true; // 本行已处理（拒绝），不重复告警；信号保留（下方 !__dlConsumed 分支不触发）
-                      continue;
+                      continue; // 2026-08-17 P1 修复：不置 __dlConsumed——置位会使下方 else 分支 unlinkSync 删掉信号（08-13 安全修复 f8bc06b 漏网）；continue 后 !__dlConsumed 分支显式告警保留信号待下轮重试
                     }
                     console.log("DEADLOCK partner=" + __partner);
                     var __pw = worldDir + "/" + __partner + "_大鱼对讲/_wakeup.md";
