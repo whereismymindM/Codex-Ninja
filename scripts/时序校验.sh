@@ -46,7 +46,7 @@ while IFS= read -r qfile; do
             LOG "✅ $(basename "${qfile%_问.md}") 顺序正确（问 $(date -d @$qt +%H:%M:%S) → 答 $(date -d @$at +%H:%M:%S)）"
         fi
     fi
-done < <(find "$WORLD" -name "对话_*_T*_问.md" 2>/dev/null | sort)
+done < <(find "$WORLD" ! -path "*_回收站*" -name "对话_*_T*_问.md" 2>/dev/null | sort)
 [ "$FOUND" = "0" ] && LOG "  （无双人对话文件）"
 
 # ── 辩论：阶段不倒退 + 文件时间序递增 ──────────
@@ -89,7 +89,7 @@ while IFS= read -r bdir; do
         fi
         prev_t=$t; prev_name="$name"; [ -n "$stage" ] && prev_stage="$stage"
     done
-done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 -name "辩论_01_*.md" 2>/dev/null | grep -q . && echo "$d"
 done)
 [ "$FOUND" = "0" ] && LOG "  （无辩论文件）"
@@ -122,7 +122,7 @@ while IFS= read -r sdir; do
             LOG "⚠️ $(basename "$sdir")/$rname 之前没有请审核记录——结果先于请审，打回循环异常！"
         fi
     done
-done < <(find "$WORLD" -type d -path "*任务*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 \( -name "请审核*.md" -o -name "审核结果*.md" \) ! -name "*.signal*" 2>/dev/null | grep -q . && echo "$d"
 done)
 [ "$FOUND" = "0" ] && LOG "  （无主笔审核文件）"

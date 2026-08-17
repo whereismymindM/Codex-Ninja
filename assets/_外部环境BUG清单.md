@@ -90,7 +90,7 @@ if (newContent === content) {
 **发生条件**：2+ 角色窗口同时 active poll。
 
 **规避**：
-- ~~poll 间隔带内置随机抖动（0-1.5s）错开多角色相位~~（已随 `_poll.js` 归档移除——当前 `_reasonix_poll.js` 无抖动；多角色轮询间隔/进入时序不同已自然错开）
+- ~~poll 间隔带内置随机抖动（0-1.5s）错开多角色相位~~（当前 `_reasonix_poll.js` 无内置抖动；多角色轮询间隔/进入时序不同已自然错开）
 - 遇到闪退后重开窗口即可恢复（公告牌和产出文件不受影响）
 - 频繁闪退 → 调大 poll 间隔
 
@@ -120,11 +120,11 @@ if (newContent === content) {
 
 ---
 
-## 7. write_file 写"字面文本"不执行表达式（心跳/时间戳坑，2026-08-16 实弹）
+## 7. write_file 写"字面文本"不执行表达式（心跳/时间戳坑）
 
 **现象**：用 `write_file 文件.txt 内容 String(Date.now())` 想写当前时间戳 → 文件内容变成字面字符串 `String(Date.now())`（不是数字时间戳）——write_file 把内容**原样写入**，不执行其中的 JS 表达式。同理任何"想写表达式结果"的场景都会中招（心跳/时间戳/计算结果）。
 
-**案例**：二号舱室内容生产批次，角色用 write_file 写心跳 → 心跳文件内容为字面文本 → monitor `parseHeartbeat` parseInt 得 NaN → 心跳无效（等于无心跳）→ STUCK/FISH_DEAD 误判风险。角色自查发现并修正（模板已改：大鱼心跳用 `date +%s%3N > _heartbeat.txt`）。
+**案例**：实弹批次，角色用 write_file 写心跳 → 心跳文件内容为字面文本 → monitor `parseHeartbeat` parseInt 得 NaN → 心跳无效（等于无心跳）→ STUCK/FISH_DEAD 误判风险。角色自查发现并修正（模板已改：大鱼心跳用 `date +%s%3N > _heartbeat.txt`）。
 
 **规避**：
 - **要写表达式结果 → 用 bash 执行**（`node -e "require('fs').writeFileSync('x', String(Date.now()))"` 或 `date +%s%3N > x`），不是 write_file 写内容

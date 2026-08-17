@@ -38,6 +38,10 @@ if (fs.existsSync(stateFile)) {
         if (state.N && Number.isInteger(state.N) && state.N >= 1) N = state.N; // 第四轮修复：校验正整数，防 公告牌_1.5.md 永久 WAIT
     } catch (e) { /* 状态文件损坏，从1开始 */ }
 }
+// 2026-08-17 P2-20：状态文件原子写（.tmp→rename）——后台 _fish_loop + 手动 monitor 并发覆写可能写坏 JSON（waitSince 丢失 → WAIT_OVERDUE 熔断反复重置）
+function writeState(obj) {
+  try { fs.writeFileSync(stateFile + ".tmp", JSON.stringify(obj), "utf8"); fs.renameSync(stateFile + ".tmp", stateFile); } catch(_ws) {}
+}
 // 顶层 try-catch：monitor 自身异常不盲飞
 try {
 // 自检：从N开始逐轮找第一个未完成的
@@ -82,6 +86,33 @@ while (true) {
                         var _rcSelf = fs.readFileSync(_rpSelf, "utf8");
                         if (/size:\s*0\b/.test(_rcSelf)) console.log("OUTPUT-WARN " + fnSelf + " .ready 显示 size=0——空交付（收工审计将标红）！");
                     } catch(_rmS) {}
+                }
+            }
+            // 2026-08-17 P2-18：自检格式A + 各自 补 producer 归属校验（对齐自检格式B :95-121）——一人重复交付凑数可绕过自检提前推进 N
+            if (outOkSelf) {
+                var _ownerMSelfA = boardContent.match(/\n- 产出负责人[:：]\s*(.+)/);
+                if (_ownerMSelfA && _ownerMSelfA[1].trim() === "各自") {
+                    var _actReSelfA = /- (.+?)[（(].*状态[:：]\s*活跃/g;
+                    var _amSelfA, _actNamesSelfA = [];
+                    while ((_amSelfA = _actReSelfA.exec(headerPart)) !== null) {
+                        var _arnSelfA = _amSelfA[1].replace(/^组[A-Z]\s*[:：]\s*/, "");
+                        if (/[\\/]|\.\./.test(_arnSelfA)) continue;
+                        _actNamesSelfA.push(_arnSelfA);
+                    }
+                    var _producersSelfA = {}, _unknownSelfA = 0;
+                    fnsSelf.forEach(function(_fnS2) {
+                        try {
+                            var _rcS2 = fs.readFileSync(base + "/我的世界/" + odSelf + "/" + _fnS2.trim() + ".ready", "utf8");
+                            var _pmS2 = _rcS2.match(/^producer:\s*(.+)$/m);
+                            if (_pmS2 && _pmS2[1]) { _producersSelfA[_pmS2[1].trim()] = true; return; }
+                        } catch(_rcS2E) {}
+                        _unknownSelfA++;
+                    });
+                    var _missSelfA = _actNamesSelfA.filter(function(_a2) { return !_producersSelfA[_a2]; });
+                    if (!(_missSelfA.length === 0 || _unknownSelfA >= _missSelfA.length)) {
+                        outOkSelf = false;
+                        console.log("OUTPUT-WARN " + odSelf + " 自检格式A 各自场景 producer 未覆盖: 缺 " + (_missSelfA.join(",") || "?"));
+                    }
                 }
             }
         } else {
@@ -546,6 +577,27 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
         });
         ready = allExist;
+        // 2026-08-17 P2-18：格式A + 产出负责人:各自 补 producer 归属校验（对齐格式B 各自场景 :595-611）——
+        //   只查 .ready 存在性会被一人重复交付凑数绕过（monitor 主判断/自检/复检 + check/ecoscope 同源五处同步）
+        if (ready) {
+            var _ownerM4 = board.match(/\n- 产出负责人[:：]\s*(.+)/);
+            if (_ownerM4 && _ownerM4[1].trim() === "各自") {
+                var _producers4 = {}, _unknown4 = 0;
+                fileNames.forEach(function(fn) {
+                    try {
+                        var _rc4 = fs.readFileSync(outDirPath + "/" + fn.trim() + ".ready", "utf8");
+                        var _pm4 = _rc4.match(/^producer:\s*(.+)$/m);
+                        if (_pm4 && _pm4[1]) { _producers4[_pm4[1].trim()] = true; return; }
+                    } catch(_rc4E) {}
+                    _unknown4++; // 无 producer 行（历史 .ready）→ 归属未知，计入（不卡轮）
+                });
+                var _miss4 = activeRoles.filter(function(_ar4) { return !_producers4[_ar4]; });
+                if (!(_miss4.length === 0 || _unknown4 >= _miss4.length)) {
+                    ready = false;
+                    console.log("OUTPUT-WARN " + outDir + " 格式A 各自场景 producer 未覆盖: 缺 " + (_miss4.join(",") || "?") + "（.ready 无对应 producer，疑似一人重复交付凑数）");
+                }
+            }
+        }
         // B-5 修复：.ready 存在时读 metadata 校验——size:0（空交付）或缺失 size 行（无 metadata 旧版/代码类）输出提示，供收工审计参考
         if (ready && fileNames) {
             fileNames.forEach(function(fn) {
@@ -719,7 +771,7 @@ if (fs.existsSync(worldDir)) {
                         var _stScan = {};
                         try { if (fs.existsSync(stateFile)) _stScan = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch(_sr3) {}
                         if (_stScan.lastScanKey === _mtimeKey) { _skipDeepScan = true; }
-                        else { _stScan.lastScanKey = _mtimeKey; try { fs.writeFileSync(stateFile, JSON.stringify(_stScan), "utf8"); } catch(_w3) {} }
+                        else { _stScan.lastScanKey = _mtimeKey; writeState(_stScan); }
                     } catch(_sc2) {}
                     var _cutoff = Date.now() - timeoutMs;
                     function _scanRecent(dir) {
@@ -933,6 +985,26 @@ if (!outputReady && activeRoles.length > 0) {
                         for (var _fi = 0; _fi < _fileNames2.length; _fi++) {
                             if (!fs.existsSync(_odp + "/" + _fileNames2[_fi].trim() + ".ready")) { _allOk = false; break; }
                         }
+                        // 2026-08-17 P2-18：复检格式A + 各自 补 producer 归属校验（对齐复检格式B :941-958）——10s 复检旁路主判断的归属校验
+                        if (_allOk) {
+                            var _ownerR2 = board.match(/\n- 产出负责人[:：]\s*(.+)/);
+                            if (_ownerR2 && _ownerR2[1].trim() === "各自") {
+                                var _producersR2 = {}, _unknownR2 = 0;
+                                _fileNames2.forEach(function(_fn2) {
+                                    try {
+                                        var _rc3 = fs.readFileSync(_odp + "/" + _fn2.trim() + ".ready", "utf8");
+                                        var _pm3 = _rc3.match(/^producer:\s*(.+)$/m);
+                                        if (_pm3 && _pm3[1]) { _producersR2[_pm3[1].trim()] = true; return; }
+                                    } catch(_rc3E) {}
+                                    _unknownR2++;
+                                });
+                                var _missR2 = activeRoles.filter(function(_ar3) { return !_producersR2[_ar3]; });
+                                if (!(_missR2.length === 0 || _unknownR2 >= _missR2.length)) {
+                                    _allOk = false;
+                                    console.log("OUTPUT-WARN " + _outDir2 + " 复检格式A 各自场景 producer 未覆盖: 缺 " + (_missR2.join(",") || "?"));
+                                }
+                            }
+                        }
                     } else {
                         // 12-15 大鱼自检：快速复检格式 B 校验（产出负责人=各自 → 需 .ready ≥ 活跃角色数）
                         var _rfs = fs.existsSync(_odp) ? fs.readdirSync(_odp).filter(function(f) { return f.endsWith(".ready"); }) : [];
@@ -972,7 +1044,7 @@ if (outputReady && allRetired) {
     console.log("DONE N=" + N + " (" + _doneWhy + ")"); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
     // 8-3: DONE 时清除 waitSince（轮次完成，卡轮计时归零——否则下轮沿用旧时间戳误报）
-    try { fs.writeFileSync(stateFile, JSON.stringify({ N: N + 1, waitSinceN: undefined, waitSince: undefined }), "utf8"); } catch (e) {}
+    writeState({ N: N + 1, waitSinceN: undefined, waitSince: undefined });
 } else {
     // 12-24 判定摘要：WAIT 带等待原因（大鱼 002 自检最卡②——"WAIT N=3 得读源码才懂"）
     var _why = [];
@@ -996,11 +1068,11 @@ if (outputReady && allRetired) {
         if (_trialWaiting) {
             // 等反馈阶段：重置计时基准，不触发熔断（反馈就位后从新基准起算）
             _st2.waitSinceN = N; _st2.waitSince = Date.now();
-            try { fs.writeFileSync(stateFile, JSON.stringify(_st2), "utf8"); } catch(_w2) {}
+            writeState(_st2);
         } else if (_st2.waitSinceN !== N || !_st2.waitSince) {
             // 首次进入当前轮 WAIT → 记录起始时间
             _st2.waitSinceN = N; _st2.waitSince = Date.now();
-            try { fs.writeFileSync(stateFile, JSON.stringify(_st2), "utf8"); } catch(_w2) {}
+            writeState(_st2);
         } else if (Date.now() - _st2.waitSince > _WAIT_OVERDUE_MS) {
             _waitOverdue = true;
         }

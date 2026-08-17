@@ -27,6 +27,7 @@ var path = require("path");
 var BOARD_RE = /公告牌_(\d{3})\.md$/;
 var ACTIVE_RE = /- (.+?)[（(].*状态[:：]\s*活跃/g;
 var ALL_ROLE_RE = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g;
+var STANDBY_RE = /- (.+?)[（(].*状态[:：]\s*待命/g; // 2026-08-17 P2-16：试用轮全员校验用（试用轮角色行=待命等通知，ALL_ROLE_RE 只收退场/休眠收集不到）
 var OUTPUT_RE = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g;
 var OWNER_RE = /\n- 产出负责人[:：]\s*(.+)/;
 var MODE_RE = /模式[：:]\s*(.+)/;
@@ -43,7 +44,7 @@ function parseBoard(content) {
   var headerPart = board.split(/\n- 任务[:：]/)[0];
   var modeM = board.match(MODE_RE);
   var mode = modeM ? modeM[1].trim() : "?";
-  var activeRoles = [], allRoles = [];
+  var activeRoles = [], allRoles = [], standbyRoles = [];
   var m;
   ACTIVE_RE.lastIndex = 0;
   while ((m = ACTIVE_RE.exec(headerPart)) !== null) {
@@ -57,6 +58,13 @@ function parseBoard(content) {
     if (BLACKLIST.indexOf(arn) !== -1 || arn.indexOf(":") !== -1 || arn.indexOf("：") !== -1) continue; // monitor.js:378 同款黑名单
     if (/[\\/]|\.\./.test(arn)) continue;
     allRoles.push(arn);
+  }
+  STANDBY_RE.lastIndex = 0;
+  while ((m = STANDBY_RE.exec(headerPart)) !== null) { // 2026-08-17 P2-16：待命态角色单独收集（试用轮/待命轮用）
+    var srn = m[1].replace(/^组[A-Z]\s*[:：]\s*/, "");
+    if (BLACKLIST.indexOf(srn) !== -1 || srn.indexOf(":") !== -1 || srn.indexOf("：") !== -1) continue;
+    if (/[\\/]|\.\./.test(srn)) continue;
+    standbyRoles.push(srn);
   }
   var outputs = [];
   var om;
@@ -75,7 +83,7 @@ function parseBoard(content) {
   }
   var ownerM = board.match(OWNER_RE);
   var ownerEach = ownerM && ownerM[1].trim() === "各自";
-  return { mode: mode, activeRoles: activeRoles, allRoles: allRoles, outputs: outputs, ownerEach: ownerEach, hasOutput: outputs.length > 0 };
+  return { mode: mode, activeRoles: activeRoles, allRoles: allRoles, standbyRoles: standbyRoles, outputs: outputs, ownerEach: ownerEach, hasOutput: outputs.length > 0 };
 }
 
 // 读项目根的公告牌序列（我的世界/ 为权威——角色 poll 的是它；源目录对比见 checkPublish）
@@ -131,7 +139,7 @@ function checkOutputs(root, boards) {
     if (!pb.hasOutput) { issues.push("第" + pad3(b.n) + "轮（" + pb.mode + "）无产出行——任务轮漏写产出 = monitor 死等（格式硬标准）"); return; }
     // 试用轮特殊：角色行状态=待命等通知（标准模板试用轮写法），产出由角色在真人反馈后汇总交付——不报"无活跃角色"
     if (pb.activeRoles.length === 0 && pb.mode !== "试用") { issues.push("第" + pad3(b.n) + "轮无活跃角色但有产出行——公告牌角色行状态可能写错"); return; }
-    if (pb.activeRoles.length === 0 && pb.mode === "试用") { pb.activeRoles = pb.allRoles; } // 试用轮按全员校验产出（等反馈后角色交付）
+    if (pb.activeRoles.length === 0 && pb.mode === "试用") { pb.activeRoles = pb.allRoles.concat(pb.standbyRoles); } // 试用轮按全员校验产出（ALL_ROLE_RE 只收退场/休眠，待命态角色走 standbyRoles——2026-08-17 P2-16 修复空转：原 allRoles 空 → 全员校验形同虚设）
     pb.outputs.forEach(function(o) {
       var outDirPath = path.join(worldDir, o.dir);
       var ready = false;
@@ -144,7 +152,22 @@ function checkOutputs(root, boards) {
           if (!fs.existsSync(path.join(outDirPath, fn.trim() + ".ready"))) missing.push(fn.trim());
         });
         ready = missing.length === 0;
-        if (!ready) reason = "缺 .ready: " + missing.join(", ");
+        // 2026-08-17 P2-18：格式A + 产出负责人:各自 补 producer 归属校验（对齐格式B 分支）——一人重复交付凑数判不过
+        if (ready && pb.ownerEach) {
+          var producersA = {}, unknownA = 0;
+          o.files.forEach(function(fn) {
+            try {
+              var rcA = fs.readFileSync(path.join(outDirPath, fn.trim() + ".ready"), "utf8");
+              var pmA = rcA.match(/^producer:\s*(.+)$/m);
+              if (pmA && pmA[1]) { producersA[pmA[1].trim()] = true; return; }
+            } catch (_rcAE) {}
+            unknownA++; // 无 producer 行（历史 .ready）→ 归属未知，计入（不卡轮）
+          });
+          var missA = pb.activeRoles.filter(function(arA) { return !producersA[arA]; });
+          ready = missA.length === 0 || unknownA >= missA.length;
+          if (!ready) reason = "格式A 各自场景 producer 未覆盖: 缺 " + (missA.join(",") || "?") + "（疑似一人重复交付凑数）";
+        }
+        if (!ready) reason = reason || "缺 .ready: " + missing.join(", ");
         else detail.push("第" + pad3(b.n) + "轮 ✅ " + o.dir + "（格式A " + o.files.length + " 个 .ready 就位）");
       } else {
         // 格式B: 扫目录 .ready（含 producer 归属校验，monitor.js:595-611 同源）

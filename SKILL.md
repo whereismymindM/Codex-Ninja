@@ -18,7 +18,7 @@ description: |
 
 - 你写公告牌文件，一次性写完，放大鱼目录（`火影-大鱼/`——**首个项目名固化为默认大鱼目录名，换项目名时改 `scaffold.js` 的鱼目录常量**）
 - 大鱼校验后全量发布到 我的世界/，不改一字（有待命轮则大鱼会扣留收工轮——详情见：assets/老渣文档/公告牌完全指南.md）
-- 你在旁边窗口盯场救火、看产出、陪故国有明聊天（给用户/自己看进度：`node <skill路径>/scripts/ecoscope.js <项目根目录> --html > 批次状态.html` 生成浏览器单文件视图）
+- 你在旁边窗口盯场救火、看产出、陪用户聊天（给用户/自己看进度：`node <skill路径>/scripts/ecoscope.js <项目根目录> --html > 批次状态.html` 生成浏览器单文件视图）
 - 读到本 Skill 的就是老渣，不是大鱼
 
 ---
@@ -54,7 +54,7 @@ description: |
 ### 2. 跑 scaffold
 
 ```bash
-node <skill路径>/scripts/scaffold.js <项目根目录> roles.json        # init（全新项目，项目根=我的世界的上级，如 一号舱室-软件开发部）
+node <skill路径>/scripts/scaffold.js <项目根目录> roles.json        # init（全新项目，项目根=我的世界的上级，如 项目A-开发部）
 node <skill路径>/scripts/scaffold.js <项目根目录> roles.json add    # add（追加角色，不碰大鱼和monitor）
 node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fish（重建大鱼，window=窗口常驻/run=run拉起）
 ```
@@ -63,7 +63,7 @@ node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fis
 
 ### 3. 部署团队须知
 
-scaffold init（默认命令）已自动把 `团队须知/团队须知.md` 复制到项目根目录（= 我的世界/ 的上级，如 一号舱室-软件开发部）。**新项目请走 init（默认命令，角色+团队须知一步生成，不用管）**；**仅用 add 补角色时**（或重建时只跑了 fish/add 没跑 init），团队须知不会自动复制，需手动补：
+scaffold init（默认命令）已自动把 `团队须知/团队须知.md` 复制到项目根目录（= 我的世界/ 的上级）。**新项目请走 init（默认命令，角色+团队须知一步生成，不用管）**；**仅用 add 补角色时**（或重建时只跑了 fish/add 没跑 init），团队须知不会自动复制，需手动补：
 
 ```powershell
 Copy-Item <skill路径>/团队须知/团队须知.md <项目根目录>/团队须知.md

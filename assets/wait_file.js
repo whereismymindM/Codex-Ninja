@@ -326,6 +326,7 @@ while (Date.now() < deadline) {
         // 只查对讲目录会误判干活中的搭档（本批次架构师按失联分支收尾的根因）。
         var _pDir = path.dirname(watchHbFile);          // 对方 对讲目录
         var _worldDir = path.resolve(_pDir, "..");      // 我的世界/
+        var _partnerName = path.basename(_pDir).replace("_大鱼对讲", ""); // 2026-08-17 P2-17：共享区归属限定用（对方角色名）
         var _scanDirs = [_pDir];
         try {
           if (fs.existsSync(_worldDir + "/产出")) _scanDirs.push(_worldDir + "/产出");
@@ -350,8 +351,19 @@ while (Date.now() < deadline) {
                   var _st = fs.statSync(_full);
                   if (_st.isDirectory()) { if (entries[_si] !== "_回收站") scanRecent(_full, isTalkDir); }
                   else if (_st.mtimeMs > _cut) {
-                    if (isTalkDir && _isMonitorFile(entries[_si])) continue;
-                    _working = true; return;
+                    if (isTalkDir) {
+                      if (_isMonitorFile(entries[_si])) continue;
+                      _working = true; return;
+                    }
+                    // 2026-08-17 P2-17：共享区归属限定（对齐 monitor 主区判据）——只认 文件名含对方角色名 或 .ready producer 归属对方；
+                    // 否则 3 人+ 场景搭档真死、第三人干活 → 误判搭档活着，exit 4 永不触发（盲等 20 分钟）
+                    if (entries[_si].indexOf(_partnerName) !== -1) { _working = true; return; }
+                    if (/\.ready$/.test(entries[_si])) {
+                      try {
+                        var _pc2 = fs.readFileSync(_full, "utf8");
+                        if (new RegExp("producer\\s*[:：]\\s*" + _partnerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(_pc2)) { _working = true; return; }
+                      } catch(_pc2e) {}
+                    }
                   }
                 } catch(_e2) {}
               }

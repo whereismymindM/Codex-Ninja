@@ -9,7 +9,8 @@
 bash run_e2e.sh                      # 单角色链路（默认测上级 codex-ninja/）
 bash run_e2e_multi.sh                # 多角色协作链路（3 角色 × 4 轮）
 bash run_e2e_sys.sh                  # 系统机制链路（心跳/锁/唤醒/死锁/断点/待命/扣留/追加）
-bash run_e2e_tools.sh                # 工具链路（boardlint/check/ecoscope——9 新工具中 Skill 侧 3 个；工具舱 7 个由发布门禁 run-all-checks.sh 覆盖）
+bash run_e2e_trial.sh                # 试用轮链路（T1-T7，9 断言）
+bash run_e2e_tools.sh                # 工具链路（boardlint/check/ecoscope——Skill 侧 3 个；工具舱其余由发布门禁 run-all-checks.sh 覆盖）
 bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加引号）
 ```
 
@@ -91,4 +92,4 @@ bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加�
 
 **判断标准一句话**：升级动了"系统怎么判定/模式怎么交互/公告牌长什么样"→ 同步 e2e；只是内部实现换写法 → 只跑不改。
 
-**流程**：改 Skill → 跑三脚本（14+19+19）→ 全绿再提交。
+**流程**：改 Skill → 跑四脚本（14+19+19+9+17=78 断言）→ 全绿再提交。

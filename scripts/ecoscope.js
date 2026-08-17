@@ -183,6 +183,21 @@ function collectData(root) {
         var ok = false;
         if (o.files && o.files.length > 0) {
           ok = o.files.every(function(fn) { return fs.existsSync(path.join(worldDir, o.dir, fn.trim() + ".ready")); });
+          // 2026-08-17 P2-18：格式A + 产出负责人:各自 补 producer 归属校验（对齐格式B 分支）——一人重复交付凑数判不过
+          if (ok && b.ownerEach) {
+            var producersA = {}, unknownA = 0;
+            o.files.forEach(function(fn) {
+              try {
+                var rcA = fs.readFileSync(path.join(worldDir, o.dir, fn.trim() + ".ready"), "utf8");
+                var pmA = rcA.match(/^producer:\s*(.+)$/m);
+                if (pmA && pmA[1]) { producersA[pmA[1].trim()] = true; return; }
+              } catch (e3) {}
+              unknownA++;
+            });
+            var missA = b.activeRoles.filter(function(arA) { return !producersA[arA]; });
+            ok = missA.length === 0 || unknownA >= missA.length;
+            if (!ok) alerts.push("第" + pad3(b.n) + "轮 格式A 各自场景 producer 未覆盖: 缺 " + (missA.join(",") || "?"));
+          }
         } else {
           try {
             var readyFiles = fs.existsSync(path.join(worldDir, o.dir)) ? fs.readdirSync(path.join(worldDir, o.dir)).filter(function(f) { return f.endsWith(".ready"); }) : [];
