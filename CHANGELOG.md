@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-08-17 review 复核修复批（独立子代理审 4 提交 diff）
+
+- **背景**：用户问"要不要再全量审一遍"→ 判断没必要重复全量审（同基线边际信息低），欠"修复批独立复核"→ 派只读子代理审 `a2c1f42^..HEAD`（本日 4 提交，27 文件 +228/-66）。**独立视角抓到修复者漏掉的 1 P1 + 3 P2**
+- **P1（761a12d 修复）**：monitor 主判断格式A+`产出负责人: 各自` 归属校验被历史 fallback 旁路——归属失败置 `ready=false` 后，fallback 分支 `missing=[]` 时 `[].every()` 恒 true → 改回 true → 主判断 DONE 放行（一人重复交付仍可绕过，漏报侧）。修复：归属失败置 `_ownerFail4` 标志，fallback 仅覆盖"存在性缺失"；打印改 `✗ producer 未覆盖，禁止 fallback`。定向场景：修复前 fallback 放行 DONE / 修复后 `OUTPUT ✗` + `WAIT N=1`
+- **P2-1**：monitor `_scanRecent` + wait_file `--watch-hb` 归属正则原子串匹配 → 改精确匹配（对齐格式B 同源，`producer: 甲乙` 不再误命中角色"甲"）
+- **P2-2**：ecoscope 试用轮校验空转（standbyRoles 未并入 active）→ parseBoard 收集 + 试用轮 active = allRoles+standbyRoles（对齐 check.js #16）
+- **P2-3**：e2e README 维护段"跑四脚本"→"跑五脚本"（实际 5 个脚本）
+- **验证**：node --check ×3 + doc-consistency 三连全绿（27✓/11/11/7/7）+ e2e 78 断言全绿 + P1 定向场景
+- **测试基线**：761a12d（feature-职位化角色，34 项原问题 + 4 项 review 新问题全闭环，tag `meta-review复核修复-20260817` + **`基准版-20260817`**）
+
 ## 2026-08-17 机制 P1 + P2 批修复（全量重审问题全闭环）
 
 - **机制 P1 修复（8c33107，tag `meta-机制P1修复-20260817`）**：①monitor 死锁信号非法搭档名分支不置消费位（08-13 f8bc06b 安全修复漏网——置位使 else 分支 unlink 删信号，与"解析失败保留信号+显式告警"意图相反）→ continue 保留信号待下轮重试 ②主心跳区深扫加归属限定（对齐收工轮 hbForce：文件名含角色名 / .ready producer 归属，正在写未交付由对讲目录活动检查兜底）——真死角色不再被共享区其他角色活动掩盖（08-16 强制深扫引入的漏报侧回归）。验证：定向场景实测（非法搭档名→双 WARN+信号保留；stale+他人文件→DEAD / 甲名文件→SKIP / 他人 producer→DEAD）
