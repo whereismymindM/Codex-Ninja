@@ -49,7 +49,7 @@ function parseBoard(n, content) {
   var headerPart = board.split(/\n- 任务[:：]/)[0];
   var modeM = board.match(MODE_RE);
   var mode = modeM ? modeM[1].trim() : "?";
-  var activeRoles = [], allRoles = [], roleStates = {};
+  var activeRoles = [], allRoles = [], standbyRoles = [], roleStates = {};
   var m;
   ACTIVE_RE.lastIndex = 0;
   while ((m = ACTIVE_RE.exec(headerPart)) !== null) {
@@ -65,12 +65,14 @@ function parseBoard(n, content) {
     allRoles.push(arn);
     roleStates[arn] = /状态[:：]\s*退场/.test(m[0]) ? "退场" : "休眠";
   }
-  var standbyRe = /- (.+?)[（(].*状态[:：]\s*待命/g;
+  var standbyRe = /- (.+?)[（(].*状态[:：]\s*待命/g; // 2026-08-17 review P2-2：试用轮全员校验用（角色行=待命等通知，对齐 check.js #16 STANDBY_RE）
   var sm;
   standbyRe.lastIndex = 0;
   while ((sm = standbyRe.exec(headerPart)) !== null) {
     var sn = sm[1].replace(/^组[A-Z]\s*[:：]\s*/, "");
+    if (BLACKLIST.indexOf(sn) !== -1 || sn.indexOf(":") !== -1 || sn.indexOf("：") !== -1) continue; // check.js 同款黑名单
     if (/[\\/]|\.\./.test(sn)) continue;
+    standbyRoles.push(sn);
     roleStates[sn] = "待命";
   }
   var outputs = [];
@@ -90,7 +92,7 @@ function parseBoard(n, content) {
   }
   var ownerM = board.match(/\n- 产出负责人[:：]\s*(.+)/);
   var ownerEach = ownerM && ownerM[1].trim() === "各自";
-  return { n: n, mode: mode, activeRoles: activeRoles, allRoles: allRoles, roleStates: roleStates, outputs: outputs, ownerEach: ownerEach };
+  return { n: n, mode: mode, activeRoles: activeRoles, allRoles: allRoles, standbyRoles: standbyRoles, roleStates: roleStates, outputs: outputs, ownerEach: ownerEach };
 }
 
 // ── 数据采集层（唯一事实源，双渲染共用）──
@@ -171,7 +173,7 @@ function collectData(root) {
   var boardRows = boards.map(function(b) {
     var signStr = [], prodStr = [];
     var isTaskRound = b.mode !== "收工" && b.mode !== "待命"; // 收工/待命轮无签字无产出
-    var active = b.activeRoles.length > 0 ? b.activeRoles : (b.allRoles || []);
+    var active = b.activeRoles.length > 0 ? b.activeRoles : ((b.mode === "试用" ? (b.allRoles || []).concat(b.standbyRoles || []) : (b.allRoles || []))); // 2026-08-17 review P2-2：试用轮按全员校验（角色行=待命，对齐 check.js #16）
     if (isTaskRound) {
       active.forEach(function(role) {
         var signFile = path.join(worldDir, role + "_大鱼对讲", "完成_" + pad3(b.n) + ".md");

@@ -361,7 +361,8 @@ while (Date.now() < deadline) {
                     if (/\.ready$/.test(entries[_si])) {
                       try {
                         var _pc2 = fs.readFileSync(_full, "utf8");
-                        if (new RegExp("producer\\s*[:：]\\s*" + _partnerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(_pc2)) { _working = true; return; }
+                        var _pcm2 = _pc2.match(/^producer:\s*(.+)$/m); // 2026-08-17 review P2-1：改精确匹配（对齐 monitor 格式B 同源）——原子串正则会把"producer: 甲乙"误命中角色"甲"
+                        if (_pcm2 && _pcm2[1] && _pcm2[1].trim() === _partnerName) { _working = true; return; }
                       } catch(_pc2e) {}
                     }
                   }

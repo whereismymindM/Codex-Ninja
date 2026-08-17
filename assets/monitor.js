@@ -577,6 +577,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             if (!fs.existsSync(fp)) { allExist = false; missing.push(fn.trim()); }
         });
         ready = allExist;
+        var _ownerFail4 = false; // 2026-08-17 review P1：归属校验失败标志——fallback 不得旁路（一人重复交付凑数）
         // 2026-08-17 P2-18：格式A + 产出负责人:各自 补 producer 归属校验（对齐格式B 各自场景 :595-611）——
         //   只查 .ready 存在性会被一人重复交付凑数绕过（monitor 主判断/自检/复检 + check/ecoscope 同源五处同步）
         if (ready) {
@@ -594,6 +595,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                 var _miss4 = activeRoles.filter(function(_ar4) { return !_producers4[_ar4]; });
                 if (!(_miss4.length === 0 || _unknown4 >= _miss4.length)) {
                     ready = false;
+                    _ownerFail4 = true; // review P1：归属失败禁止 fallback（fallback 的 missing=[] 空数组 .every() 恒 true 会把 ready 改回 true → 主判断 DONE 旁路）
                     console.log("OUTPUT-WARN " + outDir + " 格式A 各自场景 producer 未覆盖: 缺 " + (_miss4.join(",") || "?") + "（.ready 无对应 producer，疑似一人重复交付凑数）");
                 }
             }
@@ -609,7 +611,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                 } catch(_rm) {}
             });
         }
-        if (!ready) {            // fallback: 老渣可能把产出路径错写成源文件目录（如 soulforge/）
+        if (!ready && !_ownerFail4) {            // fallback: 老渣可能把产出路径错写成源文件目录（如 源代码/）——仅覆盖"存在性缺失"（missing 非空）；归属校验失败（_ownerFail4）保持 WAIT 不旁路（review P1）
             // 实际 .ready 在 产出/ 子目录下——扫描兜底
             var outBase = base + "/我的世界/产出";
             if (fs.existsSync(outBase)) {
@@ -629,7 +631,8 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                     else console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
                 } catch(_e5) { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
             } else { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
-        } else console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
+        } else if (ready) console.log("OUTPUT " + outDir + " \u2713 (" + fileNames.length + " files)");
+        else console.log("OUTPUT " + outDir + " \u2717 (producer 未覆盖，禁止 fallback——review P1)");
         outputProgress.push({ ok: ready, need: fileNames.length, have: ready ? fileNames.length : 0 }); // 12-24 摘要
     } else {
         // P1-3: 检查 .ready 文件——有 .ready 说明内容文件已完整写入
@@ -791,7 +794,8 @@ if (fs.existsSync(worldDir)) {
                                     if (/\.ready$/.test(entries[i])) {
                                         try {
                                             var _pc = fs.readFileSync(full, "utf8");
-                                            if (new RegExp("producer\\s*[:：]\\s*" + roleName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(_pc)) { hasRecentOutput = true; return; } // ② .ready producer 归属
+                                            var _pcm = _pc.match(/^producer:\s*(.+)$/m); // 2026-08-17 review P2-1：改精确匹配（对齐格式B 同源）——原子串正则会把"producer: 甲乙"误命中角色"甲"
+                                            if (_pcm && _pcm[1] && _pcm[1].trim() === roleName) { hasRecentOutput = true; return; } // ② .ready producer 归属
                                         } catch(_pc2) {}
                                     }
                                 }
