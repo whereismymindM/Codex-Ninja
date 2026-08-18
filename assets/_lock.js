@@ -16,7 +16,7 @@ var lockName = (process.argv[3] || "写锁").replace(/[\\/]/g, "_"); // L13 修�
 var waitTimeout = parseInt(process.argv[4], 10) || 180;
 var LOCK_STALE_SEC = 600;
 // 锁命名统一 = "写锁_" + lockName + ".lock"（如 写锁_任务001.lock），与模板内联 lock() 一致，混用互斥有效。角色优先用模板内联版。
-var lockFile = path.resolve(__dirname, "..", "我的世界", "写锁_" + lockName + ".lock");
+var lockFile = path.resolve(__dirname, "..", "world", "写锁_" + lockName + ".lock");
 
 if (action === "release") {
     // L13 修复：existsSync+unlink 非原子，并发 release 时包 try-catch 防 ENOENT 崩溃
@@ -50,7 +50,7 @@ function heartbeatDuringWait() {
     try {
         var roleName15 = path.basename(__dirname);
         if (!roleName15) return;
-        var hbDir15 = path.resolve(__dirname, "..", "我的世界", roleName15 + "_大鱼对讲");
+        var hbDir15 = path.resolve(__dirname, "..", "world", roleName15 + "_talk");
         fs.mkdirSync(hbDir15, { recursive: true });
         fs.writeFileSync(hbDir15 + "/_heartbeat.txt", String(Date.now()), "utf8");
     } catch(e) {}

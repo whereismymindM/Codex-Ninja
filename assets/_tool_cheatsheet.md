@@ -1,0 +1,158 @@
+# 工具速查
+
+> 按使用者分类，每个工具一行用法 + 关键注意事项。脚手架负责把工具复制到对应目录。
+
+---
+
+## 🔧 老渣用
+
+### scaffold.js（项目初始化）
+
+```bash
+node scaffold.js <项目目录> <roles.json>          # init：新建项目
+node scaffold.js <项目目录> <roles.json> add      # add：追加角色
+node scaffold.js <项目目录> fish [window|run]      # fish：只重建大鱼+monitor（window=窗口常驻/run=run拉起，默认window）
+```
+
+- projectDir 不能以 `/我的世界` 结尾（有防呆检查）
+- `add` 不碰大鱼和 monitor，不重建 `我的世界/`
+- `fish` 不注入灵魂——大鱼是纯执行器
+- 跑完删 roles.json
+
+### boardlint.js（公告牌契约校验，发布前拦格式违规）
+
+```bash
+node scripts/boardlint.js <公告牌目录>
+# 例：node scripts/boardlint.js "火影-大鱼/"（目录下找 board_*.md，支持草稿目录；写牌完、放大鱼目录前跑）
+```
+
+- **发布前跑**（协议合规工具族 P0 第一位，共识：生态工具清单）——公告牌契约校验 9 项：编号连续（🔴）/ 模式枚举 7 值（🟡）/ 收工轮格式（🔴）/ 角色枚举（🔴）/ 状态流转硬冲突（🔴）/ 产出格式（🔴）/ 铁律8 目录一字不差（🔴）/ 前置依赖显式路径（🟡）/ 第一原则行（🔴）
+- 🔴 阻断 = 发布后必卡死/误行为，必改再发；🟡 警告 = 不阻断但建议规范化（如模式枚举外值——monitor 可跑通但偏离标准模板，实证：交叉碰撞批次能收工）
+- 判据与 compose.js 状态流转推导 / check.js parseBoard / 大鱼公告牌手册 6 项同源，**改判据必须多改**（脚本头部有同源声明）
+- 退出码：0=无阻断项（可发布，警告可存在） 1=发现阻断项 2=参数错误
+
+### sequence_check.sh（收工后查顺序违规）
+
+```bash
+bash scripts/sequence_check.sh <项目根目录>
+# 例：bash scripts/sequence_check.sh "<项目根目录绝对路径>"（如 /path/to/项目根）
+```
+
+- 收工后跑（老渣待办 #3），检查三种协作模式的流程顺序是否合规（靠文件 mtime 判定，零 token）：
+  - 双人对话：问先答后（答.md 早于 问.md = 抢答）
+  - 辩论：01→02→03→04→05→06 mtime 单调递增（03 早于 02 = 跳步；`debate-end.md` 合法提前收敛）
+  - 主笔审核：每次 please-review ≤ 对应 review-result（结果无请审 = 打回异常）
+- 退出码：0=全部合规 1=发现违规 2=参数缺失/项目目录无效（找不到 `我的世界/`）
+
+### doc-consistency.js（文档一致性校验，改文档/模板后自查）
+
+```bash
+node scripts/doc-consistency.js            # 跑一次查漂移（0=一致 1=有漂移 2=脚本错误）
+node scripts/doc-consistency.js --self-test  # 反向用例（防脚本自身腐化）
+node scripts/doc-consistency.js --smoke      # wait_file 命令实测
+```
+
+- **改模板/文档后、提交前跑一次**——从代码枚举事实（模式枚举/模板数/调查轮/输出/退出码/铁律编号/引用存在/轨迹残留）断言文档一致，数字/引用/路径漂移自动报警（**完整使用说明见同目录 `scripts/doc-consistency_guide.md`**）
+
+### check.js（收工核对工具，老渣待办 #2 自动化）
+
+```bash
+node scripts/check.js <项目根目录>
+# 例：node scripts/check.js "项目根目录"（项目根 = 含 我的世界/ 与 火影-大鱼/ 的目录）
+```
+
+- **收工后跑**（老渣待办 #2）——全链路只读校验 5 项：发布一致性（火影-大鱼 vs 我的世界 清单+内容）/ 逐轮产出 .ready（格式A/B + producer 归属）/ 逐轮签字（done_NNN.md size>20）/ 退场文件（收工轮全员 {角色名}retired_NNN）/ 收口证据链（DONE 推断 + 两件套）
+- 判据与 monitor.js 同源（公告牌解析/output/签字/退场），**改判据必须双改**（脚本头部有同源声明）；顺序合规（抢答/跳步/打回）不归它管——那是 `sequence_check.sh`
+- 退出码：0=全部合规 1=发现异常 2=参数错误
+
+### ecoscope.js（生态仪表盘，离线视图——给用户/老渣看批次进度）
+
+```bash
+node scripts/ecoscope.js <项目根目录>                       # CLI 文本视图（备查/调试）
+node scripts/ecoscope.js <项目根目录> --html > 批次状态.html  # HTML 单文件视图（浏览器打开，30s 自动刷新）
+# 例：node scripts/ecoscope.js "项目根目录" --html > 批次状态.html
+```
+
+- **离线随时看**（共识 P0/P1 第二位，生态工具清单；v1.1 定位修正：**不是盯场**——在线检测是 monitor 的活；**不是校验**——收工核对是 check.js 的活；唯一真空白=离线一页给用户看）——只读不写文件：角色存活表（心跳 mtime + 新鲜度 + 判定，静默下线一眼可见）+ 轮次进度矩阵（签字/产出含 producer 归属）+ 告警汇总
+- `--html` 输出**自包含单文件**（内联 CSS、meta 30s 自动刷新、0 外部依赖），双击即用——用户离线看进度；CLI 文本为调试/备查
+- 心跳阈值与 monitor 同源（窗口常驻 2min / run 拉起 10min，读 `_运行形态.mode`）；退场角色心跳停标记"已退场（正常）"不误报
+- 退出码：0=正常输出 2=参数错误（视图非校验——异常在输出里标 ⚠️）
+
+---
+
+## 🐟 大鱼用
+
+### monitor.js（周期验证监控）
+
+```bash
+node ../monitor.js    # 大鱼在火影-大鱼/下执行，我的世界/ 在 monitor.js 同级
+```
+
+- 每次运行检查一轮，输出 WAIT（继续等）/ DONE（完成）/ **STANDBY**（待命轮，等通知）/ **TRIAL**（试用轮等真人反馈）/ SIGN / ROLE xxx DONE|PENDING / HELP / DEAD / RETIRE（退场确认）/ FLOW（流水账校验）/ WAKE / DEADLOCK / RETRY / CRASH
+- 每 60s 跑一次（大鱼模板规定），不做翻篇——只验证不干预推进
+- N 值持久化到 `.monitor_state.json`，崩溃重启不跳轮
+- 自动检测角色心跳，超时写 `_wakeup.md` 唤醒（run 拉起形态：角色干完即退心跳停是正常态，10 分钟才判且不自动唤醒；已退场角色跳过心跳检测）
+- 收工轮同时验退场文件和休眠文件
+- 产出检查：`.ready` 信号（格式A 逐文件检查 / 格式B 目录内任意 .ready；无"目录非空"检查）
+
+### _wakeup.js（唤醒休眠角色）
+
+```bash
+node _wakeup.js <角色名> [原因]
+# 示例：node _wakeup.js <角色名> <原因>
+```
+
+- 在 `我的世界/{角色名}_talk/` 下创建 `_wakeup.md`
+- 角色低功耗轮询（poll）检测到后**删除** `_wakeup.md` 确认收到（poll 路径=删除；wait_file 等待路径=自动改名 `_wakeup_acked.md`，两条均有效）→ 切回活跃
+- 有休眠角色时逐个调用（`node _wakeup.js 角色名 原因`）
+
+---
+
+## 👤 角色用
+
+> ⚠️ **独立脚本优先，内联仅 fallback**——日常用 `node _sign.js` / `node _deliver.js` / `node _lock.js`（参数校验 + 原子写 + 自检，免手抄出错面）；仅在独立脚本不满足需求时才手抄内联函数（见 `_inline_fallback.md`）。
+
+> ⚠️ **`_poll.js` 已归档**（用 `_reasonix_poll.js` + `wait_file.js` 取代）——以下 Shell 脚本为当前在用：
+- 内置目录 mtime 优化：目录无变化时跳过文件扫描
+- ~~低功耗模式有 0-1.5s 随机抖动，多角色错开相位~~（**已归档行为**：0-1.5s 抖动属 `_poll.js` 时代，当前 `_reasonix_poll.js` 无抖动；多角色靠轮询间隔/进入时序自然错开）
+
+### _sign.js（签字）
+
+```bash
+node _sign.js <轮次号> [消息]
+# 示例：node _sign.js 3
+```
+
+- 角色名由 scaffold 生成时焊死在代码里，不会签错人
+- 签字文件：`我的世界/{角色名}_talk/done_NNN.md`
+- 已有有效签字 → 快速跳过，不重写
+- 重试 1 次 + 自检验证（原子写入本身可靠，重试多了给 shell 超时送人头）
+
+### _deliver.js（原子交付）
+
+```bash
+node _deliver.js <产出文件名> [任务目录名] [源文件路径]
+# 示例：node _deliver.js 需求文档.md task001_需求设计 ../源代码/需求文档.md
+```
+
+- 传第 3 参（任务目录名）→ 快速路径，跳过公告牌扫描
+- 不传 → 自动扫描公告牌推导任务目录（兼容旧调用）
+- 原子写入：`.tmp` → `rename` → `.ready`
+- 产出路径对标公告牌，一字不差
+
+### _lock.js（文件锁）
+
+```bash
+node _lock.js acquire [锁名] [超时秒数]     # 抢锁，默认超时180s
+node _lock.js release [锁名]               # 释放
+# 示例：node _lock.js acquire 任务001 120
+```
+
+- `wx` 标志原子抢锁——不存在才创建，操作系统级原子
+- 锁文件：`我的世界/写锁_{锁名}.lock`，默认锁名"写锁"
+- 过期锁自动回收（>10分钟未更新，**且持有进程已死**——持有进程存活=长任务，不回收；读锁内容失败/EPERM 按存活保守处理）
+- 等待间隔 5s
+
+---
+
+> 📄 内联 sign/deliver/lock 函数完整代码见 `_inline_fallback.md`（仅独立脚本不满足需求时手抄；日常默认独立脚本优先）

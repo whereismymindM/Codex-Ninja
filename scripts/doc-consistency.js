@@ -58,9 +58,9 @@ function splitFences(text) {
 // ---------------------------------------------------------------------------
 const EXEMPT_FILES = [
   'CHANGELOG.md',                 // 版本历史本体（保留例外）
-  'assets/_隐患清单.md',          // 修复记录本体（保留例外）
-  'assets/老渣文档/goal模式认知.md', // 实测知识库类（保留例外）
-  'assets/模板/_大鱼实测教训.md', // 实测知识库类（保留例外）
+  'assets/_risk_list.md',          // 修复记录本体（保留例外）
+  'assets/operator-docs/goal_mode_guide.md', // 实测知识库类（保留例外）
+  'assets/role-templates/_bigfish_lessons.md', // 实测知识库类（保留例外）
   'scripts/doc-consistency-审核指南.md', // 元文档：内容就是讲校验器怎么查（示例占位/行号/已知漂移提及是内容本身）
 ];
 const EXEMPT_DIRS = ['e2e'];      // e2e 文档（维护者信息）
@@ -106,8 +106,8 @@ reg('A1 模式枚举', 'compose.js MODES 与 标准模板/完全指南/templates
     const modsSet = new Set(mods);
 
     const targets = [
-      { f: 'assets/老渣文档/公告牌标准模板.md', re: /^- 模式: \[([^\]]+)\]/m, label: '标准模板' },
-      { f: 'assets/老渣文档/公告牌完全指南.md', re: /^- 模式: \[([^\]]+)\]/m, label: '完全指南' },
+      { f: 'assets/operator-docs/board_standard_template.md', re: /^- 模式: \[([^\]]+)\]/m, label: '标准模板' },
+      { f: 'assets/operator-docs/board_complete_guide.md', re: /^- 模式: \[([^\]]+)\]/m, label: '完全指南' },
       { f: 'scripts/templates/README.md', re: /\{ "模式": "([^"]+)"/, label: 'templates README' },
     ];
     for (const t of targets) {
@@ -142,23 +142,23 @@ reg('A2 流程模板数', 'scripts/templates/*.json 与 SKILL/完全指南 数�
     if (sm && parseInt(sm[1], 10) !== count) {
       fail('A2', path.join(ROOT, 'SKILL.md'), 0, 'SKILL 写 ' + sm[1] + ' 个模板 ≠ 实际 ' + count);
     }
-    const guide = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+    const guide = read(path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'));
     const gm = guide.match(/下有 (\d+) 个\*\*现实团队流程模板/);
     if (gm && parseInt(gm[1], 10) !== count) {
-      fail('A2', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '完全指南写 ' + gm[1] + ' 个模板 ≠ 实际 ' + count);
+      fail('A2', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '完全指南写 ' + gm[1] + ' 个模板 ≠ 实际 ' + count);
     }
     for (const f of files) {
       if (!guide.includes('`' + f + '`')) {
-        fail('A2', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '完全指南模板清单缺 [' + f + ']');
+        fail('A2', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '完全指南模板清单缺 [' + f + ']');
       }
     }
   });
 
 // A3 调查轮数：通用公告牌调查文件 == 文档数字
-reg('A3 调查轮数', 'assets/通用公告牌/ 调查文件数与 SKILL/完全指南/标准模板 一致',
+reg('A3 调查轮数', 'assets/board-templates/ 调查文件数与 SKILL/完全指南/标准模板 一致',
   () => {
-    const files = walk(path.join(ROOT, 'assets/通用公告牌'), '.md')
-      .map(p => path.basename(p, '.md')).filter(n => n.includes('调查'));
+    const files = walk(path.join(ROOT, 'assets/board-templates'), '.md')
+      .map(p => path.basename(p, '.md')).filter(n => n.includes('survey'));
     const count = files.length;
 
     const skill = read(path.join(ROOT, 'SKILL.md'));
@@ -166,17 +166,16 @@ reg('A3 调查轮数', 'assets/通用公告牌/ 调查文件数与 SKILL/完全�
     if (sm && parseInt(sm[1], 10) !== count) {
       fail('A3', path.join(ROOT, 'SKILL.md'), 0, 'SKILL 写 调查轮×' + sm[1] + ' ≠ 实际 ' + count);
     }
-    const guide = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+    const guide = read(path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'));
     const gm = guide.match(/调查轮×(\d+)/);
     if (gm && parseInt(gm[1], 10) !== count) {
-      fail('A3', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '完全指南写 调查轮×' + gm[1] + ' ≠ 实际 ' + count);
+      fail('A3', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '完全指南写 调查轮×' + gm[1] + ' ≠ 实际 ' + count);
     }
-    // 列名断言：仅完全指南（它承诺列全，用短名比对——文件"排版评价调查.md"文档写"排版"是合法简称）
-    for (const f of files) {
-      const short = f.replace('调查', '');
-      const short2 = short.replace('评价', ''); // "排版评价"→"排版"（文档用更短简称）
-      if (!guide.includes(short) && !guide.includes(short2) && !guide.includes(f)) {
-        fail('A3', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '完全指南缺调查轮名 [' + short + ']');
+    // 列名断言：仅完全指南（它承诺列全调查轮——指南正文用中文名，与 *_survey.md 6 文件对应）
+    const cnNames = ['协作体验', '文件读取', '第一原则', '排版', '工具', '时间卡点']; // 调查轮中文名（指南正文用语）
+    for (const name of cnNames) {
+      if (!guide.includes(name)) {
+        fail('A3', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '完全指南缺调查轮名 [' + name + ']');
       }
     }
   });
@@ -192,7 +191,7 @@ reg('A4 monitor 输出', '大鱼工具手册 22 行 == monitor.js 实际输出�
     const re2 = /logMonitor\("([A-Z][A-Z0-9_/-]*)/g;
     while ((m = re2.exec(mon)) !== null) prefixes.add(m[1]);
 
-    const manual = read(path.join(ROOT, 'assets/模板/大鱼工具手册.md'));
+    const manual = read(path.join(ROOT, 'assets/role-templates/bigfish_tool_manual.md'));
     const rows = [];
     const rowRe = /^\| `([^`]+)`/gm;
     while ((m = rowRe.exec(manual)) !== null) rows.push(m[1].trim().split(/\s+/)[0]);
@@ -200,7 +199,7 @@ reg('A4 monitor 输出', '大鱼工具手册 22 行 == monitor.js 实际输出�
     // 断言1：手册表行 ⊆ monitor 实际前缀（手册不能写 monitor 不存在的输出）
     for (const r of rows) {
       if (!prefixes.has(r)) {
-        fail('A4', path.join(ROOT, 'assets/模板/大鱼工具手册.md'), 0, '手册输出 [' + r + '] 在 monitor.js 中不存在');
+        fail('A4', path.join(ROOT, 'assets/role-templates/bigfish_tool_manual.md'), 0, '手册输出 [' + r + '] 在 monitor.js 中不存在');
       }
     }
     // 断言2：monitor 独立语义 ⊆ 手册表 ∪ 日志/家族白名单
@@ -217,10 +216,10 @@ reg('A4 monitor 输出', '大鱼工具手册 22 行 == monitor.js 实际输出�
 // A5 轮次类型：团队须知轮次表 4 类 + monitor 代码佐证
 reg('A5 轮次类型', '团队须知轮次四类 == monitor.js TRIAL/STANDBY/RETIRE 分支',
   () => {
-    const guide = read(path.join(ROOT, '团队须知/团队须知.md'));
+    const guide = read(path.join(ROOT, 'team-notes/team_notes.md'));
     const m = guide.match(/轮次有(四|五|六|七|八|九|十)种/);
     if (m && m[1] !== '四') {
-      fail('A5', path.join(ROOT, '团队须知/团队须知.md'), 0, '团队须知写 轮次有' + m[1] + '种 ≠ 应为四种');
+      fail('A5', path.join(ROOT, 'team-notes/team_notes.md'), 0, '团队须知写 轮次有' + m[1] + '种 ≠ 应为四种');
     }
     const mon = read(path.join(ROOT, 'assets/monitor.js'));
     for (const kw of ['TRIAL', 'STANDBY', 'RETIRE']) {
@@ -237,7 +236,7 @@ reg('A5 轮次类型', '团队须知轮次四类 == monitor.js TRIAL/STANDBY/RET
 // B1 铁律编号引用：模板主表编号 + 语义关键词映射
 reg('B1 铁律编号引用', '全仓库"铁律 N"引用语义命中模板主表编号',
   () => {
-    const tpl = read(path.join(ROOT, 'assets/模板/Reasonix版_角色_AGENTS模板.md'));
+    const tpl = read(path.join(ROOT, 'assets/role-templates/role_AGENTS_template.md'));
     // 解析主表：表头含"铁律（一句话）"的表格
     const lines = tpl.split(/\r?\n/);
     const mainTable = {};
@@ -252,7 +251,7 @@ reg('B1 铁律编号引用', '全仓库"铁律 N"引用语义命中模板主表�
       } else if (inMain && l.startsWith('#') ) { inMain = false; }
     }
     if (Object.keys(mainTable).length < 10) {
-      fail('B1', path.join(ROOT, 'assets/模板/Reasonix版_角色_AGENTS模板.md'), 0, '主表解析失败（只取到 ' + Object.keys(mainTable).length + ' 行）');
+      fail('B1', path.join(ROOT, 'assets/role-templates/role_AGENTS_template.md'), 0, '主表解析失败（只取到 ' + Object.keys(mainTable).length + ' 行）');
       return;
     }
     // 语义关键词 → 编号（内置；编号随模板变，关键词映射手动维护点）
@@ -296,7 +295,7 @@ reg('B1 铁律编号引用', '全仓库"铁律 N"引用语义命中模板主表�
 reg('B2 阈值/时间', '心跳 2/5/10 分钟、等文件 20、扣留 10、WAIT_OVERDUE 30 文档==代码',
   () => {
     const mon = read(path.join(ROOT, 'assets/monitor.js'));
-    const manual = read(path.join(ROOT, 'assets/模板/大鱼工具手册.md'));
+    const manual = read(path.join(ROOT, 'assets/role-templates/bigfish_tool_manual.md'));
     // 心跳：monitor 有 2/5/10 分钟常量
     if (!/2 \* 60 \* 1000/.test(mon)) fail('B2', path.join(ROOT, 'assets/monitor.js'), 0, '缺 2 分钟心跳常量');
     if (!/5 \* 60 \* 1000/.test(mon)) fail('B2', path.join(ROOT, 'assets/monitor.js'), 0, '缺 5 分钟心跳常量');
@@ -305,8 +304,8 @@ reg('B2 阈值/时间', '心跳 2/5/10 分钟、等文件 20、扣留 10、WAIT_
     const wf = read(path.join(ROOT, 'assets/wait_file.js'));
     if (!/var timeoutMin = 20/.test(wf)) fail('B2', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file 默认超时 ≠ 20');
     // 文档断言
-    if (!manual.includes('30 分钟')) fail('B2', path.join(ROOT, 'assets/模板/大鱼工具手册.md'), 0, '手册缺 WAIT_OVERDUE 30 分钟');
-    if (!manual.includes('窗口常驻 5 分钟 / run 拉起 10 分钟')) fail('B2', path.join(ROOT, 'assets/模板/大鱼工具手册.md'), 0, '手册 FISH_DEAD 缺 5/10 分钟阈值');
+    if (!manual.includes('30 分钟')) fail('B2', path.join(ROOT, 'assets/role-templates/bigfish_tool_manual.md'), 0, '手册缺 WAIT_OVERDUE 30 分钟');
+    if (!manual.includes('窗口常驻 5 分钟 / run 拉起 10 分钟')) fail('B2', path.join(ROOT, 'assets/role-templates/bigfish_tool_manual.md'), 0, '手册 FISH_DEAD 缺 5/10 分钟阈值');
   });
 
 // B3 退出码：脚本 exit 集合 == 文档退出码表
@@ -314,23 +313,23 @@ reg('B3 退出码', 'poll/wait_file/时序校验 exit 码 == 文档退出码描�
   () => {
     const poll = read(path.join(ROOT, 'assets/_reasonix_poll.js'));
     const wf = read(path.join(ROOT, 'assets/wait_file.js'));
-    const seq = read(path.join(ROOT, 'scripts/时序校验.sh'));
-    const cat = read(path.join(ROOT, 'assets/模板/_工具分类.md'));
-    const quick = read(path.join(ROOT, 'assets/_工具速查.md'));
+    const seq = read(path.join(ROOT, 'scripts/sequence_check.sh'));
+    const cat = read(path.join(ROOT, 'assets/role-templates/_tool_guide.md'));
+    const quick = read(path.join(ROOT, 'assets/_tool_cheatsheet.md'));
 
     // poll exit 4
     if (/process\.exit\(4\)/.test(poll)) {
-      if (!/4=用法错误/.test(cat)) fail('B3', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, 'poll exit 4 未入 _工具分类');
+      if (!/4=用法错误/.test(cat)) fail('B3', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, 'poll exit 4 未入 _工具分类');
     }
     // wait_file exit 5
     if (/process\.exit\(5\)/.test(wf)) {
-      if (!/5=写方漏发信号/.test(cat)) fail('B3', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, 'wait_file exit 5 未入 _工具分类');
+      if (!/5=写方漏发信号/.test(cat)) fail('B3', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, 'wait_file exit 5 未入 _工具分类');
       if (!/5 = 写方漏发信号/.test(wf.split('\n').slice(0, 25).join('\n'))) fail('B3', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file 头注释缺 exit 5');
       if (!wf.includes('5=写方漏发信号')) fail('B3', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file --help 缺 exit 5');
     }
     // 时序校验 exit 2
     if (/exit 2/.test(seq)) {
-      if (!/2=参数缺失/.test(quick)) fail('B3', path.join(ROOT, 'assets/_工具速查.md'), 0, '时序校验 exit 2 未入速查');
+      if (!/2=参数缺失/.test(quick)) fail('B3', path.join(ROOT, 'assets/_tool_cheatsheet.md'), 0, '时序校验 exit 2 未入速查');
     }
   });
 
@@ -339,33 +338,33 @@ reg('B4 参数语义', '--loop/--any/--hb/--watch-hb/--standby 文档描述 == �
   () => {
     const poll = read(path.join(ROOT, 'assets/_reasonix_poll.js'));
     const wf = read(path.join(ROOT, 'assets/wait_file.js'));
-    const cat = read(path.join(ROOT, 'assets/模板/_工具分类.md'));
-    const flow = read(path.join(ROOT, 'assets/模板/_干活流程.md'));
+    const cat = read(path.join(ROOT, 'assets/role-templates/_tool_guide.md'));
+    const flow = read(path.join(ROOT, 'assets/role-templates/_workflow.md'));
 
     // --loop = 循环次数（非轮号）
     if (poll.includes('--loop')) {
       if (!/N = 次数|次数，不是轮号|循环探测 N 次/.test(cat + flow)) {
-        fail('B4', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, '--loop 语义未写"次数"（防写成轮号）');
+        fail('B4', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, '--loop 语义未写"次数"（防写成轮号）');
       }
       if (/--loop.*轮号/.test(cat) && !/不是轮号/.test(cat)) {
-        fail('B4', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, '--loop 描述含"轮号"歧义');
+        fail('B4', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, '--loop 描述含"轮号"歧义');
       }
     }
     // --any = 任一
     if (wf.includes('--any')) {
-      if (!/任一/.test(cat)) fail('B4', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, '--any 语义未写"任一"');
+      if (!/任一/.test(cat)) fail('B4', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, '--any 语义未写"任一"');
     }
     // --watch-hb = 失联检测
     if (wf.includes('--watch-hb')) {
-      if (!/失联/.test(cat)) fail('B4', path.join(ROOT, 'assets/模板/_工具分类.md'), 0, '--watch-hb 语义未写"失联"');
+      if (!/失联/.test(cat)) fail('B4', path.join(ROOT, 'assets/role-templates/_tool_guide.md'), 0, '--watch-hb 语义未写"失联"');
     }
   });
 
-// B5 发布校验项数：_fish_loop.js 代码事实 == 文档四处口径（README/团队须知/大鱼模板×2）
+// B5 发布校验项数：_fish_loop.js 代码事实 == 文档四处口径（README/team-notes/大鱼模板×2）
 //   2026-08-13 元审核发现：README 校验项数 5 vs 6 曾漂移且脚本漏网（上轮人工抓到）——
 //   根因 = 无校验器覆盖"发布校验项数"这个口径（B 类只查阈值/退出码/参数语义）。
 //   本校验器从 _fish_loop.js:73 "校验 N 项" 提取代码事实 N，断言文档四处写的 N 全部一致。
-reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/团队须知/大鱼模板×2 口径',
+reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/team-notes/大鱼模板×2 口径',
   () => {
     const fish = read(path.join(ROOT, 'assets/_fish_loop.js'));
     const mFish = fish.match(/校验\s*(\d+)\s*项/);
@@ -377,9 +376,9 @@ reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/团队须知/大
     // 文档四处：README / 团队须知 / 大鱼模板窗口常驻 / 大鱼模板 run 拉起
     const docSpots = [
       { p: 'README.md', re: /校验公告牌（[^）]*?\d+ 项）/ },
-      { p: '团队须知/团队须知.md', re: /校验公告牌（\d+ 项）/ },
-      { p: 'assets/模板/大鱼_AGENTS模板_窗口常驻.md', re: /校验\s*(\d+)\s*项/ },
-      { p: 'assets/模板/大鱼_AGENTS模板_run拉起.md', re: /校验\s*(\d+)\s*项/ },
+      { p: 'team-notes/team_notes.md', re: /校验公告牌（\d+ 项）/ },
+      { p: 'assets/role-templates/bigfish_AGENTS_template_window.md', re: /校验\s*(\d+)\s*项/ },
+      { p: 'assets/role-templates/bigfish_AGENTS_template_run.md', re: /校验\s*(\d+)\s*项/ },
     ];
     for (const s of docSpots) {
       const text = read(path.join(ROOT, s.p));
@@ -403,7 +402,7 @@ reg('B5 发布校验项数', '_fish_loop 校验 N 项 == README/团队须知/大
 // C1 仓库内文件引用存在
 reg('C1 仓库内文件引用', '文档中 assets/scripts/团队须知 引用必须真实存在',
   () => {
-    const re = /(?:assets|scripts|团队须知)\/[A-Za-z0-9_\-\u4e00-\u9fa5]+(?:\/[A-Za-z0-9_\-\u4e00-\u9fa5.]+)*\.(?:json|md|js|sh|ps1)/g; // 2026-08-16: json 放 js 前——备选顺序 js 在前会把 .json 截胡成 .js（前缀匹配不消费剩余）→ .json 模板引用死引用误报
+    const re = /(?<![\w-])(?:assets|scripts|团队须知)\/[A-Za-z0-9_\-\u4e00-\u9fa5]+(?:\/[A-Za-z0-9_\-\u4e00-\u9fa5.]+)*\.(?:json|md|js|sh|ps1)/g; // 2026-08-16: json 放 js 前——备选顺序 js 在前会把 .json 截胡成 .js（前缀匹配不消费剩余）→ .json 模板引用死引用误报；2026-08-17: 负向后顾 (?<![\w-]) 防 temp-scripts/ 里的 scripts/ 子串被截胡成死引用
     for (const p of walk(ROOT, '.md')) {
       if (isExempt(p)) continue;
       const text = read(p);
@@ -411,6 +410,8 @@ reg('C1 仓库内文件引用', '文档中 assets/scripts/团队须知 引用必
       for (const r of refs) {
         // 排除含占位符的引用（<任务目录>/{{xxx}}/xxx.md 示例占位）
         if (r.includes('<') || r.includes('{{') || r.includes('${') || r.includes('xxx')) continue;
+        // 2026-08-17：temp-scripts/ 是运行时占位目录（scaffold 复制 wait_file 等工具到角色 CWD 的 临时脚本/），非仓库路径——不查
+        if (r.startsWith('temp-scripts/')) continue;
         const target = path.join(ROOT, r);
         if (!exists(target)) fail('C1', p, 0, '死引用: ' + r);
       }
@@ -433,10 +434,10 @@ reg('C2 仓库外引用标注', '引用 阅览室/档案舱 必须带"仓库外"
   });
 
 // C3 scaffold 分发完备性
-reg('C3 scaffold 分发', '角色文档引用的 我的世界/skill文档/X → scaffold.js 有分发',
+reg('C3 scaffold 分发', '角色文档引用的 world/skill文档/X → scaffold.js 有分发',
   () => {
     const sc = read(path.join(ROOT, 'scripts/scaffold.js'));
-    const re = /我的世界\/skill文档\/([A-Za-z0-9_\-\u4e00-\u9fa5.]+)/g;
+    const re = /world\/skill文档\/([A-Za-z0-9_\-\u4e00-\u9fa5.]+)/g;
     for (const p of walk(ROOT, '.md')) {
       const text = read(p);
       let m;
@@ -453,9 +454,9 @@ reg('C3 scaffold 分发', '角色文档引用的 我的世界/skill文档/X → 
 reg('C4 占位符残留', '{{ROLE_*}} 只允许出现在模板/可替换源，其他文件 0 残留',
   () => {
     const allowSuffix = [
-      'assets/模板/', 'assets/玩法模式/', 'assets/通用公告牌/', 'assets/老渣文档/',
+      'assets/role-templates/', 'assets/play-modes/', 'assets/board-templates/', 'assets/operator-docs/',
       'scripts/scaffold.js', 'scripts/doc-consistency.js', 'assets/_sign.js', 'assets/_deliver.js', 'assets/_lock.js',
-      '启动指南.md', // 讲占位符替换，含 {{ROLE_NAME}} 示例是内容本身
+      'startup-guide.md', // 讲占位符替换，含 {{ROLE_NAME}} 示例是内容本身
     ];
     for (const p of walk(ROOT, '.md').concat(walk(ROOT, '.js'))) {
       if (isExempt(p)) continue;
@@ -529,7 +530,7 @@ reg('D1 开发轨迹', '使用者文档 0 残留 开发轨迹关键词',
   });
 
 // D2 全角冒号字面匹配字段
-reg('D2 全角冒号', '字面匹配字段（模式/产出/警告）全角冒号 0 残留',
+reg('D2 全角冒号', '字面匹配字段（模式/output/警告）全角冒号 0 残留',
   () => {
     // 字段用法是行首（公告牌 `- 模式: [值]`）；正文里的"检查模式："是名词非字段
     const badRe = /^\s*- (?:模式|产出|警告)：/;
@@ -560,7 +561,7 @@ reg('D3 排版判据', '围栏配对/超长行/表格/标题/缩进/代码块卫
       c = c.replace(/\{\{[^}]+\}\}/g, '测试');
       c = c.replace(/<lastN>/g, '2');
       c = c.replace(/<当前N>/g, '2');
-      c = c.replace(/<任务目录>/g, '../我的世界/任务001_测试');
+      c = c.replace(/<任务目录>/g, '../world/task001_测试');
       c = c.replace(/YOUR_FILE_PATH/g, 'x');
       c = c.replace(/YOUR_TASK_DIR/g, 'x');
       c = c.replace(/FILE_A/g, 'x').replace(/FILE_B/g, 'x');
@@ -579,7 +580,7 @@ reg('D3 排版判据', '围栏配对/超长行/表格/标题/缩进/代码块卫
     const checkJs = (p, idx, content) => {
       const f = path.join(tmpDir, 'd3_' + idx + '.js');
       try {
-        // 包 async IIFE：内联轮询示例含顶层 await（角色照抄进临时脚本前会包 async 或用函数内 await）
+        // 包 async IIFE：内联轮询示例含顶层 await（角色照抄进temp-scripts前会包 async 或用函数内 await）
         const wrapped = '(async () => {\n' + sanitize('js', content) + '\n})();';
         fs.writeFileSync(f, wrapped, 'utf8');
         execSync('"' + process.execPath + '" --check "' + f + '"', { stdio: 'pipe' });
@@ -669,26 +670,26 @@ reg('D3 排版判据', '围栏配对/超长行/表格/标题/缩进/代码块卫
 // E1 _deadlock 口径
 reg('E1 _deadlock 口径', '双人/辩论不写 _deadlock、主笔写、完全指南三模式分叉',
   () => {
-    const dbl = read(path.join(ROOT, 'assets/玩法模式/_双人对话模式.md'));
-    const deb = read(path.join(ROOT, 'assets/玩法模式/_辩论模式.md'));
-    const pen = read(path.join(ROOT, 'assets/玩法模式/_主笔审核模式.md'));
-    const gui = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+    const dbl = read(path.join(ROOT, 'assets/play-modes/_dual_chat_mode.md'));
+    const deb = read(path.join(ROOT, 'assets/play-modes/_debate_mode.md'));
+    const pen = read(path.join(ROOT, 'assets/play-modes/_lead_review_mode.md'));
+    const gui = read(path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'));
 
-    if (!dbl.includes('不再手写 _deadlock.md')) fail('E1', path.join(ROOT, 'assets/玩法模式/_双人对话模式.md'), 0, '双人缺"不再手写 _deadlock.md"');
-    if (!deb.includes('不写 _deadlock')) fail('E1', path.join(ROOT, 'assets/玩法模式/_辩论模式.md'), 0, '辩论缺"不写 _deadlock"');
-    if (!pen.includes('_deadlock.md')) fail('E1', path.join(ROOT, 'assets/玩法模式/_主笔审核模式.md'), 0, '主笔缺 _deadlock.md 说明');
+    if (!dbl.includes('不再手写 _deadlock.md')) fail('E1', path.join(ROOT, 'assets/play-modes/_dual_chat_mode.md'), 0, '双人缺"不再手写 _deadlock.md"');
+    if (!deb.includes('不写 _deadlock')) fail('E1', path.join(ROOT, 'assets/play-modes/_debate_mode.md'), 0, '辩论缺"不写 _deadlock"');
+    if (!pen.includes('_deadlock.md')) fail('E1', path.join(ROOT, 'assets/play-modes/_lead_review_mode.md'), 0, '主笔缺 _deadlock.md 说明');
     if (!gui.includes('主笔审核') || !gui.includes('双人对话') || !gui.includes('辩论除外') || !gui.includes('_deadlock.md')) {
-      fail('E1', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '完全指南第八节缺三模式分叉说明');
+      fail('E1', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '完全指南第八节缺三模式分叉说明');
     }
   });
 
 // E2 信号后缀声明
 reg('E2 信号后缀声明', '辩论两态声明与 wait_file 白名单例外兼容',
   () => {
-    const deb = read(path.join(ROOT, 'assets/玩法模式/_辩论模式.md'));
+    const deb = read(path.join(ROOT, 'assets/play-modes/_debate_mode.md'));
     const wf = read(path.join(ROOT, 'assets/wait_file.js'));
-    if (!deb.includes('特许例外') && !deb.includes('对话结束_已处理')) {
-      fail('E2', path.join(ROOT, 'assets/玩法模式/_辩论模式.md'), 0, '辩论两态声明缺特许例外括号');
+    if (!deb.includes('特许例外') && !deb.includes('chat-end_已处理')) {
+      fail('E2', path.join(ROOT, 'assets/play-modes/_debate_mode.md'), 0, '辩论两态声明缺特许例外括号');
     }
     if (!wf.includes('signal_已处理')) {
       fail('E2', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file 白名单缺 .signal_已处理');
@@ -699,8 +700,8 @@ reg('E2 信号后缀声明', '辩论两态声明与 wait_file 白名单例外兼
 reg('E3 wait_file 路径前缀', '玩法文件 wait_file 命令目标必须带 <任务目录>/ 或 ../ 前缀',
   () => {
     // 只匹配真实命令（node 前缀）；描述文字（"wait_file.js 多目标 AND"）不抓
-    const re = /node (?:临时脚本\/)?wait_file\.js\s+([^\s`]+)/g;
-    for (const p of walk(path.join(ROOT, 'assets/玩法模式'), '.md').concat(walk(path.join(ROOT, 'assets/模板'), '.md'))) {
+    const re = /node (?:temp-scripts\/)?wait_file\.js\s+([^\s`]+)/g;
+    for (const p of walk(path.join(ROOT, 'assets/play-modes'), '.md').concat(walk(path.join(ROOT, 'assets/role-templates'), '.md'))) {
       const text = read(p);
       let m;
       while ((m = re.exec(text)) !== null) {
@@ -759,9 +760,9 @@ reg('F2 compose 头注释', 'compose.js 头注释（被完全指南指引为读�
   });
 
 // F3 盘符绝对路径：使用者文档禁 [A-Za-z]:[\\/]（配置示例照抄即配错）
-reg('F3 盘符绝对路径', '使用者文档（SKILL/启动指南/README/模板/老渣文档/通用公告牌/团队须知/玩法）禁盘符绝对路径（相对路径/占位符替代）',
+reg('F3 盘符绝对路径', '使用者文档（SKILL/启动指南/README/模板/老渣文档/通用公告牌/team-notes/玩法）禁盘符绝对路径（相对路径/占位符替代）',
   () => {
-    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式', 'assets/_工具速查.md']; // 2026-08-13 全量审核：补 _工具速查.md（曾漏网盘符 D:/Codex/…）
+    const dirs = ['SKILL.md', 'startup-guide.md', 'README.md', 'assets/operator-docs', 'assets/role-templates', 'assets/board-templates', '团队须知', 'assets/play-modes', 'assets/_tool_cheatsheet.md']; // 2026-08-13 全量审核：补 _tool_cheatsheet.md（曾漏网盘符 D:/Codex/…）
     const re = /[A-Za-z]:[\\/]/;
     for (const d of dirs) {
       const files = d.endsWith('.md') ? [path.join(ROOT, d)] : walk(path.join(ROOT, d), '.md');
@@ -786,7 +787,7 @@ reg('F4 节引用有效性', '"`文件.md`「节名」"引用：文件必须可�
     const walkC = (dir) => { if (!walkCache.has(dir)) walkCache.set(dir, walk(dir, '.md')); return walkCache.get(dir); };
     function resolveDocRef(target) {
       const candidates = [path.join(ROOT, target)];
-      for (const sub of ['assets', 'assets/老渣文档', 'assets/模板', 'assets/玩法模式', 'assets/通用公告牌', '团队须知', 'scripts']) {
+      for (const sub of ['assets', 'assets/operator-docs', 'assets/role-templates', 'assets/play-modes', 'assets/board-templates', '团队须知', 'scripts']) {
         candidates.push(path.join(ROOT, sub, target));
       }
       for (const c of candidates) if (existC(c)) return c;
@@ -795,7 +796,7 @@ reg('F4 节引用有效性', '"`文件.md`「节名」"引用：文件必须可�
       if (hits.length === 1) return hits[0];
       return null; // 多命中=引用含糊，跳过不判（宁松勿紧）
     }
-    const dirs = ['SKILL.md', '启动指南.md', 'README.md', 'assets/老渣文档', 'assets/模板', 'assets/通用公告牌', '团队须知', 'assets/玩法模式', 'assets/_外部环境BUG清单.md', 'assets/_工具速查.md'];
+    const dirs = ['SKILL.md', 'startup-guide.md', 'README.md', 'assets/operator-docs', 'assets/role-templates', 'assets/board-templates', '团队须知', 'assets/play-modes', 'assets/_env_bug_list.md', 'assets/_tool_cheatsheet.md'];
     for (const d of dirs) {
       const files = d.endsWith('.md') ? [path.join(ROOT, d)] : walk(path.join(ROOT, d), '.md');
       for (const p of files) {
@@ -809,7 +810,7 @@ reg('F4 节引用有效性', '"`文件.md`「节名」"引用：文件必须可�
           const full = resolveDocRef(target);
           if (!full) { fail('F4', p, 0, '引用文件无法解析: `' + target + '`（原文: ' + m[0].slice(0, 50) + '）'); continue; }
           const section = m[2].trim();
-          if (/^\d+$/.test(section)) continue; // 数字节号（如 goal模式认知.md 四）不验
+          if (/^\d+$/.test(section)) continue; // 数字节号（如 goal_mode_guide.md 四）不验
           const hasSection = readC(full).split('\n').some(l => l.includes(section));
           if (!hasSection) fail('F4', p, 0, '引用节不存在: `' + target + '`「' + section + '」（文件存在但无此节名）');
         }
@@ -820,7 +821,7 @@ reg('F4 节引用有效性', '"`文件.md`「节名」"引用：文件必须可�
 // F5 通用公告牌模板计数 + 内部编号一致性
 reg('F5 通用公告牌计数/编号', 'README"通用公告牌 N 个模板"=实际模板数（除 README 索引）；模板"第00X轮"占位符全局一致',
   () => {
-    const dir = path.join(ROOT, 'assets/通用公告牌');
+    const dir = path.join(ROOT, 'assets/board-templates');
     const files = walk(dir, '.md').filter(p => path.basename(p) !== 'README.md');
     const count = files.length;
     const readme = read(path.join(ROOT, 'README.md'));
@@ -847,23 +848,23 @@ reg('F5 通用公告牌计数/编号', 'README"通用公告牌 N 个模板"=实�
 //   ⚠️ 与 compose.js 校验规则同源（compose.js:92-110）：compose 改规则时本校验器须同步。
 reg('F6 示例 JSON 可执行', '完全指南「配置格式示例」JSON 照抄必可运行（轮次角色/产出负责人 ⊆ 角色名单）',
   () => {
-    const guide = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+    const guide = read(path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'));
     const idx = guide.indexOf('配置格式示例');
-    if (idx === -1) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '缺「配置格式示例」锚点（无法断言）'); return; }
+    if (idx === -1) { fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '缺「配置格式示例」锚点（无法断言）'); return; }
     const m = /```json\s*([\s\S]*?)```/.exec(guide.slice(idx));
-    if (!m) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '「配置格式示例」后缺 ```json 代码块'); return; }
+    if (!m) { fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '「配置格式示例」后缺 ```json 代码块'); return; }
     let cfg;
     try { cfg = JSON.parse(m[1]); }
-    catch (e) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '示例 JSON 解析失败（照抄必失败）: ' + String(e.message).trim().slice(0, 80)); return; }
-    if (!Array.isArray(cfg.角色) || cfg.角色.length === 0) { fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '示例 角色 必须是非空数组'); return; }
+    catch (e) { fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '示例 JSON 解析失败（照抄必失败）: ' + String(e.message).trim().slice(0, 80)); return; }
+    if (!Array.isArray(cfg.角色) || cfg.角色.length === 0) { fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '示例 角色 必须是非空数组'); return; }
     const roleSet = cfg.角色;
     (cfg.轮次 || []).forEach((r, i) => {
       if (r.角色 && typeof r.角色 === 'object' && !Array.isArray(r.角色)) {
         for (const k of Object.keys(r.角色)) {
-          if (!roleSet.includes(k)) fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '第' + (i + 1) + '轮 角色 [' + k + '] 不在角色名单（照抄 compose 编译期校验必失败）');
+          if (!roleSet.includes(k)) fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '第' + (i + 1) + '轮 角色 [' + k + '] 不在角色名单（照抄 compose 编译期校验必失败）');
         }
       }
-      if (r.产出负责人 && !roleSet.includes(r.产出负责人)) fail('F6', path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'), 0, '第' + (i + 1) + '轮 产出负责人 [' + r.产出负责人 + '] 不在角色名单（照抄 compose 编译期校验必失败）');
+      if (r.产出负责人 && !roleSet.includes(r.产出负责人)) fail('F6', path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'), 0, '第' + (i + 1) + '轮 产出负责人 [' + r.产出负责人 + '] 不在角色名单（照抄 compose 编译期校验必失败）');
     });
   });
 
@@ -882,16 +883,16 @@ function selfTest() {
   cases.push({
     name: 'A2 模板数漂移必抓', file: 'SKILL.md', from: /(\d+) 个现实团队流程模板/, to: '3 个现实团队流程模板', expect: 'A2',
   });
-  const guide = read(path.join(ROOT, 'assets/老渣文档/公告牌完全指南.md'));
+  const guide = read(path.join(ROOT, 'assets/operator-docs/board_complete_guide.md'));
   cases.push({
-    name: 'A3 调查轮漂移必抓', file: 'assets/老渣文档/公告牌完全指南.md', from: /调查轮×(\d+)/, to: '调查轮×2', expect: 'A3',
+    name: 'A3 调查轮漂移必抓', file: 'assets/operator-docs/board_complete_guide.md', from: /调查轮×(\d+)/, to: '调查轮×2', expect: 'A3',
   });
   cases.push({
-    name: 'E3 裸文件名必抓', file: 'assets/玩法模式/_主笔审核模式.md',
-    from: /(<任务目录>\/审核结果\.md\.signal)/, to: '审核结果.md.signal', expect: 'E3',
+    name: 'E3 裸文件名必抓', file: 'assets/play-modes/_lead_review_mode.md',
+    from: /(<任务目录>\/review-result\.md\.signal)/, to: 'review-result.md.signal', expect: 'E3',
   });
   cases.push({
-    name: 'D1 轨迹关键词必抓', file: 'assets/模板/_启动多步曲.md',
+    name: 'D1 轨迹关键词必抓', file: 'assets/role-templates/_startup_steps.md',
     from: /(## 第 0 步：确认现场)/, to: '## 第 0 步：确认现场（灵魂舱测试）', expect: 'D1',
   });
   cases.push({
@@ -899,7 +900,7 @@ function selfTest() {
     from: /(校验公告牌（[^）]*?)\d+( 项）)/, to: '$15$2', expect: 'B5',
   });
   cases.push({
-    name: 'F1 收工顺序漂移必抓', file: 'assets/老渣文档/公告牌标准模板.md',
+    name: 'F1 收工顺序漂移必抓', file: 'assets/operator-docs/board_standard_template.md',
     from: /②创建退场文件([^③]*?)③写流水账/, to: '②写流水账$1③创建退场文件', expect: 'F1',
   });
   cases.push({
@@ -907,19 +908,19 @@ function selfTest() {
     from: /(下有 )(\d+)( 个现实团队流程模板)/, to: '$13$3', expect: 'F2',
   });
   cases.push({
-    name: 'F3 盘符路径必抓', file: '启动指南.md',
+    name: 'F3 盘符路径必抓', file: 'startup-guide.md',
     from: /(^# .+)$/m, to: '$1\n\n> F3自测盘符 D:/Codex/Test/绝对路径', expect: 'F3',
   });
   cases.push({
-    name: 'F4 节引用必抓', file: 'assets/模板/_干活流程.md',
-    from: /(见 `_启动多步曲\.md`「)待命轮询(」)/, to: '$1不存在节$2', expect: 'F4',
+    name: 'F4 节引用必抓', file: 'assets/role-templates/_workflow.md',
+    from: /(见 `_startup_steps\.md`「)待命轮询(」)/, to: '$1不存在节$2', expect: 'F4',
   });
   cases.push({
     name: 'F5 模板计数漂移必抓', file: 'README.md',
     from: /(通用公告牌[^\n]*?)(\d+)( 个模板)/, to: '$199$3', expect: 'F5',
   });
   cases.push({
-    name: 'F6 示例 JSON 必抓', file: 'assets/老渣文档/公告牌完全指南.md',
+    name: 'F6 示例 JSON 必抓', file: 'assets/operator-docs/board_complete_guide.md',
     from: /("角色": \["A", "B", "C"\])/, to: '"角色": ["A", "B"]', expect: 'F6',
   });
 
@@ -951,13 +952,13 @@ function selfTest() {
 // ---------------------------------------------------------------------------
 // --smoke：wait_file 命令模板实测（三层方案第③层——验证标注与命令本身不失真）
 //   抽取玩法/模板文件中的 wait_file 命令 → 替换占位符 → 模拟 anchor 解析 →
-//   断言首个目标解析到 我的世界/ 下（不实际等待文件）
+//   断言首个目标解析到 world/ 下（不实际等待文件）
 // ---------------------------------------------------------------------------
 function smokeTest() {
   console.log('== --smoke wait_file 命令实测 ==');
   let pass = 0, failCount = 0, skipped = 0;
-  const re = /node (?:临时脚本\/)?wait_file\.js\s+([^\s`]+)/g;
-  const files = walk(path.join(ROOT, 'assets/玩法模式'), '.md').concat(walk(path.join(ROOT, 'assets/模板'), '.md'));
+  const re = /node (?:temp-scripts\/)?wait_file\.js\s+([^\s`]+)/g;
+  const files = walk(path.join(ROOT, 'assets/play-modes'), '.md').concat(walk(path.join(ROOT, 'assets/role-templates'), '.md'));
   const seen = new Set();
   for (const p of files) {
     const text = read(p);
@@ -965,9 +966,9 @@ function smokeTest() {
     while ((m = re.exec(text)) !== null) {
       let target = m[1];
       if (target.startsWith('YOUR_FILE_PATH')) { skipped++; continue; }
-      // 占位符替换为测试值：<任务目录> = ../我的世界/任务001_测试（角色实际替换语义）
+      // 占位符替换为测试值：<任务目录> = ../world/task001_测试（角色实际替换语义）
       target = target
-        .replace(/<任务目录>/g, '../我的世界/任务001_测试')
+        .replace(/<任务目录>/g, '../world/task001_测试')
         .replace(/<[^>]+>/g, 'X')
         .replace(/\{[^}]+\}/g, '1');
       if (seen.has(target)) continue; // 同一目标去重
@@ -976,9 +977,9 @@ function smokeTest() {
       if (target === 'X') { skipped++; continue; }
       // 模拟 anchor：相对路径锚定到角色目录（wait_file.js 的 anchor 逻辑）
       const anchored = path.join(ROOT, '角色目录', target);
-      const isWorld = anchored.split(path.sep).includes('我的世界');
+      const isWorld = anchored.split(path.sep).includes('world');
       if (isWorld) { pass++; console.log('  PASS ' + target); }
-      else { failCount++; console.log('  FAIL ' + target + ' → 未解析到 我的世界/ 下'); }
+      else { failCount++; console.log('  FAIL ' + target + ' → 未解析到 world/ 下'); }
     }
   }
   console.log('== smoke 结果: ' + pass + ' pass / ' + failCount + ' fail / ' + skipped + ' skipped ==');

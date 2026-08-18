@@ -7,9 +7,9 @@
  * 用法：
  *   node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout <分钟>] [--parent-check] [--any] [--watch-hb <对方心跳文件>] [--watch-hb-dead <分钟>]
  *   --any：任一目标就位即返回（默认=全部就位才返回）；辩论等"立论或终结谁先来"场景用
- *   单文件：  node wait_file.js ../我的世界/产出/任务003_改进方案/方案.md --hb ../我的世界/角色_大鱼对讲/_heartbeat.txt
+ *   单文件：  node wait_file.js ../world/output/task003_改进方案/方案.md --hb ../world/角色_talk/_heartbeat.txt
  *   双文件：  node wait_file.js 路径A 路径B（两个都就位才算完成）
- *   多审核方：node wait_file.js 审核结果_架构师-林纳斯.md.signal 审核结果_前端开发-尤雨溪.md.signal 审核结果_质量审计-图灵.md.signal
+ *   多审核方：node wait_file.js review-result_架构师-林纳斯.md.signal review-result_前端开发-尤雨溪.md.signal review-result_质量审计-图灵.md.signal
  *             （不带 --any = 全部就位才返回 = "等齐三方结果"语义，2026-08-10 DHH 复盘——别手写等文件脚本）
  *   --parent-check：等待前检查父目录存在（不存在 = 任务目录路径可能写错，立即报错，不静默等满超时）
  *   --timeout 默认 20 分钟（与模板兜底一致）
@@ -21,10 +21,10 @@
  * 心跳：每 30s 写一次 Date.now()（数字毫秒）到 --hb 指定文件（不传则从 __dirname 自动推导角色对讲目录续心跳，12-6 修复）
  *
  * 9-1 修复（2026-08-05 第九轮）：路径自动锚定，与 CWD 无关——
- *   本脚本位于 {角色目录}/临时脚本/wait_file.js，用 __dirname 推导角色目录/项目根：
+ *   本脚本位于 {角色目录}/temp-scripts/wait_file.js，用 __dirname 推导角色目录/项目根：
  *     角色目录 = __dirname/.. ；项目根 = __dirname/../..
  *   参数以 "../" 开头（相对角色目录写法）→ path.resolve(__dirname, "..", 参数) 自动转绝对路径；
- *   绝对路径参数原样透传。无论角色 CWD 在哪（角色目录 / cd 进临时脚本 / 别处）路径都正确。
+ *   绝对路径参数原样透传。无论角色 CWD 在哪（角色目录 / cd 进temp-scripts / 别处）路径都正确。
  *
  * CommonJS 同步实现（5-3 修复：禁 require+顶层 await 混用；同步 fs 最稳，无崩溃面）
  */
@@ -73,24 +73,24 @@ if (targets.length === 0) {
 }
 
 // ---- 9-1 路径锚定：相对角色目录（../开头）→ 绝对路径；与 CWD 无关 ----
-var roleDir = path.resolve(__dirname, "..");   // 角色目录 = 临时脚本/..
+var roleDir = path.resolve(__dirname, "..");   // 角色目录 = temp-scripts/..
 function anchor(p) {
   if (!p) return p;
   // Windows 盘符绝对路径（D:\...）原样透传
   if (/^[a-zA-Z]:[\/]/.test(p)) return p;
-  // 其余（../我的世界/X、我的世界/X、相对路径）统一锚定到角色目录
+  // 其余（../world/X、world/X、相对路径）统一锚定到角色目录
   return path.resolve(roleDir, p);
 }
 targets = targets.map(anchor);
 if (hbFile) hbFile = anchor(hbFile);
 if (watchHbFile) watchHbFile = anchor(watchHbFile);
 
-// 12-6 修复：无 --hb 时从 __dirname 自动推导角色对讲目录续心跳（角色目录 = 临时脚本/..，对讲目录 = 项目根/我的世界/{角色名}_大鱼对讲）
+// 12-6 修复：无 --hb 时从 __dirname 自动推导角色对讲目录续心跳（角色目录 = temp-scripts/..，对讲目录 = 项目根/world/{角色名}_talk）
 //   防止等待中不传 --hb 导致心跳断 → monitor 误判 DEAD（H1：答方等待命令示例曾缺 --hb）
 if (!hbFile) {
   try {
     var _roleName = path.basename(roleDir);
-    var _autoHb = path.resolve(roleDir, "..", "我的世界", _roleName + "_大鱼对讲", "_heartbeat.txt");
+    var _autoHb = path.resolve(roleDir, "..", "world", _roleName + "_talk", "_heartbeat.txt");
     fs.mkdirSync(path.dirname(_autoHb), { recursive: true });
     hbFile = _autoHb;
   } catch(_e) {}
@@ -112,9 +112,9 @@ if (parentCheck) {
 // 机制化：等待前扫描任务目录，若存在「.md 无同名 .signal / _acked」的产出（最近 5 分钟内写入），
 // 立即报错退出（exit 5）——把"漏发"从静默吞掉变成立即失败（马斯克 v2 建议：工具链根治）。
 // 13-7 修复（泰勒 006 质询实测）：扫描范围收窄——原扫整个任务目录所有 .md（5 分钟内），
-// 搭档正在写的 .md/别人的产出会被误伤（泰勒两场景：signal 被 ack 后扫描误判 + 主笔正在写请审核时误伤）。
-// 修正：只检查"与等待目标同名"的 .md（等 审核结果_角色X.md.signal → 只查 审核结果_角色X.md 是否有信号），
-// 其他 审核结果_别人.md 等无关文件不检查——精确同名，杜绝误伤。
+// 搭档正在写的 .md/别人的产出会被误伤（泰勒两场景：signal 被 ack 后扫描误判 + 主笔正在写please-review时误伤）。
+// 修正：只检查"与等待目标同名"的 .md（等 review-result_角色X.md.signal → 只查 review-result_角色X.md 是否有信号），
+// 其他 review-result_别人.md 等无关文件不检查——精确同名，杜绝误伤。
 var _missingSignal = false;
 try {
   var _waitDirs = targets.map(function(t) { return path.dirname(t); });
@@ -203,7 +203,7 @@ try {
       try {
         if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
           var _mBase = f.replace(/\.signal_acked$/, "");
-          var _log = path.resolve(roleDir, "..", "我的世界", path.basename(roleDir) + "_大鱼对讲", path.basename(roleDir) + "_操作日志.md");
+          var _log = path.resolve(roleDir, "..", "world", path.basename(roleDir) + "_talk", path.basename(roleDir) + "_操作日志.md");
           var _hasAck = false;
           try {
             if (fs.existsSync(_log)) {
@@ -254,7 +254,7 @@ function readySummary() {
 //   xxx.md.signal → xxx.md.signal_acked（原 .signal 消失）。手动改名常漏/常追加错（.signal.signal_acked），脚本代改零手工。
 //   非 .signal 目标忽略（不误改普通文件）；默认（无 --ack）行为完全不变。
 // 2026-08-09 增补（信号质询 007 根因）：目标为 .md 文件时就位后，自动 ack 同名 .signal——
-//   辩论裁判等总结 .md 本体（第 7 步示例），不处理信号 → 反方总结 .signal 残留；
+//   辩论裁判等总结 .md 本体（第 7 步示例），不处理信号 → con-summary .signal 残留；
 //   等 .md 就位 = 读到内容 = 读方义务，脚本代 ack 零手工（马斯克/图灵共同建议：工具原子行为）。
 //   兼容两种命名：xxx.md.signal（协议标准）与 xxx.signal（旧/其他玩法）。
 function ackSignals() {
@@ -289,12 +289,12 @@ function ackSignals() {
   });
 }
 
-// 2026-08-09：ACK 动作留痕——追加一行到角色操作日志（我的世界/{角色}_大鱼对讲/{角色}_操作日志.md）
+// 2026-08-09：ACK 动作留痕——追加一行到角色操作日志（world/{角色}_talk/{角色}_操作日志.md）
 //   解决"文件出现"与"角色动作"的归因歧义（本次 .signal_ok 质询因缺留痕导致归因困难，马斯克建议③）
 function ackLog(src, dst) {
   try {
     var _role = path.basename(roleDir);
-    var _log = path.resolve(roleDir, "..", "我的世界", _role + "_大鱼对讲", _role + "_操作日志.md");
+    var _log = path.resolve(roleDir, "..", "world", _role + "_talk", _role + "_操作日志.md");
     fs.mkdirSync(path.dirname(_log), { recursive: true });
     var _ts = new Date().toISOString().substring(11, 19);
     fs.appendFileSync(_log, "[" + _ts + "] ACK " + path.basename(src) + " -> " + path.basename(dst) + "\n", "utf8");
@@ -322,21 +322,21 @@ while (Date.now() < deadline) {
       if (_pTs && Date.now() - _pTs > watchHbDeadMin * 60 * 1000) {
         // M7 宽容 + 2026-08-16 扩展（隐患#19 实弹：马斯克写 001 盘点被误判失联）：
         // 心跳 stale 但对方最近 watchHbDeadMin 分钟内有新文件 = 在干活/长思考，不算失联（对齐 monitor A-1 + 主区判据）。
-        // 扫描范围 = 对讲目录 + 产出目录 + 任务*目录——干活期角色只在产出/任务写文件、对讲静默，
+        // 扫描范围 = 对讲目录 + 产出目录 + 任务*目录——干活期角色只在output/task写文件、对讲静默，
         // 只查对讲目录会误判干活中的搭档（本批次架构师按失联分支收尾的根因）。
         var _pDir = path.dirname(watchHbFile);          // 对方 对讲目录
-        var _worldDir = path.resolve(_pDir, "..");      // 我的世界/
-        var _partnerName = path.basename(_pDir).replace("_大鱼对讲", ""); // 2026-08-17 P2-17：共享区归属限定用（对方角色名）
+        var _worldDir = path.resolve(_pDir, "..");      // world/
+        var _partnerName = path.basename(_pDir).replace("_talk", ""); // 2026-08-17 P2-17：共享区归属限定用（对方角色名）
         var _scanDirs = [_pDir];
         try {
           if (fs.existsSync(_worldDir + "/产出")) _scanDirs.push(_worldDir + "/产出");
           fs.readdirSync(_worldDir).forEach(function(_d2) {
-            if (/^任务\d+/.test(_d2) && fs.existsSync(_worldDir + "/" + _d2)) _scanDirs.push(_worldDir + "/" + _d2);
+            if (/^task\d+/.test(_d2) && fs.existsSync(_worldDir + "/" + _d2)) _scanDirs.push(_worldDir + "/" + _d2);
           });
         } catch(_psd) {}
         var _working = false;
         var _isMonitorFile = function(_f) {
-          return _f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0 ||
+          return _f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("needs-intervention") === 0 ||
             _f === "_heartbeat.txt" || _f === "_hb_state.json" || _f === "_mtime.txt"; // 心跳文件内容 stale 但文件 mtime 最近写入——不算活动证据（monitor 同款防自指）
         };
         try {
@@ -372,7 +372,7 @@ while (Date.now() < deadline) {
           }
         } catch(_ph2) {}
         if (!_working) {
-          console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）且产出/任务/对讲均无新文件——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
+          console.error("PARTNER_DEAD: 对方心跳 " + Math.round((Date.now() - _pTs) / 1000) + "s 未更新（阈值 " + watchHbDeadMin + " 分钟）且output/task/对讲均无新文件——对方失联，结束信号/下一问不会再来。立即写求助给大鱼，不要盲等超时（12-6）");
           process.exit(4);
         }
       }

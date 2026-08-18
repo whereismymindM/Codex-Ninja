@@ -1,5 +1,5 @@
 // ecoscope.js —— 生态仪表盘（EcoScope）v1.1（2026-08-16）
-// 用途: 离线批次状态视图——读 我的世界/（公告牌/对讲/产出），输出角色存活（心跳 mtime）+
+// 用途: 离线批次状态视图——读 world/（公告牌/对讲/产出），输出角色存活（心跳 mtime）+
 //       轮次进度 + 签字/产出完成矩阵。定位: **给用户/老渣离线看批次进度**（不是盯场——
 //       在线检测是 monitor 的活；不是收工校验——那是 check.js 的活）。
 //       共识来源: 阅览室/评审记录_20260816_生态工具清单/生态工具清单_共识.md（P0/P1 第二位，
@@ -24,9 +24,9 @@ var path = require("path");
 var ACTIVE_RE = /- (.+?)[（(].*状态[:：]\s*活跃/g;
 var ALL_ROLE_RE = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g;
 var MODE_RE = /模式[：:]\s*(.+)/;
-var OUTPUT_RE = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g;
+var OUTPUT_RE = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g;
 var BLACKLIST = ["模式", "任务", "产出", "产出负责人", "任务目录", "辩论轮数"];
-var BOARD_RE = /公告牌_(\d{3})\.md$/;
+var BOARD_RE = /board_(\d{3})\.md$/;
 
 // ── 工具函数 ──
 function stripBom(s) { return s.replace(/^\uFEFF/, ""); }
@@ -97,8 +97,8 @@ function parseBoard(n, content) {
 
 // ── 数据采集层（唯一事实源，双渲染共用）──
 function collectData(root) {
-  var worldDir = path.join(root, "我的世界");
-  var fishDir = path.join(root, "火影-大鱼");
+  var worldDir = path.join(root, "world");
+  var fishDir = path.join(root, "fish");
 
   // 心跳阈值（monitor.js:432 同源）
   var hbTimeout = 2 * 60 * 1000;
@@ -116,7 +116,7 @@ function collectData(root) {
       var n = parseInt(BOARD_RE.exec(f)[1], 10);
       boards.push(parseBoard(n, fs.readFileSync(path.join(worldDir, f), "utf8")));
     });
-  } catch (e) { return { error: "读取 我的世界/ 失败: " + e.message }; }
+  } catch (e) { return { error: "读取 world/ 失败: " + e.message }; }
 
   // 当前轮 N
   var curN = boards.length ? boards[boards.length - 1].n : 0;
@@ -142,7 +142,7 @@ function collectData(root) {
   // 角色存活表
   var roleRows = roles.map(function(role) {
     var st = curBoard && curBoard.roleStates ? (curBoard.roleStates[role] || "—") : "—";
-    var hbFile = path.join(worldDir, role + "_大鱼对讲", "_heartbeat.txt");
+    var hbFile = path.join(worldDir, role + "_talk", "_heartbeat.txt");
     var hbT = NaN, hbStr = "—", fresh = "—", verdict = "—", level = "ok";
     try {
       if (fs.existsSync(hbFile)) {
@@ -176,10 +176,10 @@ function collectData(root) {
     var active = b.activeRoles.length > 0 ? b.activeRoles : ((b.mode === "试用" ? (b.allRoles || []).concat(b.standbyRoles || []) : (b.allRoles || []))); // 2026-08-17 review P2-2：试用轮按全员校验（角色行=待命，对齐 check.js #16）
     if (isTaskRound) {
       active.forEach(function(role) {
-        var signFile = path.join(worldDir, role + "_大鱼对讲", "完成_" + pad3(b.n) + ".md");
+        var signFile = path.join(worldDir, role + "_talk", "done_" + pad3(b.n) + ".md");
         var has = fs.existsSync(signFile) && fs.statSync(signFile).size > 20;
         signStr.push({ role: role, ok: has });
-        if (!has) alerts.push("第" + pad3(b.n) + "轮 " + role + " 缺签字（完成_" + pad3(b.n) + ".md）");
+        if (!has) alerts.push("第" + pad3(b.n) + "轮 " + role + " 缺签字（done_" + pad3(b.n) + ".md）");
       });
       b.outputs.forEach(function(o) {
         var ok = false;
@@ -221,7 +221,7 @@ function collectData(root) {
             }
           } catch (e2) { ok = false; }
         }
-        prodStr.push({ name: o.dir.replace(/^产出\//, ""), ok: ok });
+        prodStr.push({ name: o.dir.replace(/^output\//, ""), ok: ok });
         if (!ok) alerts.push("第" + pad3(b.n) + "轮 产出未就位: " + o.dir);
       });
     }
@@ -261,7 +261,7 @@ function renderText(d) {
   out.push("");
 
   out.push("### 轮次进度矩阵（签字 + 产出）");
-  out.push("| 轮 | 模式 | 活跃角色 | 签字(完成_NNN) | 产出(.ready) |");
+  out.push("| 轮 | 模式 | 活跃角色 | 签字(done_NNN) | 产出(.ready) |");
   out.push("|----|------|----------|---------------|--------------|");
   d.boardRows.forEach(function(b) {
     var signStr = b.sign.length ? b.sign.map(function(s) { return s.role + (s.ok ? " ✓" : " ✗"); }).join("、") : "—";
@@ -329,9 +329,9 @@ function renderHtml(d) {
     + '<h2>角色存活表</h2>\n'
     + '<table><tr><th>角色</th><th>当前轮状态</th><th>心跳</th><th>心跳新鲜度</th><th>判定</th></tr>\n' + roleRows + '\n</table>\n'
     + '<h2>轮次进度矩阵</h2>\n'
-    + '<table><tr><th>轮</th><th>模式</th><th>活跃角色</th><th>签字(完成_NNN)</th><th>产出(.ready)</th></tr>\n' + boardRows + '\n</table>\n'
+    + '<table><tr><th>轮</th><th>模式</th><th>活跃角色</th><th>签字(done_NNN)</th><th>产出(.ready)</th></tr>\n' + boardRows + '\n</table>\n'
     + '<h2>告警汇总</h2>\n' + alertHtml + '\n'
-    + '<div class="foot">EcoScope v1.1 · 离线视图（非盯场——在线检测是 monitor 的活；非校验——收工核对是 check.js 的活）· 数据源 我的世界/ · 每 30s 自动刷新，可双击打开本地文件</div>\n'
+    + '<div class="foot">EcoScope v1.1 · 离线视图（非盯场——在线检测是 monitor 的活；非校验——收工核对是 check.js 的活）· 数据源 world/ · 每 30s 自动刷新，可双击打开本地文件</div>\n'
     + '</body>\n</html>\n';
 }
 
@@ -346,8 +346,8 @@ function main() {
   }
   var root = path.resolve(args[0]);
   var isHtml = args.indexOf("--html") !== -1;
-  if (!fs.existsSync(path.join(root, "我的世界"))) {
-    console.error("ERROR: '" + root + "' 下没有 我的世界/ 目录——参数应是项目根（我的世界/ 的上级）");
+  if (!fs.existsSync(path.join(root, "world"))) {
+    console.error("ERROR: '" + root + "' 下没有 world/ 目录——参数应是项目根（world/ 的上级）");
     process.exit(2);
   }
   var d = collectData(root);

@@ -36,7 +36,7 @@ bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加�
 | 1. scaffold init | 角色+大鱼 reasonix.toml（H10）、monitor.js、**玩法文件/_sign.js 占位符替换为 0**（H-1） |
 | 2. 公告牌发布 | 001 单人输出 + 002 收工全量复制 |
 | 3. 角色 poll 慢路径 | `BULLETIN N=1` exit 0 |
-| 4. 干活 | `_deliver.js` → `.ready`、`_sign.js` → `完成_001.md` |
+| 4. 干活 | `_deliver.js` → `.ready`、`_sign.js` → `done_001.md` |
 | 5. monitor 推进 | 001 完成 → 002 收工轮，未退场 → `RETIRE 测试甲 MISS` + `WAIT N=2`（正确不误判） |
 | 6. 收工轮 poll | exit 0/2（收工轮感知）+ 创建退场文件 |
 | 7. monitor 终局 | `DONE N=2` |
@@ -76,7 +76,7 @@ bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加�
 
 - 依赖 `node` 在 PATH（reasonix 环境自带）
 - `mktemp` 需 git-bash/类 Unix 环境（Windows 下用 Git Bash 跑）
-- 双人对话只测了"挖空自然结束"路径；辩论未测"提前终结"（`辩论_终结.md`）路径——可后续扩展
+- 双人对话只测了"挖空自然结束"路径；辩论未测"提前终结"（`debate-end.md`）路径——可后续扩展
 
 ## 维护规则（Skill 升级时 e2e 要不要改）
 

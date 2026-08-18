@@ -3,17 +3,17 @@
 // 每次运行检查一轮状态后退出，stdout 即时可见
 // 大鱼每 60 秒跑一次（大鱼模板规定）：WAIT → 等 → DONE → 项目完成（只验证，不翻篇）
 var fs = require("fs");
-// 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，我的世界/ 在 monitor.js 同级
+// 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，world/ 在 monitor.js 同级
 var base = __dirname;
 
-// ② 监控日志：monitor 每次运行追加一行到 我的世界/监控日志.md（历史流水，可追溯每周期检测轨迹）
+// ② monitor-log：monitor 每次运行追加一行到 world/monitor-log.md（历史流水，可追溯每周期检测轨迹）
 function logMonitor(summary) {
   try {
     var _ts = new Date().toISOString().substring(11, 19);
-    fs.appendFileSync(base + "/我的世界/监控日志.md", "[" + _ts + "] " + summary + "\n", "utf8");
+    fs.appendFileSync(base + "/world/monitor-log.md", "[" + _ts + "] " + summary + "\n", "utf8");
   } catch(e) {
-    // 12-14：不再静默吞——监控日志写入失败要可见（第三轮实测：约 8 分钟断档被 catch 吞掉，只能靠 _fish_loop.log 补证）
-    console.error("MONLOG_WARN: 监控日志写入失败: " + (e && e.message ? e.message : e) + " ——监控日志可能断档，以 _fish_loop.log 为准");
+    // 12-14：不再静默吞——monitor-log写入失败要可见（第三轮实测：约 8 分钟断档被 catch 吞掉，只能靠 _fish_loop.log 补证）
+    console.error("MONLOG_WARN: monitor-log写入失败: " + (e && e.message ? e.message : e) + " ——monitor-log可能断档，以 _fish_loop.log 为准");
   }
 }
 
@@ -29,13 +29,13 @@ function parseHeartbeat(raw) {
 }
 
 // P1-1: N值从状态文件读，崩溃重启不跳轮次
-var stateFile = base + "/我的世界/.monitor_state.json";
+var stateFile = base + "/world/.monitor_state.json";
 var N = 1;
 var outputReadyCount = 0; // 12-24 判定摘要：已就位产出行计数（WAIT 原因输出用）——修复未声明直接引用导致的 CRASH
 if (fs.existsSync(stateFile)) {
     try {
         var state = JSON.parse(fs.readFileSync(stateFile, "utf8"));
-        if (state.N && Number.isInteger(state.N) && state.N >= 1) N = state.N; // 第四轮修复：校验正整数，防 公告牌_1.5.md 永久 WAIT
+        if (state.N && Number.isInteger(state.N) && state.N >= 1) N = state.N; // 第四轮修复：校验正整数，防 board_1.5.md 永久 WAIT
     } catch (e) { /* 状态文件损坏，从1开始 */ }
 }
 // 2026-08-17 P2-20：状态文件原子写（.tmp→rename）——后台 _fish_loop + 手动 monitor 并发覆写可能写坏 JSON（waitSince 丢失 → WAIT_OVERDUE 熔断反复重置）
@@ -46,7 +46,7 @@ function writeState(obj) {
 try {
 // 自检：从N开始逐轮找第一个未完成的
 while (true) {
-    var bf = base + "/我的世界/公告牌_" + String(N).padStart(3, "0") + ".md";
+    var bf = base + "/world/board_" + String(N).padStart(3, "0") + ".md";
     if (!fs.existsSync(bf)) break; // 公告牌不存在 → 当前N就是正确轮次
     // 检查该轮是否已完成（所有活跃角色签字 + 产出就位）
     // 第四轮修复：自检 readFileSync 包 try——读失败视为当前轮未完成（break 交主流程处理，主流程 :117 有 READ_ERR 保护）
@@ -59,14 +59,14 @@ while (true) {
     var Npad = String(N).padStart(3, "0");
     var allDone = true, hasActive = actCount > 0;
     // 产出检查（与主判断一致：推进判定只看产出就位，签字不阻塞推进，不参与自检判据）
-    var outReSelf = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（任务描述里的"产出: 我的世界/…"引用不再误匹配）
+    var outReSelf = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（任务描述里的"产出: world/…"引用不再误匹配）
     var omSelf; var hasOutSelf = false; var outOkSelf = true;
     while ((omSelf = outReSelf.exec(boardContent)) !== null) {
         hasOutSelf = true;
         var fpSelf = omSelf[1].trim();
         if (/[\{\}]/.test(fpSelf)) { console.log("OUTPUT-FORMAT ⚠️ 产出路径含占位符（{}）: " + fpSelf + "——公告牌产出行应为具体文件名或尾斜杠目录，占位符永不匹配（12-1 fail-loud）"); }
         var lsSelf = fpSelf.lastIndexOf("/");
-        // 2026-08-13（机制审查 #22）：自检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
+        // 2026-08-13（机制审查 #22）：自检产出路径禁止 ..（防拼路径写出 world/，与主判断同步）
         if (/\.\./.test(fpSelf)) {
           console.log("OUTPUT-FORMAT ⚠️ 自检产出路径含 ..（拒绝）: " + fpSelf);
           outOkSelf = false; // 2026-08-13 security review：被拒行必须置未就位——否则自检 continue 后 outOkSelf 不变，含 .. 的轮次被 N++ 跳过绕过检查
@@ -78,7 +78,7 @@ while (true) {
             var fnsSelf = fpSelf.substring(lsSelf + 1).split(/\s*,\s*/);
             for (var fiSelf = 0; fiSelf < fnsSelf.length; fiSelf++) {
                 var fnSelf = fnsSelf[fiSelf].trim();
-                var _rpSelf = base + "/我的世界/" + odSelf + "/" + fnSelf + ".ready";
+                var _rpSelf = base + "/world/" + odSelf + "/" + fnSelf + ".ready";
                 if (fnSelf && !fs.existsSync(_rpSelf)) { outOkSelf = false; break; }
                 // B-5 修复：self-check 处也做 metadata 校验（size:0 空交付提示，收工审计可见）
                 if (fnSelf) {
@@ -102,7 +102,7 @@ while (true) {
                     var _producersSelfA = {}, _unknownSelfA = 0;
                     fnsSelf.forEach(function(_fnS2) {
                         try {
-                            var _rcS2 = fs.readFileSync(base + "/我的世界/" + odSelf + "/" + _fnS2.trim() + ".ready", "utf8");
+                            var _rcS2 = fs.readFileSync(base + "/world/" + odSelf + "/" + _fnS2.trim() + ".ready", "utf8");
                             var _pmS2 = _rcS2.match(/^producer:\s*(.+)$/m);
                             if (_pmS2 && _pmS2[1]) { _producersSelfA[_pmS2[1].trim()] = true; return; }
                         } catch(_rcS2E) {}
@@ -117,7 +117,7 @@ while (true) {
             }
         } else {
             var od2Self = fpSelf.replace(/\/$/, "");
-            var dp2Self = base + "/我的世界/" + od2Self;
+            var dp2Self = base + "/world/" + od2Self;
             // F-10 修复：自检格式B readdirSync 包 try（目录并发被删不 CRASH，与主流程 :251 一致）
             var rfsSelf = [];
             try { rfsSelf = fs.existsSync(dp2Self) ? fs.readdirSync(dp2Self).filter(function(f) { return f.endsWith(".ready"); }) : []; } catch(_rds) {}
@@ -167,8 +167,8 @@ while (true) {
                 // 过滤非角色行（模式、任务、产出等字段）
                 // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不推进
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "产出负责人" || roleName === "任务目录" || roleName === "辩论轮数" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
-                var retireFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + Npad;
-                var sleepFile = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + Npad;
+                var retireFile = base + "/world/" + roleName + "_talk/" + roleName + "retired_" + Npad;
+                var sleepFile = base + "/world/" + roleName + "_talk/" + roleName + "slept_" + Npad;
                 // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）；4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
                 if (!fs.existsSync(retireFile) && !fs.existsSync(retireFile + ".acked") && !fs.existsSync(sleepFile) && !fs.existsSync(sleepFile + ".acked")) { allDone = false; break; }
             }
@@ -178,14 +178,14 @@ while (true) {
     N++; // 完成了 → 看下一轮
 }
 
-var boardFile = base + "/我的世界/公告牌_" + String(N).padStart(3,"0") + ".md";
+var boardFile = base + "/world/board_" + String(N).padStart(3,"0") + ".md";
 
 // ── 8-2 大鱼心跳检测（决策者验证，P0-1）────────────────────────────
 //   放在 boardFile 判断之前——扣留期（收工轮被扣、下一张牌不存在）monitor 会在下方提前 WAIT 退出，
 //   这段必须在此执行，否则最需要检测的场景反而检测不到（冒烟实测确认）
-//   大鱼每回合醒来/轮询动作顺带写 火影-大鱼/_heartbeat.txt（模板已加）
+//   大鱼每回合醒来/轮询动作顺带写 fish/_heartbeat.txt（模板已加）
 //   判据：心跳 stale 且 无近期产出 → FISH_DEAD；_fish_loop.log 更新 ≠ 大鱼在场（脚本≠决策者，铁律 4）
-var _fishSrcDir = base + "/火影-大鱼";
+var _fishSrcDir = base + "/fish";
 var FISH_HB_FILE = _fishSrcDir + "/_heartbeat.txt";
 // 运行形态（自读，不依赖后面的 F_SCHEDULED——本段在 monitor 顶部执行）
 var _fishModeRun = false;
@@ -202,16 +202,16 @@ try {
             var _fishTimeoutMs = _fishModeRun ? 10 * 60 * 1000 : 5 * 60 * 1000;
             if (_fishHbAge > _fishTimeoutMs) {
                 // 复核：大鱼对讲目录近期有新产出 = 写报告/交付中，不算死
-                // ⚠️ 排除 monitor 自写的 需人工干预_*（monitor 写的文件不算大鱼产出，否则死循环抑制 FISH_DEAD）
+                // ⚠️ 排除 monitor 自写的 needs-intervention_*（monitor 写的文件不算大鱼产出，否则死循环抑制 FISH_DEAD）
                 var _fishRecentOutput = false;
                 try {
                     var _fishCut = Date.now() - _fishTimeoutMs;
-                    var _fishDirs = [base + "/我的世界/大鱼_老渣对讲"];
+                    var _fishDirs = [base + "/world/fish_laozha_talk"];
                     for (var _fd = 0; _fd < _fishDirs.length; _fd++) {
                         if (!fs.existsSync(_fishDirs[_fd])) continue;
                         var _fEntries = fs.readdirSync(_fishDirs[_fd]);
                         for (var _fe = 0; _fe < _fEntries.length; _fe++) {
-                            if (_fEntries[_fe].indexOf("需人工干预_") === 0) continue; // 8-2 修复：排除 monitor 自写干预文件
+                            if (_fEntries[_fe].indexOf("needs-intervention_") === 0) continue; // 8-2 修复：排除 monitor 自写干预文件
                             try { if (fs.statSync(_fishDirs[_fd] + "/" + _fEntries[_fe]).mtimeMs > _fishCut) { _fishRecentOutput = true; break; } } catch(_fes) {}
                         }
                         if (_fishRecentOutput) break;
@@ -225,7 +225,7 @@ try {
 // 收口豁免：上一轮是已完成的收工轮（项目结束，大鱼合法收口心跳停是正常态）
 try {
     if (_fishDead) {
-        var _prevBf2 = base + "/我的世界/公告牌_" + String(N - 1).padStart(3,"0") + ".md";
+        var _prevBf2 = base + "/world/board_" + String(N - 1).padStart(3,"0") + ".md";
         if (fs.existsSync(_prevBf2)) {
             var _prevBc2 = fs.readFileSync(_prevBf2, "utf8");
             if (/模式[：:]\s*收工/.test(_prevBc2)) _fishDead = false; // 上一轮是收工轮 → 项目已收口，不报
@@ -236,14 +236,14 @@ if (_fishDead) {
     console.log("FISH_DEAD (heartbeat: " + Math.round(_fishHbAge/1000) + "s stale, no recent output)");
     logMonitor("FISH_DEAD 大鱼心跳 stale");
     try {
-        var _fishIv = base + "/我的世界/大鱼_老渣对讲/需人工干预_大鱼.md";
+        var _fishIv = base + "/world/fish_laozha_talk/needs-intervention_大鱼.md";
         if (!fs.existsSync(_fishIv)) {
-            var _fishIvContent = "# 需人工干预: 大鱼（决策者掉线）\n\n" +
+            var _fishIvContent = "# needs-intervention: 大鱼（决策者掉线）\n\n" +
                 "- 时间: " + new Date().toISOString() + "\n" +
                 "- 现象: 大鱼心跳 stale 且无新产出——大鱼掉线（回合结束/窗口关），扣留收工轮无人补搬，项目可能静默卡死\n" +
                 "- 建议动作: 去大鱼窗口输入「进入角色」重启大鱼（启动铁律第 1 条先看牌 → 校验发布 → 补搬收工轮）\n";
             fs.writeFileSync(_fishIv, _fishIvContent, "utf8");
-            console.log("INTERVENE 大鱼 -> 大鱼_老渣对讲/需人工干预_大鱼.md");
+            console.log("INTERVENE 大鱼 -> fish_laozha_talk/needs-intervention_大鱼.md");
         }
     } catch(_fiv) {}
 }
@@ -255,20 +255,20 @@ var _standbyOverdue = false;
 try {
     // ① 大鱼目录仍扣着收工轮（存在未发布的收工轮 = 扣留中）——兼容 模式:收工 与 ·收工 两种写法（2026-08-12 修复）
     var _retireKept = fs.readdirSync(_fishSrcDir).some(function(_ff) {
-        return /^公告牌_(\d+)\.md$/.test(_ff) && (function() {
+        return /^board_(\d+)\.md$/.test(_ff) && (function() {
             try { return /模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff, "utf8")); } catch(_rke) { return false; }
         })();
     });
     if (_retireKept) {
-        // ② 基线：前一轮完成时刻（最后一个 完成_{N}.md mtime）+ 10 分钟
-        //    降级（手册承诺，2026-08-12 补实现）：无任何签字文件时，退回用 我的世界/ 已发布的待命轮公告牌 mtime
+        // ② 基线：前一轮完成时刻（最后一个 done_{N}.md mtime）+ 10 分钟
+        //    降级（手册承诺，2026-08-12 补实现）：无任何签字文件时，退回用 world/ 已发布的待命轮公告牌 mtime
         var _overdueMs = 10 * 60 * 1000;
         var _baseTs = 0;
         // 扣留的收工轮编号 → 待命轮编号 = 收工轮编号 - 1（用于"无新动作"的完成文件范围判定）
         var _keptRetireN = 0;
         try {
             fs.readdirSync(_fishSrcDir).forEach(function(_ff2) {
-                var _rm2 = String(_ff2).match(/^公告牌_(\d+)\.md$/);
+                var _rm2 = String(_ff2).match(/^board_(\d+)\.md$/);
                 if (_rm2) {
                     try {
                         if (/模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(fs.readFileSync(_fishSrcDir + "/" + _ff2, "utf8"))) {
@@ -280,14 +280,14 @@ try {
             });
         } catch(_rk3) {}
         try {
-            var _worldDirTop = base + "/我的世界";
-            var _prevSigns = fs.readdirSync(_worldDirTop).filter(function(_d) { return _d.endsWith("_大鱼对讲"); });
+            var _worldDirTop = base + "/world";
+            var _prevSigns = fs.readdirSync(_worldDirTop).filter(function(_d) { return _d.endsWith("_talk"); });
             for (var _psi = 0; _psi < _prevSigns.length; _psi++) {
                 try {
                     var _sDir = _worldDirTop + "/" + _prevSigns[_psi];
                     var _sFiles = fs.readdirSync(_sDir);
                     for (var _sf = 0; _sf < _sFiles.length; _sf++) {
-                        var _sM = String(_sFiles[_sf]).match(/^完成_(\d+)\.md$/);
+                        var _sM = String(_sFiles[_sf]).match(/^done_(\d+)\.md$/);
                         if (_sM) {
                             var _sTs = fs.statSync(_sDir + "/" + _sFiles[_sf]).mtimeMs;
                             if (_sTs > _baseTs) _baseTs = _sTs;
@@ -296,33 +296,33 @@ try {
                 } catch(_se) {}
             }
         } catch(_ps) {}
-        // 基线降级：无任何签字文件 → 用已发布的待命轮公告牌 mtime（我的世界/ 那份，非源目录）
+        // 基线降级：无任何签字文件 → 用已发布的待命轮公告牌 mtime（world/ 那份，非源目录）
         if (_baseTs === 0 && _keptRetireN > 1) {
             try {
-                var _standbyBoard = base + "/我的世界/公告牌_" + String(_keptRetireN - 1).padStart(3, "0") + ".md";
+                var _standbyBoard = base + "/world/board_" + String(_keptRetireN - 1).padStart(3, "0") + ".md";
                 if (fs.existsSync(_standbyBoard)) _baseTs = fs.statSync(_standbyBoard).mtimeMs;
             } catch(_sb2) {}
         }
         // ③ 无新动作判定：基线后未出现追加轮次的新签字/新产出（.ready），且超时无追加信号
-        //    （2026-08-12 修复：手册承诺"新 完成_{N}.md / .ready"均算新动作，原只查完成文件）
+        //    （2026-08-12 修复：手册承诺"新 done_{N}.md / .ready"均算新动作，原只查完成文件）
         var _noNewAction = _baseTs > 0 && (Date.now() - _baseTs > _overdueMs);
         if (_noNewAction) {
             var _hasNewAction = false;
             var _newCut = _baseTs;
             try {
-                var _top2 = base + "/我的世界";
-                fs.readdirSync(_top2).filter(function(_d2) { return _d2.endsWith("_大鱼对讲"); }).forEach(function(_d2) {
+                var _top2 = base + "/world";
+                fs.readdirSync(_top2).filter(function(_d2) { return _d2.endsWith("_talk"); }).forEach(function(_d2) {
                     try {
                         fs.readdirSync(_top2 + "/" + _d2).forEach(function(_f2) {
-                            var _m2 = String(_f2).match(/^完成_(\d+)\.md$/);
+                            var _m2 = String(_f2).match(/^done_(\d+)\.md$/);
                             if (_m2 && parseInt(_m2[1], 10) > _keptRetireN - 1) {
                                 try { if (fs.statSync(_top2 + "/" + _d2 + "/" + _f2).mtimeMs > _newCut) _hasNewAction = true; } catch(_e2) {}
                             }
                         });
                     } catch(_e2b) {}
                 });
-                // 产出/ 下新增 .ready（mtime > 基线 = 待命轮之后的新交付；递归支持 _deliver 子路径，2026-08-12）
-                var _outBase2 = base + "/我的世界/产出";
+                // output/ 下新增 .ready（mtime > 基线 = 待命轮之后的新交付；递归支持 _deliver 子路径，2026-08-12）
+                var _outBase2 = base + "/world/output";
                 function _scanReadyNew(dir) {
                     var _entries2;
                     try { _entries2 = fs.readdirSync(dir); } catch(_e2e) { return false; }
@@ -350,7 +350,7 @@ try {
 // P2-10: 公告牌不存在时，回看上一轮是否为已完成的收工轮
 if (!fs.existsSync(boardFile)) {
     var prevN = N - 1;
-    var prevBoard = base + "/我的世界/公告牌_" + String(prevN).padStart(3,"0") + ".md";
+    var prevBoard = base + "/world/board_" + String(prevN).padStart(3,"0") + ".md";
     if (fs.existsSync(prevBoard)) {
         // 复核补充：readFileSync 包 try（与 M-1 同类）——读失败跳过收工回看，走 WAIT（安全）；monitor 重跑幂等
         var prevContent;
@@ -372,8 +372,8 @@ if (!fs.existsSync(boardFile)) {
                 var roleName = retireMatch[1].trim().replace(/^组[A-Z]\s*[:：]\s*/, ""); // H8 修复：先剥离组前缀再过滤
                 // ⚠️ 黑名单过滤——老渣新增非角色字段（如 - 备注: xxx）需在此补上，否则 monitor 永不推进
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "产出负责人" || roleName === "任务目录" || roleName === "辩论轮数" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
-                var rf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已退场_" + String(prevN).padStart(3,"0");
-                var sf = base + "/我的世界/" + roleName + "_大鱼对讲/" + roleName + "已休眠_" + String(prevN).padStart(3,"0");
+                var rf = base + "/world/" + roleName + "_talk/" + roleName + "retired_" + String(prevN).padStart(3,"0");
+                var sf = base + "/world/" + roleName + "_talk/" + roleName + "slept_" + String(prevN).padStart(3,"0");
                 if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked")) { allRetired = false; break; } // 4 修复：兼容 .acked
                 _retireOk++;
             }
@@ -382,7 +382,7 @@ if (!fs.existsSync(boardFile)) {
     }
     // 8-2 扣留超时报警：扣留期（收工轮被扣、下一张牌不存在）真实输出点——WAIT 前先判 OVERDUE
     if (_standbyOverdue) {
-        console.log("STANDBY_OVERDUE N=" + N + "（待命轮基线已过 10 分钟无新动作且收工轮仍扣留——大鱼可能掉线，检查 需人工干预_大鱼.md；若大鱼在场请立即补搬收工轮）");
+        console.log("STANDBY_OVERDUE N=" + N + "（待命轮基线已过 10 分钟无新动作且收工轮仍扣留——大鱼可能掉线，检查 needs-intervention_大鱼.md；若大鱼在场请立即补搬收工轮）");
         logMonitor("STANDBY_OVERDUE N=" + N);
     }
     console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
@@ -407,7 +407,7 @@ while ((am = allRe.exec(headerPart)) !== null) {
     var arn = am[1].replace(/^组[A-Z]\s*[:：]\s*/, '');
     // 第四轮修复：字段行黑名单——带括号的字段行（如 `- 模式: 收工（全员确认）`）不当角色，防收工轮查不存在的退场文件卡死
     if (arn === "模式" || arn === "任务" || arn === "产出" || arn === "产出负责人" || arn === "任务目录" || arn === "辩论轮数" || arn.indexOf(":") !== -1 || arn.indexOf("：") !== -1) continue;
-    // 2026-08-13（机制审查 #22）：角色名含路径分隔符/.. 拒绝（防拼路径写出 我的世界/）——compose 已净化，此层防手写公告牌绕过
+    // 2026-08-13（机制审查 #22）：角色名含路径分隔符/.. 拒绝（防拼路径写出 world/）——compose 已净化，此层防手写公告牌绕过
     if (/[\\/]|\.\./.test(arn)) { console.log("OUTPUT-FORMAT ⚠️ 角色名含路径分隔符/..（拒绝）: " + arn); continue; }
     allRoles.push(arn);
 }
@@ -424,12 +424,12 @@ if (activeRoles.length === 0) {
     // ★ 新增 A2：试用反馈文件探测（任务目录来自公告牌「任务目录」字段，与 .ready 检查同级）
     _trialFbPath = null;
     if (isTrialRound) {
-        var _tdM = board.match(/\n- 任务目录[:：]\s*我的世界\/([^\r\n]+)/);
+        var _tdM = board.match(/\n- 任务目录[:：]\s*world\/([^\r\n]+)/);
         if (_tdM) {
             if (/\.\./.test(_tdM[1])) {
-              console.log("OUTPUT-FORMAT ⚠️ 试用轮任务目录含 ..（拒绝）: " + _tdM[1]); // 2026-08-13 security review：与产出路径同款净化（防拼路径逃出 我的世界/）
+              console.log("OUTPUT-FORMAT ⚠️ 试用轮任务目录含 ..（拒绝）: " + _tdM[1]); // 2026-08-13 security review：与产出路径同款净化（防拼路径逃出 world/）
             } else {
-              var _tdP = base + "/我的世界/" + _tdM[1].trim().replace(/\/+$/, "");
+              var _tdP = base + "/world/" + _tdM[1].trim().replace(/\/+$/, "");
               if (fs.existsSync(_tdP + "/试用反馈.md") || fs.existsSync(_tdP + "/试用反馈.md.signal")) _trialFbPath = _tdP + "/试用反馈.md";
             }
         }
@@ -450,47 +450,47 @@ if (activeRoles.length === 0) {
         // 收工轮：全员退场，逐个检查退场文件（或休眠文件，两者都验）是否到位
         console.log("SIGN [收工]");
         allRoles.forEach(function(role) {
-            var retireFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已退场_" + String(N).padStart(3,"0");
-            var sleepFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "已休眠_" + String(N).padStart(3,"0");
+            var retireFile = base + "/world/" + role + "_talk/" + role + "retired_" + String(N).padStart(3,"0");
+            var sleepFile = base + "/world/" + role + "_talk/" + role + "slept_" + String(N).padStart(3,"0");
             // 4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
             var retireAcked = retireFile + ".acked", sleepAcked = sleepFile + ".acked";
             // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
-            var hbFile3 = base + "/我的世界/" + role + "_大鱼对讲/_heartbeat.txt";
+            var hbFile3 = base + "/world/" + role + "_talk/_heartbeat.txt";
         var hbForce = false;
         try {
           if (fs.existsSync(hbFile3)) {
             var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
-            var hbTimeout3 = (fs.existsSync(base + "/火影-大鱼/_运行形态.mode") && fs.readFileSync(base + "/火影-大鱼/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            var hbTimeout3 = (fs.existsSync(base + "/fish/_运行形态.mode") && fs.readFileSync(base + "/fish/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) {
               // A-1 判据同步（2026-08-11 修复 + 2026-08-12 范围统一）：心跳 stale 但窗口内有新文件
               // （正在写流水账/角色记忆/退场文件/补交产出而心跳没同步）→ 不算死，不强制退场——
               // 与主心跳检测区 A-1 判据（"心跳不能单独作为死亡证据"）保持一致；
               // 真死（心跳 stale + 窗口内无任何新产出）才 hbForce，防止收工轮写长文档/补交被误判提前 DONE。
-              // 扫描范围与主区一致：对讲目录 + 产出 + 任务*（补交场景角色写 产出/任务 区同样算活着）
+              // 扫描范围与主区一致：对讲目录 + 产出 + 任务*（补交场景角色写 output/task 区同样算活着）
               var _hbForceRecent = false;
               try {
                 var _hbfCut = Date.now() - hbTimeout3;
-                var _hbfDirs = [base + "/我的世界/" + role + "_大鱼对讲"];
+                var _hbfDirs = [base + "/world/" + role + "_talk"];
                 try {
-                  var _hbfTaskDirs = fs.readdirSync(base + "/我的世界").filter(function(td) { return /^任务\d+/.test(td); });
-                  _hbfTaskDirs.forEach(function(td) { _hbfDirs.push(base + "/我的世界/" + td); });
+                  var _hbfTaskDirs = fs.readdirSync(base + "/world").filter(function(td) { return /^task\d+/.test(td); });
+                  _hbfTaskDirs.forEach(function(td) { _hbfDirs.push(base + "/world/" + td); });
                 } catch(_htd) {}
-                if (fs.existsSync(base + "/我的世界/产出")) _hbfDirs.push(base + "/我的世界/产出");
+                if (fs.existsSync(base + "/world/output")) _hbfDirs.push(base + "/world/output");
                 function _hbfRecent(dir) {
                   var entries;
                   try { entries = fs.readdirSync(dir); } catch(e) { return false; }
                   return entries.some(function(_f) {
                     // 排除 monitor 自写文件（仅对讲目录内存在）——它们是 monitor 写的不是角色新产出，
                     // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长
-                    if (dir.indexOf("_大鱼对讲") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("需人工干预") === 0)) return false;
+                    if (dir.indexOf("_talk") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("needs-intervention") === 0)) return false;
                     try {
                       var _st = fs.statSync(dir + "/" + _f);
                       if (_st.isDirectory()) return _hbfRecent(dir + "/" + _f);
                       if (_st.mtimeMs <= _hbfCut) return false;
-                      // 2026-08-12 归属限定：共享区（产出/任务*）只认 producer 匹配本角色的 .ready——
+                      // 2026-08-12 归属限定：共享区（output/task*）只认 producer 匹配本角色的 .ready——
                       // 否则角色 A 真死但角色 B 在共享区补交时，A 的 hbForce 永不触发（收工轮 DONE 无限阻塞）；
                       // 对讲目录是角色自有，任意新文件即算该角色活着
-                      if (dir.indexOf("_大鱼对讲") === -1) {
+                      if (dir.indexOf("_talk") === -1) {
                         if (!_f.endsWith(".ready")) return false;
                         try {
                           var _rc = fs.readFileSync(dir + "/" + _f, "utf8");
@@ -512,7 +512,7 @@ if (activeRoles.length === 0) {
             // 2026-08-02 优化：流水账覆盖校验——退场角色应有全程总结（≥2 行：至少一轮 + 退场），
             // 不足标 ⚠️（不阻塞退场，提醒角色复盘漏写）
             try {
-                var flowFile = base + "/我的世界/" + role + "_大鱼对讲/" + role + "_流水账.md";
+                var flowFile = base + "/world/" + role + "_talk/" + role + "_ledger.md";
                 if (fs.existsSync(flowFile)) {
                     var flowLines = fs.readFileSync(flowFile, "utf8").split("\n").filter(function(l) { return l.trim().length > 0; }).length;
                     if (flowLines < 2) {
@@ -532,7 +532,7 @@ if (activeRoles.length === 0) {
     } // end isRetireRound
 } else {
     activeRoles.forEach(function(role) {
-        var sign = base + "/我的世界/" + role + "_大鱼对讲/完成_" + String(N).padStart(3,"0") + ".md";
+        var sign = base + "/world/" + role + "_talk/done_" + String(N).padStart(3,"0") + ".md";
         // P2-7: 空文件不算签字
         if (fs.existsSync(sign) && fs.statSync(sign).size > 20) { console.log("SIGN " + role + " ✓"); }
         else { console.log("SIGN " + role + " ⚠️"); }
@@ -542,9 +542,9 @@ if (activeRoles.length === 0) {
 // 2. 产出（收工公告牌不需要产出）
 var outputReady = activeRoles.length === 0;
 // 产出校验——优先解析产出行中的具体文件名，逐个fs.existsSync检查
-// 格式A（有文件名）: 产出: 我的世界/产出/任务001/server.js, search.js → 逐文件检查
-// 格式B（仅目录）: 产出: 我的世界/产出/任务001/ → 回退到目录非空检查
-var outputRe = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（自检/主流程/复检三处已同步）
+// 格式A（有文件名）: 产出: world/output/task001/server.js, search.js → 逐文件检查
+// 格式B（仅目录）: 产出: world/output/task001/ → 回退到目录非空检查
+var outputRe = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（自检/主流程/复检三处已同步）
 var outputMatch, allOutputReady = true, outputCount = 0;
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;
@@ -559,15 +559,15 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
         outDir = fullPath.replace(/\/$/, "");
         fileNames = null;
     }
-    // 2026-08-13（机制审查 #22）：产出路径禁止 ..（防拼路径写出 我的世界/）——compose 已净化，此层防手写公告牌绕过
+    // 2026-08-13（机制审查 #22）：产出路径禁止 ..（防拼路径写出 world/）——compose 已净化，此层防手写公告牌绕过
     if (/\.\./.test(outDir) || /\.\./.test(fileNames ? fileNames.join(",") : "")) {
-        console.log("OUTPUT-FORMAT ⚠️ 产出路径含 ..（拒绝）: " + fullPath + "——公告牌产出行应为 我的世界/产出/ 下路径，禁止相对路径逃逸");
+        console.log("OUTPUT-FORMAT ⚠️ 产出路径含 ..（拒绝）: " + fullPath + "——公告牌产出行应为 world/output/ 下路径，禁止相对路径逃逸");
         allOutputReady = false; // 2026-08-13 review：被拒产出行视为未就位（否则 outputCount 已计但 allOutputReady 未置 false → 全部被拒时 DONE 误放行）
         continue;
     }
     
     var ready = false;
-    var outDirPath = base + "/我的世界/" + outDir;
+    var outDirPath = base + "/world/" + outDir;
     if (fileNames && fileNames.length > 0) {
         var allExist = true;
         var missing = [];
@@ -612,8 +612,8 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
             });
         }
         if (!ready && !_ownerFail4) {            // fallback: 老渣可能把产出路径错写成源文件目录（如 源代码/）——仅覆盖"存在性缺失"（missing 非空）；归属校验失败（_ownerFail4）保持 WAIT 不旁路（review P1）
-            // 实际 .ready 在 产出/ 子目录下——扫描兜底
-            var outBase = base + "/我的世界/产出";
+            // 实际 .ready 在 output/ 子目录下——扫描兜底
+            var outBase = base + "/world/output";
             if (fs.existsSync(outBase)) {
                 try {
                     var outDirs = fs.readdirSync(outBase).filter(function(d2) {
@@ -627,7 +627,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
                             return fs.existsSync(outBase + "/" + d2 + "/" + fn + ".ready");
                         });
                     });
-                    if (fbOk) { ready = true; console.log("OUTPUT " + outDir + " \u2713 (fallback: 产出/)"); }
+                    if (fbOk) { ready = true; console.log("OUTPUT " + outDir + " \u2713 (fallback: output/)"); }
                     else console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")");
                 } catch(_e5) { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
             } else { console.log("OUTPUT " + outDir + " \u2717 (missing: " + missing.join(", ") + ")"); }
@@ -677,18 +677,18 @@ if (isRetireRound) outputReady = true;
 // 3.5 活跃角色完成状态（F 模式大鱼调度用：逐角色输出签字/产出就位，方便大鱼决定唤醒谁）
 if (activeRoles.length > 0) {
     activeRoles.forEach(function(role) {
-        var signFile = base + "/我的世界/" + role + "_大鱼对讲/完成_" + String(N).padStart(3, "0") + ".md";
+        var signFile = base + "/world/" + role + "_talk/done_" + String(N).padStart(3, "0") + ".md";
         var signed = fs.existsSync(signFile) && fs.statSync(signFile).size > 20;
         console.log("ROLE " + role + " " + (signed ? "DONE" : "PENDING") + " N=" + N);
     });
 }
 // 3. 求助
-var worldDir = base + "/我的世界";
+var worldDir = base + "/world";
 if (fs.existsSync(worldDir)) {
-    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
+    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_talk"); }).forEach(function(dir) {
         var fullDir = worldDir + "/" + dir;
         if (!fs.statSync(fullDir).isDirectory()) return;
-        fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("大鱼对话_") && !f.endsWith("_已处理"); }).forEach(function(f) {
+        fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("大鱼chat_") && !f.endsWith("_已处理"); }).forEach(function(f) {
             var help = fs.readFileSync(fullDir + "/" + f, "utf8");
             console.log("HELP " + dir + ": " + help.substring(0, 150));
             // P1-3: 原子写入——先写.tmp再rename
@@ -710,21 +710,21 @@ if (fs.existsSync(worldDir)) {
 
 // 3.5 心跳检测：检查所有角色心跳文件，超时自动唤醒
 var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
-// 运行形态判定：看 火影-大鱼/_运行形态.mode（scaffold fish 命令写入）
+// 运行形态判定：看 fish/_运行形态.mode（scaffold fish 命令写入）
 //   = "run" → run拉起（角色干完即退，心跳停是正常态）；否则 → 窗口常驻（心跳停=掉线，自动唤醒）
 var F_SCHEDULED = false;
 try {
-    var modeFlag = worldDir.replace(/我的世界$/, "火影-大鱼") + "/_运行形态.mode";
+    var modeFlag = worldDir.replace(/world$/, "fish") + "/_运行形态.mode";
     F_SCHEDULED = fs.existsSync(modeFlag) && fs.readFileSync(modeFlag, "utf8").trim() === "run";
 } catch(e) {}
 if (fs.existsSync(worldDir)) {
-    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_大鱼对讲"); }).forEach(function(dir) {
+    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_talk"); }).forEach(function(dir) {
         // M2 修复：已退场角色跳过心跳检测——退场后心跳停是正常态，不应被唤醒
-        // （复核修正：indexOf 用 !== -1——退场文件名是 {角色名}已退场_NNN，不以"已退场_"开头，=== 0 恒 false 等于没修）
-        // 注意：不查 已休眠_——休眠是中间态，心跳停=角色真死，monitor 必须靠心跳检测写 _wakeup.md 唤醒它
+        // （复核修正：indexOf 用 !== -1——退场文件名是 {角色名}retired_NNN，不以"retired_"开头，=== 0 恒 false 等于没修）
+        // 注意：不查 slept_——休眠是中间态，心跳停=角色真死，monitor 必须靠心跳检测写 _wakeup.md 唤醒它
         try {
             var _dirEntries = fs.readdirSync(worldDir + "/" + dir);
-            if (_dirEntries.some(function(f) { return f.indexOf("已退场_") !== -1; })) return;
+            if (_dirEntries.some(function(f) { return f.indexOf("retired_") !== -1; })) return;
         } catch(_e7) {}
         var hbFile = worldDir + "/" + dir + "/_heartbeat.txt";
         if (!fs.existsSync(hbFile)) return;
@@ -735,20 +735,20 @@ if (fs.existsSync(worldDir)) {
             // F 模式下放宽到 10 分钟（角色干完即退后心跳停是正常态），且不自动写唤醒
             var timeoutMs = F_SCHEDULED ? 10 * 60 * 1000 : HEARTBEAT_TIMEOUT_MS;
             // A-1 修复（实弹测试：贾维斯 bash sleep 等文件时心跳断 → 误判 DEAD 5+ 次）：
-            // DEAD 判定前检查「心跳超时窗口内是否有新产出/对话文件」——角色在干活（写文件）而心跳没更新 = 活着，不算 DEAD。
+            // DEAD 判定前检查「心跳超时窗口内是否有新output/对话文件」——角色在干活（写文件）而心跳没更新 = 活着，不算 DEAD。
             // 心跳不能单独作为死亡证据（大鱼审计建议："DEAD 应结合该窗口内无新产出文件判定"）。
             if (hbAge > timeoutMs) {
-                var roleName = dir.replace("_大鱼对讲", "");
+                var roleName = dir.replace("_talk", "");
                 var hasRecentOutput = false;
                 try {
-                    // 扫 我的世界/产出 与 我的世界/任务* 下最近 timeoutMs 内修改的文件
+                    // 扫 world/output 与 world/任务* 下最近 timeoutMs 内修改的文件
                     var _scanDirs = [worldDir + "/产出"];
                     try {
-                        var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^任务\d+/.test(td); });
+                        var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^task\d+/.test(td); });
                         _taskDirs.forEach(function(td) { _scanDirs.push(worldDir + "/" + td); });
                     } catch(_ts) {}
                     // 12-29 优化：扫描目录 mtime 门控——无变化时跳过 _scanRecent 深扫（monitor 60s 常驻开销大头：
-                    //   产出/任务目录一旦静止，递归 readdirSync 每次全跑白耗）。门控 key 存 .monitor_state.json。
+                    //   output/task目录一旦静止，递归 readdirSync 每次全跑白耗）。门控 key 存 .monitor_state.json。
                     var _skipDeepScan = false;
                     try {
                         var _scanMtimes = [];
@@ -780,7 +780,7 @@ if (fs.existsSync(worldDir)) {
                     function _scanRecent(dir) {
                         // 2026-08-17 P1 修复：共享区归属限定（对齐收工轮 hbForce :462-467 只认 producer 归属）——
                         // 任意 mtime 新文件算"该角色活着"会把真死角色掩盖（角色 B 在共享区干活 = A 永不 DEAD）。
-                        // 该角色相关证据 = ①文件名含角色名（产出/对话文件带名）②.ready 内容 producer 归属该角色；
+                        // 该角色相关证据 = ①文件名含角色名（output/对话文件带名）②.ready 内容 producer 归属该角色；
                         // "正在写未交付"由下方对讲目录活动文件检查兜底（角色干活必写操作日志/轮询日志/流水账）。
                         var entries;
                         try { entries = fs.readdirSync(dir); } catch(e) { return; }
@@ -810,7 +810,7 @@ if (fs.existsSync(worldDir)) {
                 } catch(_sc) {}
                 // 隐患#19 修复②：深扫无产出时叠加"对讲目录近期活动文件"检查（双保险）——
                 // 角色干活必写 操作日志/轮询日志/流水账（对讲目录自有文件），有新文件 = 活着（心跳只是没同步）。
-                // 排除 monitor 自写文件（_wakeup/需人工干预/大鱼回复——非角色活动）。
+                // 排除 monitor 自写文件（_wakeup/needs-intervention/大鱼回复——非角色活动）。
                 if (!hasRecentOutput) {
                     try {
                         var _talkDir = worldDir + "/" + dir;
@@ -818,9 +818,9 @@ if (fs.existsSync(worldDir)) {
                         var _talkEntries = fs.readdirSync(_talkDir);
                         for (var _ti = 0; _ti < _talkEntries.length; _ti++) {
                             var _tf = _talkEntries[_ti];
-                            // 排除 monitor 自写文件（_wakeup/需人工干预/大鱼回复）与心跳/轮询状态文件
+                            // 排除 monitor 自写文件（_wakeup/needs-intervention/大鱼回复）与心跳/轮询状态文件
                             // （_heartbeat.txt 内容 stale 正是判据来源，其文件 mtime 却是最近写入——算活动证据会永远 SKIP 导致真死检测失效）
-                            if (_tf.indexOf("_wakeup") === 0 || _tf.indexOf("需人工干预") === 0 || _tf.indexOf("大鱼回复") === 0 ||
+                            if (_tf.indexOf("_wakeup") === 0 || _tf.indexOf("needs-intervention") === 0 || _tf.indexOf("大鱼回复") === 0 ||
                                 _tf === "_heartbeat.txt" || _tf === "_hb_state.json" || _tf === "_mtime.txt") continue;
                             try {
                                 if (fs.statSync(_talkDir + "/" + _tf).mtimeMs > _talkCut) { hasRecentOutput = true; break; }
@@ -839,20 +839,20 @@ if (fs.existsSync(worldDir)) {
                     return; // F 模式：不写 _wakeup.md，唤醒由大鱼负责
                 }
                 var wakeFile = worldDir + "/" + dir + "/_wakeup.md";
-                // ③ 挂死识别：上一轮已写过唤醒信号但角色未 ack（没改名 _acked）+ 仍无产出 → 挂死，需人工干预
+                // ③ 挂死识别：上一轮已写过唤醒信号但角色未 ack（没改名 _acked）+ 仍无产出 → 挂死，needs-intervention
                 //    （挂起 bash 感知不到 _wakeup.md，唤醒无效——升级为 STUCK + 写老渣干预信号）
                 if (fs.existsSync(wakeFile)) {
-                    console.log("STUCK " + roleName + " (心跳stale + 唤醒未确认 + 无产出——挂死，需人工干预)");
+                    console.log("STUCK " + roleName + " (心跳stale + 唤醒未确认 + 无产出——挂死，needs-intervention)");
                     logMonitor("STUCK " + roleName);
                     try {
-                        var _ivFile = base + "/我的世界/大鱼_老渣对讲/需人工干预_" + roleName + ".md";
+                        var _ivFile = base + "/world/fish_laozha_talk/needs-intervention_" + roleName + ".md";
                         if (!fs.existsSync(_ivFile)) {
-                            var _ivContent = "# 需人工干预: " + roleName + "\n\n" +
+                            var _ivContent = "# needs-intervention: " + roleName + "\n\n" +
                                 "- 时间: " + new Date().toISOString() + "\n" +
                                 "- 现象: 心跳 stale + 唤醒信号未确认 + 无新产出（挂死，疑似 bash 长等 / heredoc 挂起 / 回合异常）\n" +
                                 "- 建议动作: 去该角色窗口按 Ctrl+C 中断挂起命令；或重启 reasonix code（进入角色目录跑 reasonix code，输入「进入角色」）\n";
                             fs.writeFileSync(_ivFile, _ivContent, "utf8");
-                            console.log("INTERVENE " + roleName + " -> 大鱼_老渣对讲/需人工干预_" + roleName + ".md");
+                            console.log("INTERVENE " + roleName + " -> fish_laozha_talk/needs-intervention_" + roleName + ".md");
                         }
                     } catch(_iv) {}
                     return; // 不重复写唤醒（上一轮已写，无效）
@@ -876,9 +876,9 @@ if (fs.existsSync(worldDir)) {
                 var __dlFile = worldDir + "/" + dir + "/_deadlock.md";
         if (fs.existsSync(__dlFile)) {
           try {
-            var __role = dir.replace("_大鱼对讲", "");
+            var __role = dir.replace("_talk", "");
             console.log("DEADLOCK " + __role);
-            var __bf = base + "/我的世界/公告牌_" + String(N).padStart(3,"0") + ".md";
+            var __bf = base + "/world/board_" + String(N).padStart(3,"0") + ".md";
             var __dlConsumed = false;   // 2026-08-13：死锁信号解析失败不静默删除——找不到搭档=无法唤醒，保留信号+显式告警
             if (fs.existsSync(__bf)) {
               var __bc = fs.readFileSync(__bf, "utf8");
@@ -890,18 +890,18 @@ if (fs.existsSync(worldDir)) {
                   var __m = __l.match(/搭档[\uFF1A\u003A]\s*(\S+?)(?=[，,;；\)）。！？]|\s*$)/); // L12 修复：搭档名在行尾/句号结尾也能匹配；第四轮修复：补句号终止符
                   if (__m && __m[1]) {
                     var __partner = __m[1].trim();
-                    // 2026-08-13 security review：搭档名净化（与角色名同款 [\\/]|\.\. 拒绝）——公告牌文本可注入，`产出/../../..` 等会拼出项目根外路径写唤醒
+                    // 2026-08-13 security review：搭档名净化（与角色名同款 [\\/]|\.\. 拒绝）——公告牌文本可注入，`output/../../..` 等会拼出项目根外路径写唤醒
                     if (/[\\/]|\.\./.test(__partner)) {
                       console.log("DEADLOCK " + __role + " WARN: 搭档名含路径分隔符/..（拒绝）: " + __partner + "——保留 _deadlock.md 待下轮，请人工核查公告牌角色行");
                       logMonitor("DEADLOCK " + __role + " WARN: 搭档名非法（" + __partner + "），信号保留");
                       continue; // 2026-08-17 P1 修复：不置 __dlConsumed——置位会使下方 else 分支 unlinkSync 删掉信号（08-13 安全修复 f8bc06b 漏网）；continue 后 !__dlConsumed 分支显式告警保留信号待下轮重试
                     }
                     console.log("DEADLOCK partner=" + __partner);
-                    var __pw = worldDir + "/" + __partner + "_大鱼对讲/_wakeup.md";
+                    var __pw = worldDir + "/" + __partner + "_talk/_wakeup.md";
                     // 第四轮修复：写唤醒前重读搭档心跳——刚恢复则跳过（与主唤醒路径 :318 一致）
                     var __partnerAlive = false;
                     try {
-                        var __phb = parseHeartbeat(fs.readFileSync(worldDir + "/" + __partner + "_大鱼对讲/_heartbeat.txt", "utf8"));
+                        var __phb = parseHeartbeat(fs.readFileSync(worldDir + "/" + __partner + "_talk/_heartbeat.txt", "utf8"));
                         if (!isNaN(__phb) && Date.now() - __phb < 30000) __partnerAlive = true;
                     } catch(_ph) {}
                     if (__partnerAlive) {
@@ -939,7 +939,7 @@ if (!outputReady && activeRoles.length > 0) {
     try {
         var _now = Date.now();
         var _recentChange = false;
-        var _outBase = base + "/我的世界/产出";
+        var _outBase = base + "/world/output";
         if (fs.existsSync(_outBase)) {
             var _outDirs = fs.readdirSync(_outBase).filter(function(d) { return fs.statSync(_outBase + "/" + d).isDirectory(); });
             for (var _di = 0; _di < _outDirs.length; _di++) {
@@ -969,7 +969,7 @@ if (!outputReady && activeRoles.length > 0) {
                 while ((outputMatch = outputRe.exec(board)) !== null) {
                     _anyOutput = true;
                     var _fullPath2 = outputMatch[1];
-                    // 2026-08-13（机制审查 #22）：快速复检产出路径禁止 ..（防拼路径写出 我的世界/，与主判断同步）
+                    // 2026-08-13（机制审查 #22）：快速复检产出路径禁止 ..（防拼路径写出 world/，与主判断同步）
                     if (/\.\./.test(_fullPath2)) {
                       console.log("OUTPUT-FORMAT ⚠️ 复检产出路径含 ..（拒绝）: " + _fullPath2);
                       _allOk = false; // 2026-08-13 security review：被拒行必须置未就位——否则 _anyOutput=true 且 _allOk 不变，10s 复检 DONE 旁路主判断
@@ -984,7 +984,7 @@ if (!outputReady && activeRoles.length > 0) {
                         _outDir2 = _fullPath2.replace(/\/$/, "");
                         _fileNames2 = null;
                     }
-                    var _odp = base + "/我的世界/" + _outDir2;
+                    var _odp = base + "/world/" + _outDir2;
                     if (_fileNames2 && _fileNames2.length > 0) {
                         for (var _fi = 0; _fi < _fileNames2.length; _fi++) {
                             if (!fs.existsSync(_odp + "/" + _fileNames2[_fi].trim() + ".ready")) { _allOk = false; break; }
@@ -1061,7 +1061,7 @@ if (outputReady && allRetired) {
     if (isRetireRound && !allRetired) _why.push("收工轮 退场 " + (allRoles.length - missingRetireNames.length) + "/" + allRoles.length + " 缺 " + (missingRetireNames.join(",") || "?"));
     // 8-3 产出卡轮熔断（WAIT_OVERDUE，P0 窗口常驻版）：当前轮产出不齐持续 WAIT 超 30 分钟 → 机器自动报警
     //   角色心跳正常但在干活+产出路径错/deliver 参数错 → .ready 永不齐 → 无限 WAIT 无升级（run 形态已有熔断，窗口常驻补上）
-    //   只报警不干预（写 需人工干预 提示大鱼核查产出路径/deliver 参数），与干预阶梯（大鱼肉眼）互补
+    //   只报警不干预（写 needs-intervention 提示大鱼核查产出路径/deliver 参数），与干预阶梯（大鱼肉眼）互补
     // ★ 试用轮等真人反馈阶段豁免 WAIT_OVERDUE：等真人点程序是预期长等待（几十分钟到几小时），产出未就位 ≠ 卡轮（D组#10）
     var _trialWaiting = isTrialRound && !_trialFbPath;
     var _waitOverdue = false;
@@ -1083,17 +1083,17 @@ if (outputReady && allRetired) {
     } catch(_woe) {}
     console.log("WAIT N=" + N + (_why.length ? " (" + _why.join("; ") + ")" : "")); logMonitor("WAIT N=" + N);
     if (_waitOverdue) {
-        console.log("WAIT_OVERDUE N=" + N + "（当前轮 WAIT 超 30 分钟——产出卡轮：核查角色产出路径是否与公告牌一字不差 / deliver 参数 / 搭档是否完成前置；已写 需人工干预 提示大鱼）");
+        console.log("WAIT_OVERDUE N=" + N + "（当前轮 WAIT 超 30 分钟——产出卡轮：核查角色产出路径是否与公告牌一字不差 / deliver 参数 / 搭档是否完成前置；已写 needs-intervention 提示大鱼）");
         logMonitor("WAIT_OVERDUE N=" + N);
         try {
-            var _woIv = base + "/我的世界/大鱼_老渣对讲/需人工干预_产出卡轮_" + String(N).padStart(3,"0") + ".md";
+            var _woIv = base + "/world/fish_laozha_talk/needs-intervention_产出卡轮_" + String(N).padStart(3,"0") + ".md";
             if (!fs.existsSync(_woIv)) {
-                var _woContent = "# 需人工干预: 第" + String(N).padStart(3,"0") + "轮产出卡轮\n\n" +
+                var _woContent = "# needs-intervention: 第" + String(N).padStart(3,"0") + "轮产出卡轮\n\n" +
                     "- 时间: " + new Date().toISOString() + "\n" +
                     "- 现象: 当前轮 WAIT 超 30 分钟（产出 " + (_why.length ? _why.join("; ") : "未就位") + "）——角色可能在干活但产出路径错/deliver 参数错\n" +
                     "- 建议动作: ①读公告牌产出行核对路径 ②查角色对讲目录/操作日志看其交付动作 ③确认前置依赖是否就位 ④必要时 _wakeup.js 提示角色核查产出路径\n";
                 fs.writeFileSync(_woIv, _woContent, "utf8");
-                console.log("INTERVENE 产出卡轮 -> 大鱼_老渣对讲/需人工干预_产出卡轮_" + String(N).padStart(3,"0") + ".md");
+                console.log("INTERVENE 产出卡轮 -> fish_laozha_talk/needs-intervention_产出卡轮_" + String(N).padStart(3,"0") + ".md");
             }
         } catch(_woe2) {}
     }

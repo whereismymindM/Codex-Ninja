@@ -17,7 +17,7 @@ if (args.length < 2) {
 }
 
 var roleName = args[0];
-// 2026-08-13（机制审查 #21）：角色名禁止路径分隔符/相对路径/纯点号——防在 我的世界/ 之外建目录（对齐 _wakeup.js 同款校验，scaffold M-4 同类漏洞另一入口）
+// 2026-08-13（机制审查 #21）：角色名禁止路径分隔符/相对路径/纯点号——防在 world/ 之外建目录（对齐 _wakeup.js 同款校验，scaffold M-4 同类漏洞另一入口）
 if (/[\\/]|\.\.|^\.+$/.test(roleName)) {
   console.log("用法错误: 角色名不能包含路径分隔符（/ \\）或 ..（当前: " + roleName + "）");
   process.exit(4);
@@ -36,8 +36,8 @@ if (_li !== -1) {
 }
 var sleepMs = isStandby ? 15000 : 3000;   // 循环内 sleep 间隔（待命 15s / 休眠 3s，匹配现有档位）
 
-var worldDir = path.join(__dirname, "..", "我的世界");   // M3 修复：基于 __dirname 解析（与 _sign/_lock/_deliver 一致），不受 bash CWD 影响
-var talkDir = path.join(worldDir, roleName + "_大鱼对讲");
+var worldDir = path.join(__dirname, "..", "world");   // M3 修复：基于 __dirname 解析（与 _sign/_lock/_deliver 一致），不受 bash CWD 影响
+var talkDir = path.join(worldDir, roleName + "_talk");
 
 try { fs.mkdirSync(talkDir, { recursive: true }); } catch(e) {}
 
@@ -69,7 +69,7 @@ function checkEndMarker() {
   try {
     var endMarker = path.join(talkDir, roleName + "_结束回合_" + String(lastN).padStart(3, "0") + ".md");
     if (fs.existsSync(endMarker)) {
-      var curBoard = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
+      var curBoard = path.join(worldDir, "board_" + String(lastN).padStart(3, "0") + ".md");
       var isRetireBoard = false;
       try {
         if (fs.existsSync(curBoard)) {
@@ -86,20 +86,20 @@ function checkEndMarker() {
 }
 
 function checkRetire() {
-  var curFile = path.join(worldDir, "公告牌_" + String(lastN).padStart(3, "0") + ".md");
+  var curFile = path.join(worldDir, "board_" + String(lastN).padStart(3, "0") + ".md");
   if (fs.existsSync(curFile)) {
     try {
       var bc = fs.readFileSync(curFile, "utf8");
       if (/模式[：:]\s*收工|(?:^|\n)\s*·\s*收工/.test(bc)) { // 第四轮修复：·收工 锚定行首，防任务描述含"· 收工"误判提前退场
-        // 5-1 修复（升级计划第 3 条，2026-08-04 第五轮）：当前轮是收工轮，但本角色已写过退场文件（{角色}已退场_{N} 或 .acked）=
+        // 5-1 修复（升级计划第 3 条，2026-08-04 第五轮）：当前轮是收工轮，但本角色已写过退场文件（{角色}retired_{N} 或 .acked）=
         // 该收工轮已处理过——不应再返回 RETIRED（会误导角色跳号空等），返回 null（无事发生）
         // 第八轮图灵审计修正：本豁免仅服务于"同一回合内防 RETIRED 误跳号"（断点续接/唤醒场景），
         // 不构成"退场后继续轮询等追加"的依据——收工轮是轮询循环的出口，退场后回合结束，不再 poll
         // 第五轮实测：图灵/DHH 收工后 poll 收工轮返回 RETIRED 后错误 N+1 跳号，004 晚 7 秒发布 → 空等 10 分钟
         try {
-          var exitMarker = path.join(talkDir, roleName + "已退场_" + String(lastN).padStart(3, "0"));
+          var exitMarker = path.join(talkDir, roleName + "retired_" + String(lastN).padStart(3, "0"));
           if (fs.existsSync(exitMarker) || fs.existsSync(exitMarker + ".acked")) {
-            return null; // 已处理过该收工轮 → 继续等下一张牌（公告牌_(lastN+1) 检测在前）
+            return null; // 已处理过该收工轮 → 继续等下一张牌（board_(lastN+1) 检测在前）
           }
         } catch(e) {}
         log("收工轮 N=" + lastN);
@@ -151,14 +151,14 @@ function probeOnce() {
   //     （L4 兼容注：_round_NNN.signal 是 A 方案逐轮搬运时代遗留；当前全量发布形态不用 signal，
   //      保留此路径仅为兼容旧项目，不影响新形态行为）
   var sigFile = path.join(worldDir, "_round_" + String(lastN + 1).padStart(3, "0") + ".signal");
-  var bulletinFile = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
+  var bulletinFile = path.join(worldDir, "board_" + String(lastN + 1).padStart(3, "0") + ".md");
   try {
     var sigStat = fs.statSync(sigFile);
     // 信号文件存在 → 验证公告牌也到位
     if (fs.existsSync(bulletinFile)) {
       lastN++;
       var sigMtime = new Date(sigStat.mtimeMs).toISOString().substring(11, 19);
-      log("信号命中 N=" + lastN + " → 公告牌_" + String(lastN).padStart(3, "0") + " 就位（大鱼发布: " + sigMtime + "）");
+      log("信号命中 N=" + lastN + " → board_" + String(lastN).padStart(3, "0") + " 就位（大鱼发布: " + sigMtime + "）");
       console.log("BULLETIN N=" + lastN);
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
@@ -168,7 +168,7 @@ function probeOnce() {
   }
 
   // ── 2. mtime 预检 ──
-  //     记录 我的世界/ 目录 mtime（取整到毫秒整数），无变化时走快路径跳过全量文件检查
+  //     记录 world/ 目录 mtime（取整到毫秒整数），无变化时走快路径跳过全量文件检查
   //     写入与读取两端均为整数：String(Math.round(...)) 写入 → parseInt 读回，保证 === 命中快路径
   var mtimeFile = path.join(talkDir, "_mtime.txt");
   var lastMtime = 0;
@@ -180,12 +180,12 @@ function probeOnce() {
 
   var curMtime = 0;
   try { curMtime = Math.round(fs.statSync(worldDir).mtimeMs); }
-  catch(e) { console.log("TIMEOUT N=" + lastN); return 3; } // M3 修复：我的世界/ 不可访问时按"无事发生"退出，避免崩溃退出码 1 被误判为 WOKEN
+  catch(e) { console.log("TIMEOUT N=" + lastN); return 3; } // M3 修复：world/ 不可访问时按"无事发生"退出，避免崩溃退出码 1 被误判为 WOKEN
   var wakeFile = path.join(talkDir, "_wakeup.md");
 
   if (curMtime === lastMtime) {
     // 快路径：目录无变化 → 只做心跳 + 唤醒 + 下一公告牌检查
-    // ⚠️ _wakeup.md 写在 {角色}_大鱼对讲/ 子目录，不影响 我的世界/ mtime
+    // ⚠️ _wakeup.md 写在 {角色}_talk/ 子目录，不影响 world/ mtime
     //    必须独立检查，否则休眠角色收不到唤醒信号
     // ⚠️ 全量发布场景（方案E）：公告牌一次放齐后目录 mtime 不再变化，
     //    快路径必须仍检查下一公告牌（单文件 existsSync，开销可忽略），否则角色永远 TIMEOUT
@@ -199,10 +199,10 @@ function probeOnce() {
     }
     checkEndMarker();
     // 快路径公告牌检查——全量发布下目录 mtime 不变，靠这里检测下一轮
-    var nextFileFast = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
+    var nextFileFast = path.join(worldDir, "board_" + String(lastN + 1).padStart(3, "0") + ".md");
     if (fs.existsSync(nextFileFast)) {
       lastN++;
-      log("公告牌_" + String(lastN).padStart(3, "0") + " 就位（快路径）");
+      log("board_" + String(lastN).padStart(3, "0") + " 就位（快路径）");
       console.log("BULLETIN N=" + lastN);
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
@@ -221,10 +221,10 @@ function probeOnce() {
   } catch(e) {}
 
   // ── 3. 检查下一公告牌 ──
-  var nextFile = path.join(worldDir, "公告牌_" + String(lastN + 1).padStart(3, "0") + ".md");
+  var nextFile = path.join(worldDir, "board_" + String(lastN + 1).padStart(3, "0") + ".md");
   if (fs.existsSync(nextFile)) {
     lastN++;
-    log("公告牌_" + String(lastN).padStart(3, "0") + " 就位");
+    log("board_" + String(lastN).padStart(3, "0") + " 就位");
     console.log("BULLETIN N=" + lastN);
     console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 0;

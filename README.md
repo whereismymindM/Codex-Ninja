@@ -46,7 +46,7 @@ Codex Ninja 是一个 AI Agent 团队协作框架。通过文件系统通信、�
 
 ## 核心机制
 
-- **公告牌驱动**：任务写在 `公告牌_NNN.md`，大鱼全量发布（有待命轮扣留收工轮），角色轮询读取——不需要长连接
+- **公告牌驱动**：任务写在 `board_NNN.md`，大鱼全量发布（有待命轮扣留收工轮），角色轮询读取——不需要长连接
 - **角色持续轮询**（可选全自动）：角色单会话内持续 poll 到收工，全程无人值守（配置由 scaffold 自动生成，详见角色模板）
 - **大鱼守护**：大鱼负责发布前校验公告牌（编号连续/收工轮格式/角色枚举/前置依赖/状态流转/产出格式 6 项）、周期 monitor 验证（不干预推进）、求助具体回复、收工审计（产出总结含逐轮完成矩阵）
 - **角色状态机**：待命 → 活跃 → 休眠 → 退场，公告牌指定每轮谁干活、干完去哪
@@ -56,9 +56,9 @@ Codex Ninja 是一个 AI Agent 团队协作框架。通过文件系统通信、�
 1. 安装 Skill 到 Reasonix skills 目录
 2. 按 SKILL.md 6步流程：定角色、scaffold、部署团队须知、写公告牌、开窗口、收工后待办
 3. 启动方式二选一：
-   - **窗口常驻**（推荐，协作复杂）：`reasonix code` 开角色窗口常驻，自己 poll 推进；大鱼负责发布/校验/扣留收工轮。按 启动指南.md「形态一：窗口常驻」
-   - **run 拉起**（简单/串行、角色多资源紧）：大鱼按需 `reasonix run --continue` 拉起角色，干完即退。按 启动指南.md「形态二：run 拉起」
-4. 读 assets/老渣文档/ 下文档，在火影-大鱼下写公告牌（每轮一个独立文件）——格式以 `老渣文档/公告牌标准模板.md` 为准（唯一填空模板）
+   - **窗口常驻**（推荐，协作复杂）：`reasonix code` 开角色窗口常驻，自己 poll 推进；大鱼负责发布/校验/扣留收工轮。按 startup-guide.md「形态一：窗口常驻」
+   - **run 拉起**（简单/串行、角色多资源紧）：大鱼按需 `reasonix run --continue` 拉起角色，干完即退。按 startup-guide.md「形态二：run 拉起」
+4. 读 assets/operator-docs/ 下文档，在火影-大鱼下写公告牌（每轮一个独立文件）——格式以 `老渣文档/board_standard_template.md` 为准（唯一填空模板）
 5. 离开，让他们自己干活 ☕
 
 ## 目录结构
@@ -68,25 +68,25 @@ codex-ninja/
 ├── SKILL.md                 # Skill 入口（老渣身份声明）
 ├── README.md                # 本文件
 ├── CHANGELOG.md             # 版本历史（时间线格式）
-├── 启动指南.md               # 启动流程（窗口常驻/run拉起 两形态 + "永久轮询"机制）
+├── startup-guide.md               # 启动流程（窗口常驻/run拉起 两形态 + "永久轮询"机制）
 ├── assets/                  # 玩法文件 + 模板 + 工具
 │   ├── 模板/                # 大鱼模板（选择入口 + 窗口常驻 + run拉起）+ 角色模板
-│   │   ├── 大鱼_AGENTS模板.md     # 大鱼模板·形态选择入口（窗口常驻 / run 拉起选一）
-│   │   ├── 大鱼_AGENTS模板_窗口常驻.md # 大鱼模板（窗口常驻形态，reasonix code）
-│   │   ├── 大鱼_AGENTS模板_run拉起.md # 大鱼模板（run 拉起形态，调度唤醒）
-│   │   ├── Reasonix版_角色_AGENTS模板.md
-│   │   ├── 大鱼公告牌手册.md / 大鱼工具手册.md / _大鱼实测教训.md  # 大鱼手册三件
-│   │   └── 解耦四件套（_启动多步曲/_公告牌解读/_干活流程/_工具分类）+ _内联fallback.md
+│   │   ├── bigfish_AGENTS_template.md     # 大鱼模板·形态选择入口（窗口常驻 / run 拉起选一）
+│   │   ├── bigfish_AGENTS_template_window.md # 大鱼模板（窗口常驻形态，reasonix code）
+│   │   ├── bigfish_AGENTS_template_run.md # 大鱼模板（run 拉起形态，调度唤醒）
+│   │   ├── role_AGENTS_template.md
+│   │   ├── bigfish_board_manual.md / bigfish_tool_manual.md / _bigfish_lessons.md  # 大鱼手册三件
+│   │   └── 解耦四件套（_启动多步曲/_公告牌解读/_干活流程/_工具分类）+ _inline_fallback.md
 │   ├── 玩法模式/            # 玩法文件（4 个模式文件，scaffold 复制到每个角色目录）
-│   │   ├── _双人对话模式.md
-│   │   ├── _主笔审核模式.md
-│   │   ├── _辩论模式.md
-│   │   └── _单人输出模式.md
+│   │   ├── _dual_chat_mode.md
+│   │   ├── _lead_review_mode.md
+│   │   ├── _debate_mode.md
+│   │   └── _solo_output_mode.md
 │   ├── 老渣文档/              # 老渣看的文档（格式标准/标准模板/完全指南/RSS/Multi-pass，README 索引）
 │   ├── 通用公告牌/            # 调查轮/待命/收工/老渣对讲 11 个模板（生产每轮带调查轮）
-│   ├── _工具速查.md
-│   ├── _隐患清单.md
-│   ├── _外部环境BUG清单.md
+│   ├── _tool_cheatsheet.md
+│   ├── _risk_list.md
+│   ├── _env_bug_list.md
 │   ├── monitor.js           # 大鱼周期验证监控
 │   ├── _reasonix_poll.js    # Reasonix 单次探测轮询
 │   ├── _fish_loop.js        # 大鱼周期循环（30s 查牌 + 60s monitor，纯检测零决策）
@@ -95,8 +95,8 @@ codex-ninja/
 │   ├── _deliver.js          # 交付工具
 │   ├── _wakeup.js           # 唤醒工具
 │   └── wait_file.js         # 标准等文件（取代 _poll.js）
-├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）+ 校验（doc-consistency.js：**改文档/模板后跑**，用前先读 scripts/doc-consistency-使用说明.md）
-└── 团队须知/                # 注入所有角色窗口的通用规则（团队须知.md）
+├── scripts/                 # 脚手架（scaffold.js + scaffold.ps1）+ 校验（doc-consistency.js：**改文档/模板后跑**，用前先读 scripts/doc-consistency_guide.md）
+└── team-notes/                # 注入所有角色窗口的通用规则（team_notes.md）
 ```
 
 ## 分支 / Tag / 测试

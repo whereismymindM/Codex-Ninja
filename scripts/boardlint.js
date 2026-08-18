@@ -3,26 +3,26 @@
 //       把"格式不合规但能跑"的问题在源头拦下（协议合规工具族 P0 第一位，共识见
 //       阅览室/评审记录_20260816_生态工具清单/生态工具清单_共识.md）
 // 用法: node boardlint.js <公告牌目录>
-//       例: node boardlint.js "火影-大鱼/"   （目录下找 公告牌_*.md，支持草稿目录）
+//       例: node boardlint.js "fish/"   （目录下找 board_*.md，支持草稿目录）
 // 校验点（分级: 🔴 阻断 = 发布后必卡死/误行为，必改再发；🟡 警告 = 不阻断但提示规范化）:
-//   1. 编号连续    🔴 公告牌_NNN.md 三位补零、001 起连续、无断号/重号（大鱼手册①）
+//   1. 编号连续    🔴 board_NNN.md 三位补零、001 起连续、无断号/重号（大鱼手册①）
 //   2. 模式枚举    🟡 模式 ∈ 7 值（单人输出/辩论/主笔审核/双人对话/试用/待命/收工）——
 //                  外值 monitor 可当任务轮跑但偏离标准模板硬标准 2（实证: 交叉碰撞批次能收工）
-//   3. 收工轮格式  🔴 最后一张；只写 模式+角色+任务；产出/产出负责人/任务目录/产出类型省略（手册②）
+//   3. 收工轮格式  🔴 最后一张；只写 模式+角色+任务；output/产出负责人/任务目录/产出类型省略（手册②）
 //   4. 角色枚举    🔴 每轮列出全部参与人员（跨轮集合一致）；状态 ∈ 活跃/待命/休眠/退场（手册③）
 //                  协作模式（辩论/双人/主笔）角色行须带 角色：+ 搭档：
 //   5. 状态流转    🔴 硬冲突: 上轮本轮后=休眠/退场 → 本轮活跃（需唤醒/不可能）；退场→非退场
 //                  收工轮全员退场；待命轮全员"待命，等通知"；第一轮状态 ∈ {活跃,待命}
 //                  （与 compose.js:128-184 矩阵推导同源；手册⑤）
-//   6. 产出格式    🔴 产出以 我的世界/产出/ 开头、无 {}、无 ..、无 \；格式A（.md）/B（尾斜杠目录）
+//   6. 产出格式    🔴 产出以 world/output/ 开头、无 {}、无 ..、无 \；格式A（.md）/B（尾斜杠目录）
 //                  任务轮（单人/辩论/主笔/双人/试用）必填 产出负责人+产出+任务目录；
 //                  待命/收工不填（手册⑥）
-//   7. 铁律8       🔴 任务目录名与产出目录名一字不差（任务001_XXX ↔ 产出/任务001_XXX/）
-//   8. 前置依赖    🟡 任务提到 基于/参考/依赖 但无显式 我的世界/ 路径（手册④，缺路径角色可能不等依赖）
+//   7. 铁律8       🔴 任务目录名与产出目录名一字不差（task001_XXX ↔ output/task001_XXX/）
+//   8. 前置依赖    🟡 任务提到 基于/参考/依赖 但无显式 world/ 路径（手册④，缺路径角色可能不等依赖）
 //   9. 第一原则    🔴 固定行存在（标准模板硬标准 6）
 // ⚠️ 同源声明（改判据必须双改）:
 //   状态流转推导与 scripts/compose.js:128-184 同源；公告牌解析与 scripts/check.js parseBoard
-//   同源（两者又与 assets/monitor.js:369-611 同源）；分级语义与 assets/模板/大鱼公告牌手册.md
+//   同源（两者又与 assets/monitor.js:369-611 同源）；分级语义与 assets/role-templates/bigfish_board_manual.md
 //   一、发布前校验 6 项同源。任何一处改判据，三处必须同步。
 // 退出码: 0=无阻断项（可发布，警告可存在） 1=发现阻断项（必改再发） 2=参数错误
 // 零依赖（Node 原生），ES5 风格，与 codex-ninja 一致
@@ -35,7 +35,7 @@ var MODES = ["单人输出", "辩论", "主笔审核", "双人对话", "试用",
 var STATES = ["活跃", "待命", "休眠", "退场"];
 var TASK_MODES = ["单人输出", "辩论", "主笔审核", "双人对话", "试用"]; // 有产出的轮
 var COOP_ROLES = { 辩论: ["正方", "反方", "裁判"], 双人对话: ["问方", "答方"], 主笔审核: ["主笔", "审核"] };
-var BOARD_RE = /^公告牌_(\d{3})\.md$/;
+var BOARD_RE = /^board_(\d{3})\.md$/;
 var FIRST_LINE = "🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场";
 
 // ── 工具函数 ──
@@ -69,7 +69,7 @@ function parseBoard(n, content) {
   });
   var outputs = [];
   var om;
-  var outputRe = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g;
+  var outputRe = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g;
   while ((om = outputRe.exec(board)) !== null) {
     var fullPath = om[1];
     var lastSlash = fullPath.lastIndexOf("/");
@@ -84,7 +84,7 @@ function parseBoard(n, content) {
   }
   var ownerM = board.match(/\n- 产出负责人[:：]\s*(.+)/);
   var owner = ownerM ? ownerM[1].trim() : "";
-  var tdM = board.match(/\n- 任务目录[:：]\s*我的世界\/([^\r\n]+)/);
+  var tdM = board.match(/\n- 任务目录[:：]\s*world\/([^\r\n]+)/);
   var taskDir = tdM ? tdM[1].trim().replace(/\/+$/, "") : "";
   var taskM = board.match(/\n- 任务[:：]\s*([^\r\n]*)/);
   var taskText = taskM ? taskM[1] : "";
@@ -110,11 +110,11 @@ function loadBoards(dir) {
 // ── 校验 1: 编号连续（🔴）──
 function checkNumbering(boards) {
   var issues = [];
-  if (boards.length === 0) { issues.push("未找到 公告牌_*.md（目录下无公告牌或目录为空）"); return { ok: false, issues: issues }; }
+  if (boards.length === 0) { issues.push("未找到 board_*.md（目录下无公告牌或目录为空）"); return { ok: false, issues: issues }; }
   for (var i = 0; i < boards.length; i++) {
     var expect = i + 1;
     if (boards[i].n !== expect) {
-      issues.push("编号不连续: 第 " + (i + 1) + " 张应为 公告牌_" + pad3(expect) + ".md，实际 " + pad3(boards[i].n) + "——断号/重号 = 角色永远等不到某轮");
+      issues.push("编号不连续: 第 " + (i + 1) + " 张应为 board_" + pad3(expect) + ".md，实际 " + pad3(boards[i].n) + "——断号/重号 = 角色永远等不到某轮");
       break;
     }
   }
@@ -143,7 +143,7 @@ function checkRetireRound(boards) {
   }
   boards.forEach(function(b) {
     if (b.mode !== "收工") return;
-    if (b.outputs.length > 0) issues.push("第" + pad3(b.n) + "轮（收工）写了产出行——收工轮只写 模式+角色+任务，产出/产出负责人/任务目录/产出类型全省略（monitor 判定分叉）");
+    if (b.outputs.length > 0) issues.push("第" + pad3(b.n) + "轮（收工）写了产出行——收工轮只写 模式+角色+任务，output/产出负责人/任务目录/产出类型全省略（monitor 判定分叉）");
     if (b.owner) issues.push("第" + pad3(b.n) + "轮（收工）写了 产出负责人——收工轮应省略");
     if (b.taskDir) issues.push("第" + pad3(b.n) + "轮（收工）写了 任务目录——收工轮应省略");
   });
@@ -243,7 +243,7 @@ function checkOutputFormat(boards) {
     b.outputs.forEach(function(o) {
       if (/[\{\}]/.test(o.full)) issues.push("第" + pad3(b.n) + "轮 产出含占位符 {}: '" + o.full + "'——monitor 按字面文件名查永不匹配 → 轮次卡死");
       if (/\.\./.test(o.dir) || /[\\]/.test(o.full)) issues.push("第" + pad3(b.n) + "轮 产出路径含 .. 或反斜杠（拒绝）: '" + o.full + "'");
-      if (o.full.indexOf("产出/") !== 0) issues.push("第" + pad3(b.n) + "轮 产出必须以 '我的世界/产出/' 开头: '" + o.full + "'");
+      if (o.full.indexOf("output/") !== 0) issues.push("第" + pad3(b.n) + "轮 产出必须以 'world/output/' 开头: '" + o.full + "'");
     });
   });
   return { ok: issues.length === 0, issues: issues };
@@ -255,8 +255,8 @@ function checkDirMatch(boards) {
   boards.forEach(function(b) {
     if (!b.taskDir || b.outputs.length === 0) return;
     b.outputs.forEach(function(o) {
-      // 产出目录 = o.dir 已去'我的世界/'前缀（outputRe 吃掉），再去'产出/'即任务目录名
-      var outDir = o.dir.replace(/^产出\//, "");
+      // 产出目录 = o.dir 已去'world/'前缀（outputRe 吃掉），再去'output/'即任务目录名
+      var outDir = o.dir.replace(/^output\//, "");
       if (outDir !== b.taskDir) {
         issues.push("第" + pad3(b.n) + "轮 铁律8: 任务目录 '" + b.taskDir + "' 与产出目录 '" + outDir + "' 不一致——产出目录名必须与任务目录名一字不差（错位 = monitor 死等）");
       }
@@ -270,8 +270,8 @@ function checkDeps(boards) {
   var warns = [];
   boards.forEach(function(b) {
     if (!b.taskText) return;
-    if (/基于|参考|依赖|用.*产出|读.*产出/.test(b.taskText) && b.taskText.indexOf("我的世界/") === -1) {
-      warns.push("第" + pad3(b.n) + "轮 任务提到 基于/参考/依赖 但无显式 '我的世界/...' 路径——缺路径角色可能不等依赖直接干（建议补完整路径）");
+    if (/基于|参考|依赖|用.*产出|读.*output/.test(b.taskText) && b.taskText.indexOf("world/") === -1) {
+      warns.push("第" + pad3(b.n) + "轮 任务提到 基于/参考/依赖 但无显式 'world/...' 路径——缺路径角色可能不等依赖直接干（建议补完整路径）");
     }
   });
   return { ok: true, warns: warns };
@@ -292,7 +292,7 @@ function checkFirstLine(boards) {
 function main() {
   var args = process.argv.slice(2);
   if (args.length < 1) {
-    console.error("用法: node boardlint.js <公告牌目录>（目录下找 公告牌_*.md，如 火影-大鱼/ 或草稿目录）");
+    console.error("用法: node boardlint.js <公告牌目录>（目录下找 board_*.md，如 fish/ 或草稿目录）");
     process.exit(2);
   }
   var dir = path.resolve(args[0]);
@@ -303,7 +303,7 @@ function main() {
   var boards = loaded.boards;
   // 为 first-line 检查补 raw（parseBoard 时没存，这里补读）
   boards.forEach(function(b) {
-    var f = path.join(dir, "公告牌_" + pad3(b.n) + ".md");
+    var f = path.join(dir, "board_" + pad3(b.n) + ".md");
     try { b.raw = stripBom(fs.readFileSync(f, "utf8")); } catch (e) { b.raw = ""; }
   });
 

@@ -1,9 +1,9 @@
 // compose.js —— 公告牌编排器 v1.0（2026-08-10）
 // 把"老渣手画状态矩阵 + 手填公告牌"变成"声明式 JSON + 自动生成 + 编译期校验"
 // 用法: node compose.js <编排.json> [输出目录]   |   node compose.js --list 看模板
-// 模板: scripts/templates/ 下有 19 个现实团队流程模板（软件开发全流程/四阶段流程/故障复盘/技术选型决策/知识挖掘/代码审查/质量审计/交叉评审/共识达成/公众号文章/轻量开发流程/迭代复盘/技术债盘点/多人圆桌讨论/竞标评审/逐级审核/红队蓝队-单挑/红队蓝队-围攻/苏格拉底辅导）
+// 模板: scripts/templates/ 下有 19 个现实团队流程模板（full_software_lifecycle/four_phase/postmortem/tech_selection/knowledge_mining/code_review/quality_audit/cross_review/consensus_building/wechat_article/light_dev_flow/iteration_retrospective/tech_debt_inventory/roundtable_discussion/bid_review/tiered_review/red_blue_duel/red_blue_siege/socratic_coaching）
 //       ——复制模板 → 替换 {角色X} 占位符 → 喂 compose.js 生成（谁先谁后已按现实流程排好）
-// 输出: 公告牌_001.md ~ 公告牌_NNN.md + 状态矩阵 + 校验报告（流转冲突/格式违规 → 报错不生成）
+// 输出: board_001.md ~ board_NNN.md + 状态矩阵 + 校验报告（流转冲突/格式违规 → 报错不生成）
 // 零依赖（Node 原生），与 codex-ninja 风格一致
 //
 // 配置格式（JSON）：
@@ -15,8 +15,8 @@
 //       "角色": { "架构师-张三": "正方", "技术VP-李四": "反方", "AI研究员-王五": "裁判" },  // 模式角色字段（辩论等）
 //       "任务": "任务描述",
 //       "产出负责人": "AI研究员-王五",   // 单人/主笔/辩论/双人/试用必填；待命/收工不填
-//       "产出": "我的世界/产出/任务001_XX/文件名.md",
-//       "任务目录": "我的世界/任务001_XX/",
+//       "产出": "world/output/task001_XX/文件名.md",
+//       "任务目录": "world/task001_XX/",
 //       "警告": "可选，本轮临时约束",
 //       "本轮后": { "架构师-张三": "休眠" }   // 可选，默认活跃→待命
 //     }
@@ -24,7 +24,7 @@
 // }
 //
 // 自动做的事：
-//   1. 编号/文件名（公告牌_NNN.md 三位补零）
+//   1. 编号/文件名（board_NNN.md 三位补零）
 //   2. 状态矩阵推导 + 流转编译期校验（本轮后 ≠ 下轮状态 → 报错）
 //   3. 角色行按模式生成（辩论→正方/反方/裁判+搭档；双人→问方/答方；主笔→主笔/审核）
 //   4. 收工轮自动（全员退场 + 5 步任务栏）
@@ -109,11 +109,11 @@ cfg.轮次 && cfg.轮次.forEach(function(r, ri) {
     if (!r.产出) errors.push("第" + n + "轮 缺 产出");
     if (!r.任务目录) errors.push("第" + n + "轮 缺 任务目录");
   }
-  if (r.产出 && (r.产出.indexOf("我的世界/产出/") !== 0 || r.产出.indexOf("\\") !== -1 || r.产出.indexOf("..") !== -1)) errors.push("第" + n + "轮 产出 必须以 '我的世界/产出/' 开头且不含 \\ 或 ..（防路径逃逸）");
-  if (r.任务目录 && (r.任务目录.indexOf("我的世界/") !== 0 || r.任务目录.indexOf("\\") !== -1 || r.任务目录.indexOf("..") !== -1)) errors.push("第" + n + "轮 任务目录 必须以 '我的世界/' 开头且不含 \\ 或 ..（防路径逃逸）"); // 2026-08-12 修复：任务目录字段补前缀/逃逸校验（原无校验）
+  if (r.产出 && (r.产出.indexOf("world/output/") !== 0 || r.产出.indexOf("\\") !== -1 || r.产出.indexOf("..") !== -1)) errors.push("第" + n + "轮 产出 必须以 'world/output/' 开头且不含 \\ 或 ..（防路径逃逸）");
+  if (r.任务目录 && (r.任务目录.indexOf("world/") !== 0 || r.任务目录.indexOf("\\") !== -1 || r.任务目录.indexOf("..") !== -1)) errors.push("第" + n + "轮 任务目录 必须以 'world/' 开头且不含 \\ 或 ..（防路径逃逸）"); // 2026-08-12 修复：任务目录字段补前缀/逃逸校验（原无校验）
   if (r.产出 && r.产出.indexOf("{}") !== -1) errors.push("第" + n + "轮 产出 含占位符 {}");
   if (r.产出 && !/\.md$/.test(r.产出) && !/\/$/.test(r.产出)) errors.push("第" + n + "轮 产出 应为 .md 文件名或以 / 结尾目录（格式 A/B）");
-  if ((r.模式 === "收工" || r.模式 === "待命") && (r.产出负责人 || r.产出 || r.任务目录)) errors.push("第" + n + "轮（" + r.模式 + "）不该有 产出负责人/产出/任务目录");
+  if ((r.模式 === "收工" || r.模式 === "待命") && (r.产出负责人 || r.产出 || r.任务目录)) errors.push("第" + n + "轮（" + r.模式 + "）不该有 产出负责人/output/task目录");
   // 收工轮必须最后
   if (r.模式 === "收工" && ri !== cfg.轮次.length - 1) errors.push("收工轮必须是最后一轮（第" + n + "轮）");
   // 待命轮应在收工前
@@ -185,7 +185,7 @@ if (errors.length > 0) {
 
 // ── 生成公告牌 ──
 var FIRST_LINE = "🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场";
-var RETIRE_TASK = "全员退场。①收工前确认你的职责已尽：盘点本项目/前几轮公告牌分配给你的任务是否已交付——未尽则先补交/求助/说明，不得直接退场 ②创建退场文件（对讲目录，无 .md 后缀，monitor 靠它确认你已安全退出）③写流水账（独立文件 {角色名}_流水账.md，回顾全程每轮一行）④【终局轮】写 {角色名}_角色记忆.md 到对讲目录（传承给下一任的自己）⑤输出「项目完成」结束回合。";
+var RETIRE_TASK = "全员退场。①收工前确认你的职责已尽：盘点本项目/前几轮公告牌分配给你的任务是否已交付——未尽则先补交/求助/说明，不得直接退场 ②创建退场文件（对讲目录，无 .md 后缀，monitor 靠它确认你已安全退出）③写流水账（独立文件 {角色名}_ledger.md，回顾全程每轮一行）④【终局轮】写 {角色名}_memory.md 到对讲目录（传承给下一任的自己）⑤输出「项目完成」结束回合。";
 
 function roleLine(role, round, r) {
   var info = round.roles[role];
@@ -228,7 +228,7 @@ cfg.轮次.forEach(function(r, ri) {
     lines.push("- 任务目录: " + r.任务目录);
   }
   var content = lines.join("\n") + "\n";
-  var fname = "公告牌_" + String(n).padStart(3, "0") + ".md";
+  var fname = "board_" + String(n).padStart(3, "0") + ".md";
   fs.writeFileSync(path.join(outDir, fname), content, "utf8");
   files.push(fname);
 });

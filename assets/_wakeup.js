@@ -20,8 +20,8 @@ if (/[\\/]|\.\.|^\.+$/.test(roleName)) {
   process.exit(1);
 }
 
-// 对讲目录在 我的世界/{角色名}_大鱼对讲/
-var talkDir = path.resolve(__dirname, '..', '我的世界', roleName + '_大鱼对讲');
+// 对讲目录在 world/{角色名}_talk/
+var talkDir = path.resolve(__dirname, '..', 'world', roleName + '_talk');
 
 if (!fs.existsSync(talkDir)) {
   console.log('ERROR: 对讲目录不存在: ' + talkDir);

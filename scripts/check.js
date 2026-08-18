@@ -1,13 +1,13 @@
 // check.js —— 收工核对工具 v1.0（2026-08-16，compose.js v1.1 方案落地版）
-// 用途: 收工后全链路校验——自动化老渣待办 #2（核对产出/签字/退场），一个工具覆盖
+// 用途: 收工后全链路校验——自动化老渣待办 #2（核对output/签字/退场），一个工具覆盖
 //       生成 → 发布 → 交付 → 收口 全生命周期（只读，不发牌、不写任何文件）
 // 用法: node check.js <项目根目录>
-//       例: node check.js "一号舱室-软件开发部"（项目根 = 含 我的世界/ 与 火影-大鱼/ 的目录）
+//       例: node check.js "一号舱室-软件开发部"（项目根 = 含 world/ 与 fish/ 的目录）
 // 校验点（5 项）:
-//   1. 发布一致性   火影-大鱼/ 公告牌是否全部发布到 我的世界/（清单 + 内容逐字节对比）
+//   1. 发布一致性   fish/ 公告牌是否全部发布到 world/（清单 + 内容逐字节对比）
 //   2. 逐轮产出    每轮活跃角色的 .ready 是否就位（对应 monitor 的 WAIT 判据，格式A/B + producer 归属）
-//   3. 逐轮签字    每轮活跃角色 完成_NNN.md 是否齐全（size>20 才算，monitor 同判据）
-//   4. 退场核对    收工轮全员 {角色名}已退场_NNN 是否就位（含 .acked 兼容；休眠文件按 monitor 判据算合法终局）
+//   3. 逐轮签字    每轮活跃角色 done_NNN.md 是否齐全（size>20 才算，monitor 同判据）
+//   4. 退场核对    收工轮全员 {角色名}retired_NNN 是否就位（含 .acked 兼容；休眠文件按 monitor 判据算合法终局）
 //   5. 收口证据链  monitor DONE 推断（收工轮全员退场齐）+ 收工两件套（产出总结.md / 项目完成.md）是否落盘
 // ⚠️ 同源声明（改判据必须双改）:
 //   ②③④ 判据与 assets/monitor.js 同源——公告牌解析 monitor.js:369-382、产出校验 :516-611、
@@ -15,20 +15,20 @@
 //   反之亦然（doc-consistency 有校验器盯两者一致性）。
 // ⚠️ 范围边界:
 //   - 心跳实查不在此工具内（心跳是瞬时信号，收工后无意义；终局证据 = 退场文件）
-//   - 顺序合规（双人抢答/辩论跳步/审核打回）查 scripts/时序校验.sh（mtime 判定）
+//   - 顺序合规（双人抢答/辩论跳步/审核打回）查 scripts/sequence_check.sh（mtime 判定）
 //   - 公告牌格式硬标准（产出前缀/角色枚举等）查 scripts/compose.js 编译期校验
-// 退出码: 0=全部合规 1=发现异常 2=参数错误（与 时序校验.sh / doc-consistency.js 对齐）
+// 退出码: 0=全部合规 1=发现异常 2=参数错误（与 sequence_check.sh / doc-consistency.js 对齐）
 // 零依赖（Node 原生），ES5 风格，与 codex-ninja 一致
 
 var fs = require("fs");
 var path = require("path");
 
 // ── 判据常量（与 monitor.js 同源）──
-var BOARD_RE = /公告牌_(\d{3})\.md$/;
+var BOARD_RE = /board_(\d{3})\.md$/;
 var ACTIVE_RE = /- (.+?)[（(].*状态[:：]\s*活跃/g;
 var ALL_ROLE_RE = /- (.+?)[（(].*状态[:：]\s*(?:退场|休眠)/g;
 var STANDBY_RE = /- (.+?)[（(].*状态[:：]\s*待命/g; // 2026-08-17 P2-16：试用轮全员校验用（试用轮角色行=待命等通知，ALL_ROLE_RE 只收退场/休眠收集不到）
-var OUTPUT_RE = /(?:^|\n)- 产出[:：]\s*我的世界\/([^\r\n]+)/g;
+var OUTPUT_RE = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g;
 var OWNER_RE = /\n- 产出负责人[:：]\s*(.+)/;
 var MODE_RE = /模式[：:]\s*(.+)/;
 var BLACKLIST = ["模式", "任务", "产出", "产出负责人", "任务目录", "辩论轮数"]; // monitor.js:378 同款字段黑名单
@@ -86,9 +86,9 @@ function parseBoard(content) {
   return { mode: mode, activeRoles: activeRoles, allRoles: allRoles, standbyRoles: standbyRoles, outputs: outputs, ownerEach: ownerEach, hasOutput: outputs.length > 0 };
 }
 
-// 读项目根的公告牌序列（我的世界/ 为权威——角色 poll 的是它；源目录对比见 checkPublish）
+// 读项目根的公告牌序列（world/ 为权威——角色 poll 的是它；源目录对比见 checkPublish）
 function loadBoards(root) {
-  var worldDir = path.join(root, "我的世界");
+  var worldDir = path.join(root, "world");
   var boards = [];
   try {
     var entries = fs.readdirSync(worldDir).filter(function(f) { return BOARD_RE.test(f); });
@@ -98,7 +98,7 @@ function loadBoards(root) {
       boards.push({ n: n, file: f, content: fs.readFileSync(path.join(worldDir, f), "utf8") });
     });
   } catch (e) {
-    return { error: "读取 我的世界/ 失败: " + e.message };
+    return { error: "读取 world/ 失败: " + e.message };
   }
   return { boards: boards };
 }
@@ -106,31 +106,31 @@ function loadBoards(root) {
 // ── 校验 1: 发布一致性 ──
 function checkPublish(root) {
   var issues = [];
-  var srcDir = path.join(root, "火影-大鱼");
-  var dstDir = path.join(root, "我的世界");
+  var srcDir = path.join(root, "fish");
+  var dstDir = path.join(root, "world");
   var srcFiles = [], dstFiles = [];
-  try { srcFiles = fs.readdirSync(srcDir).filter(function(f) { return BOARD_RE.test(f); }).sort(); } catch (e) { return { ok: false, issues: ["火影-大鱼/ 不存在或不可读: " + e.message] }; }
-  try { dstFiles = fs.readdirSync(dstDir).filter(function(f) { return BOARD_RE.test(f); }).sort(); } catch (e) { return { ok: false, issues: ["我的世界/ 不存在或不可读: " + e.message] }; }
+  try { srcFiles = fs.readdirSync(srcDir).filter(function(f) { return BOARD_RE.test(f); }).sort(); } catch (e) { return { ok: false, issues: ["fish/ 不存在或不可读: " + e.message] }; }
+  try { dstFiles = fs.readdirSync(dstDir).filter(function(f) { return BOARD_RE.test(f); }).sort(); } catch (e) { return { ok: false, issues: ["world/ 不存在或不可读: " + e.message] }; }
   // 清单一致性
   if (srcFiles.length !== dstFiles.length) {
-    issues.push("公告牌数量不一致: 源目录 " + srcFiles.length + " 张 vs 我的世界 " + dstFiles.length + " 张（可能未全量发布或追加中）");
+    issues.push("公告牌数量不一致: 源目录 " + srcFiles.length + " 张 vs world " + dstFiles.length + " 张（可能未全量发布或追加中）");
   }
   // 内容一致性（大鱼"不改一字"全量发布 → 逐字节对比，容忍 BOM 差异）
   srcFiles.forEach(function(f) {
-    if (dstFiles.indexOf(f) === -1) { issues.push("未发布: " + f + "（源目录有，我的世界缺）"); return; }
+    if (dstFiles.indexOf(f) === -1) { issues.push("未发布: " + f + "（源目录有，world缺）"); return; }
     var s = stripBom(fs.readFileSync(path.join(srcDir, f), "utf8"));
     var d = stripBom(fs.readFileSync(path.join(dstDir, f), "utf8"));
-    if (s !== d) issues.push("内容不一致: " + f + "（源目录与我的世界版本不同——违反'不改一字'铁律）");
+    if (s !== d) issues.push("内容不一致: " + f + "（源目录与world版本不同——违反'不改一字'铁律）");
   });
   dstFiles.forEach(function(f) {
-    if (srcFiles.indexOf(f) === -1) issues.push("孤儿公告牌: " + f + "（我的世界有，源目录已无——可能是历史残留）");
+    if (srcFiles.indexOf(f) === -1) issues.push("孤儿公告牌: " + f + "（world有，源目录已无——可能是历史残留）");
   });
   return { ok: issues.length === 0, issues: issues, count: srcFiles.length };
 }
 
 // ── 校验 2: 逐轮产出核对（monitor.js:516-611 同源）──
 function checkOutputs(root, boards) {
-  var worldDir = path.join(root, "我的世界");
+  var worldDir = path.join(root, "world");
   var issues = [];
   var detail = [];
   boards.forEach(function(b) {
@@ -201,7 +201,7 @@ function checkOutputs(root, boards) {
 
 // ── 校验 3: 逐轮签字核对（monitor.js:504-506 同源）──
 function checkSigns(root, boards) {
-  var worldDir = path.join(root, "我的世界");
+  var worldDir = path.join(root, "world");
   var issues = [];
   var detail = [];
   boards.forEach(function(b) {
@@ -209,10 +209,10 @@ function checkSigns(root, boards) {
     if (pb.mode === "收工" || pb.mode === "待命") return; // 无签字轮
     if (pb.activeRoles.length === 0) return;
     pb.activeRoles.forEach(function(role) {
-      var signFile = path.join(worldDir, role + "_大鱼对讲", "完成_" + pad3(b.n) + ".md");
+      var signFile = path.join(worldDir, role + "_talk", "done_" + pad3(b.n) + ".md");
       var ok = fs.existsSync(signFile) && fs.statSync(signFile).size > 20; // P2-7 同款: 空文件不算签字
-      if (ok) detail.push("第" + pad3(b.n) + "轮 ✅ " + role + " 完成_" + pad3(b.n) + ".md 在");
-      else issues.push("第" + pad3(b.n) + "轮 ❌ " + role + " 缺签字（完成_" + pad3(b.n) + ".md 不存在或为空）");
+      if (ok) detail.push("第" + pad3(b.n) + "轮 ✅ " + role + " done_" + pad3(b.n) + ".md 在");
+      else issues.push("第" + pad3(b.n) + "轮 ❌ " + role + " 缺签字（done_" + pad3(b.n) + ".md 不存在或为空）");
     });
   });
   return { ok: issues.length === 0, issues: issues, detail: detail };
@@ -220,7 +220,7 @@ function checkSigns(root, boards) {
 
 // ── 校验 4: 退场核对（monitor.js:422-425, 479 同源）──
 function checkRetire(root, boards) {
-  var worldDir = path.join(root, "我的世界");
+  var worldDir = path.join(root, "world");
   var issues = [];
   var detail = [];
   boards.forEach(function(b) {
@@ -229,12 +229,12 @@ function checkRetire(root, boards) {
     if (pb.allRoles.length === 0) { issues.push("第" + pad3(b.n) + "轮（收工）无角色行——收工轮必须列出全部参与人员"); return; }
     var okCount = 0;
     pb.allRoles.forEach(function(role) {
-      var retireFile = path.join(worldDir, role + "_大鱼对讲", role + "已退场_" + pad3(b.n));
-      var sleepFile = path.join(worldDir, role + "_大鱼对讲", role + "已休眠_" + pad3(b.n));
+      var retireFile = path.join(worldDir, role + "_talk", role + "retired_" + pad3(b.n));
+      var sleepFile = path.join(worldDir, role + "_talk", role + "slept_" + pad3(b.n));
       // monitor.js:424 兼容 .acked 归档形态
       if (fs.existsSync(retireFile) || fs.existsSync(retireFile + ".acked") ||
           fs.existsSync(sleepFile) || fs.existsSync(sleepFile + ".acked")) okCount++;
-      else issues.push("第" + pad3(b.n) + "轮 ❌ " + role + " 未退场（缺 " + role + "已退场_" + pad3(b.n) + "）");
+      else issues.push("第" + pad3(b.n) + "轮 ❌ " + role + " 未退场（缺 " + role + "retired_" + pad3(b.n) + "）");
     });
     detail.push("第" + pad3(b.n) + "轮 ✅ 收工轮退场 " + okCount + "/" + pb.allRoles.length + "（" + (okCount === pb.allRoles.length ? "全员退场" : "有缺") + "）");
   });
@@ -245,7 +245,7 @@ function checkRetire(root, boards) {
 function checkClose(root, boards) {
   var issues = [];
   var detail = [];
-  var talkDir = path.join(root, "我的世界", "大鱼_老渣对讲");
+  var talkDir = path.join(root, "world", "fish_laozha_talk");
   // monitor DONE 推断: 收工轮存在且全员退场文件齐（对应 monitor.js:934 DONE 判据的终局侧）
   var retireOk = true, hasRetireRound = false;
   boards.forEach(function(b) {
@@ -253,7 +253,7 @@ function checkClose(root, boards) {
     if (pb.mode !== "收工") return;
     hasRetireRound = true;
     pb.allRoles.forEach(function(role) {
-      var rf = path.join(root, "我的世界", role + "_大鱼对讲", role + "已退场_" + pad3(b.n));
+      var rf = path.join(root, "world", role + "_talk", role + "retired_" + pad3(b.n));
       if (!(fs.existsSync(rf) || fs.existsSync(rf + ".acked"))) retireOk = false;
     });
   });
@@ -274,13 +274,13 @@ function checkClose(root, boards) {
 function main() {
   var args = process.argv.slice(2);
   if (args.length < 1) {
-    console.error("用法: node check.js <项目根目录>（项目根 = 含 我的世界/ 与 火影-大鱼/ 的目录）");
+    console.error("用法: node check.js <项目根目录>（项目根 = 含 world/ 与 fish/ 的目录）");
     console.error("例:   node check.js \"一号舱室-软件开发部\"");
     process.exit(2);
   }
   var root = path.resolve(args[0]);
-  if (!fs.existsSync(path.join(root, "我的世界"))) {
-    console.error("ERROR: '" + root + "' 下没有 我的世界/ 目录——参数应是项目根（我的世界/ 的上级），如 一号舱室-软件开发部");
+  if (!fs.existsSync(path.join(root, "world"))) {
+    console.error("ERROR: '" + root + "' 下没有 world/ 目录——参数应是项目根（world/ 的上级），如 一号舱室-软件开发部");
     process.exit(2);
   }
 
@@ -298,7 +298,7 @@ function main() {
 
   // 1 发布一致性
   var p = checkPublish(root);
-  sections.push({ title: "[1/5] 发布一致性（火影-大鱼 → 我的世界）", ok: p.ok, issues: p.issues, info: "源目录 " + p.count + " 张" + (p.ok ? "，全部发布且内容一致" : "") });
+  sections.push({ title: "[1/5] 发布一致性（fish → world）", ok: p.ok, issues: p.issues, info: "源目录 " + p.count + " 张" + (p.ok ? "，全部发布且内容一致" : "") });
   allIssues = allIssues.concat(p.issues);
 
   // 2 产出
@@ -308,7 +308,7 @@ function main() {
 
   // 3 签字
   var s = checkSigns(root, boards);
-  sections.push({ title: "[3/5] 逐轮签字核对（完成_NNN.md）", ok: s.ok, issues: s.issues, detail: s.detail });
+  sections.push({ title: "[3/5] 逐轮签字核对（done_NNN.md）", ok: s.ok, issues: s.issues, detail: s.detail });
   allIssues = allIssues.concat(s.issues);
 
   // 4 退场
@@ -334,7 +334,7 @@ function main() {
     process.exit(0);
   } else {
     console.log("结论: ❌ 发现 " + allIssues.length + " 处异常——按上面对照产出总结.md 的逐轮矩阵核对");
-    console.log("> 提示: 若批次**尚未收工**（monitor 未 DONE / 两件套未落盘），产出/签字/退场缺失属预期推进状态，非故障——收工后再跑才是全绿场景");
+    console.log("> 提示: 若批次**尚未收工**（monitor 未 DONE / 两件套未落盘），output/签字/退场缺失属预期推进状态，非故障——收工后再跑才是全绿场景");
     process.exit(1);
   }
 }

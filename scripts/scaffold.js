@@ -14,11 +14,11 @@ if (!projectDir) {
     process.exit(1);
 }
 
-// 防呆：projectDir 不能以 "我的世界" 结尾——角色会被生成到我的世界里面而不是同级
-// 正确：projectDir 是 我的世界/ 的上级目录（如 一号舱室-软件开发部）
-if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/我的世界")) {
-    console.error("ERROR: projectDir 不能是我的世界目录！角色会生成到我的世界里面。");
-    console.error("请用我的世界的上级目录（如 一号舱室-软件开发部）作为 projectDir。");
+// 防呆：projectDir 不能以 "world" 结尾——角色会被生成到world里面而不是同级
+// 正确：projectDir 是 world/ 的上级目录（如 一号舱室-软件开发部）
+if (projectDir.replace(/\\/g, "/").replace(/\/$/, "").endsWith("/world")) {
+    console.error("ERROR: projectDir 不能是world目录！角色会生成到world里面。");
+    console.error("请用world的上级目录（如 一号舱室-软件开发部）作为 projectDir。");
     process.exit(1);
 }
 
@@ -69,7 +69,7 @@ roles.forEach(function(r) {
         process.exit(1);
     }
     r.name = r.name.trim();
-    // M-4 修复：角色名禁止路径分隔符/相对路径/纯点号——防 mkdir/写文件逃出项目目录（如 name: "../火影-大鱼"）或写入项目根（name: "."）
+    // M-4 修复：角色名禁止路径分隔符/相对路径/纯点号——防 mkdir/写文件逃出项目目录（如 name: "../fish"）或写入项目根（name: "."）
     if (/[\\/]|\.\.|^\.+$/.test(r.name)) {
         console.error("ERROR: roles.json 角色名不能包含路径分隔符（/ \\）、'..' 或纯点号（当前: " + r.name + "）");
         process.exit(1);
@@ -79,37 +79,37 @@ roles.forEach(function(r) {
 } // !isFishMode
 
 // 读模板
-var roleTpl = fs.readFileSync(assetDir + "/模板/Reasonix版_角色_AGENTS模板.md", "utf8").replace(/^\uFEFF/, "");
+var roleTpl = fs.readFileSync(assetDir + "/role-templates/role_AGENTS_template.md", "utf8").replace(/^\uFEFF/, "");
 // 大鱼模板按形态选：window（窗口常驻，默认）| run（run拉起）
-var fishTplFile = (isFishMode && fishShape === "run") ? "大鱼_AGENTS模板_run拉起.md" : "大鱼_AGENTS模板_窗口常驻.md";
-var fishTpl = fs.readFileSync(assetDir + "/模板/" + fishTplFile, "utf8").replace(/^\uFEFF/, "");
+var fishTplFile = (isFishMode && fishShape === "run") ? "bigfish_AGENTS_template_run.md" : "bigfish_AGENTS_template_window.md";
+var fishTpl = fs.readFileSync(assetDir + "/role-templates/" + fishTplFile, "utf8").replace(/^\uFEFF/, "");
 
 // 鱼模式：只重建大鱼AGENTS.md（纯模板，不注入灵魂——大鱼不需要人格）和monitor.js
 if (isFishMode) {
     console.log("MODE: fish —— 重建大鱼+monitor（纯模板，无灵魂）");
 
     // 大鱼 AGENTS.md —— 纯模板，替换路径变量
-    var fishDir = projectDir + "/火影-大鱼";
+    var fishDir = projectDir + "/fish";
     fs.mkdirSync(fishDir, { recursive: true });
     // H10 修复：大鱼目录也生成 reasonix.toml（bash_timeout=0 + sandbox=项目根）——与角色一致，
     // 避免大鱼会话回退到上级/全局配置（无 bash_timeout、workspace_root 指向错误目录 → write_file 被沙箱拦截 → bash 绕行）
     var fishRxCfgPath = fishDir + "/reasonix.toml";
     if (!fs.existsSync(fishRxCfgPath)) {
-        var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
-        var fishDirAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/火影-大鱼";   // 8-5 修复：大鱼自己的目录也追加可写（心跳 _heartbeat.txt/日志——缺这个大鱼 write_file 写不了自己目录被迫 bash 绕行）
+        var fishRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/world";   // 收紧沙箱：write_file 只写 world（read_file 读公告牌/角色目录不受限）
+        var fishDirAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/fish";   // 8-5 修复：大鱼自己的目录也追加可写（心跳 _heartbeat.txt/日志——缺这个大鱼 write_file 写不了自己目录被迫 bash 绕行）
         fs.writeFileSync(fishRxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询（monitor 周期验证 + 调度循环）\n" +
             "\n" +
             "[sandbox]\n" +
-            "workspace_root = \"" + fishRootAbs + "\"   # write_file 沙箱根=项目根，大鱼可直接写 我的世界/，免 bash 绕行\n" +
+            "workspace_root = \"" + fishRootAbs + "\"   # write_file 沙箱根=项目根，大鱼可直接写 world/，免 bash 绕行\n" +
             "allow_write = [\"" + fishDirAbs + "\"]   # 追加可写：大鱼自己的目录（心跳/日志，8-5 修复）\n",
             "utf8");
-        console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
+        console.log("OK: fish/reasonix.toml (bash_timeout=0 + sandbox)");
     }
     var fishContent = fishTpl;
     fs.writeFileSync(fishDir + "/AGENTS.md", fishContent, "utf8");
-    console.log("OK: 火影-大鱼/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
+    console.log("OK: fish/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
 
     // 形态标志文件：monitor 靠它区分窗口常驻/run拉起的心跳处理（run拉起=角色干完即退，心跳停是正常态）
     var modeFlag = fishDir + "/_运行形态.mode";
@@ -117,8 +117,8 @@ if (isFishMode) {
     console.log("OK: 运行形态标志 " + fishShape);
 
     // 大鱼→老渣对讲目录，收工时写审计报告用
-    fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
-    console.log("OK: 我的世界/大鱼_老渣对讲/");
+    fs.mkdirSync(projectDir + "/world/fish_laozha_talk", { recursive: true });
+    console.log("OK: world/fish_laozha_talk/");
 
     // monitor.js
     var monitorPath = projectDir + "/monitor.js";
@@ -133,10 +133,10 @@ if (isFishMode) {
     // 8-1 大鱼自评阻断③修正：大鱼也要能交付专属任务产物给老渣——fish 也发 _deliver.js/_sign.js（老渣对讲任务交付用，不走公告牌 monitor）
     var fishDeliverPath = fishDir + "/_deliver.js";
     fs.copyFileSync(assetDir + "/_deliver.js", fishDeliverPath);
-    console.log("OK: 火影-大鱼/_deliver.js (" + fs.statSync(fishDeliverPath).size + " bytes)");
-    var fishSignContent = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "火影-大鱼"; });
+    console.log("OK: fish/_deliver.js (" + fs.statSync(fishDeliverPath).size + " bytes)");
+    var fishSignContent = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "fish"; });
     fs.writeFileSync(fishDir + "/_sign.js", fishSignContent, "utf8");
-    console.log("OK: 火影-大鱼/_sign.js (" + fs.statSync(fishDir + "/_sign.js").size + " bytes)");
+    console.log("OK: fish/_sign.js (" + fs.statSync(fishDir + "/_sign.js").size + " bytes)");
 
     // 7-1 修复：_fish_loop.js —— 大鱼周期验证循环（公告牌检测 30s + monitor 60s），
     // 第七轮实测发现缺失（大鱼只能自补临时版）——必须随 scaffold 部署
@@ -146,25 +146,25 @@ if (isFishMode) {
     // 13-y 纠正（12-10 方向错误）：_reasonix_poll.js 不再复制给大鱼——大鱼工具复盘 A 段明确"角色侧工具，大鱼不 poll 公告牌"；
     //   大鱼保持在场 = bash while + 持续工具调用（回合保持铁律已改），无需 _reasonix_poll.js（该文件仅角色目录需要，:252 保留）
 
-    // _外部环境BUG清单.md —— 大鱼模板引用 ./_外部环境BUG清单.md，必须复制到位
-    var bugListPath = fishDir + "/_外部环境BUG清单.md";
-    fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListPath);
-    console.log("OK: _外部环境BUG清单.md (" + fs.statSync(bugListPath).size + " bytes)");
+    // _env_bug_list.md —— 大鱼模板引用 ./_env_bug_list.md，必须复制到位
+    var bugListPath = fishDir + "/_env_bug_list.md";
+    fs.copyFileSync(assetDir + "/_env_bug_list.md", bugListPath);
+    console.log("OK: _env_bug_list.md (" + fs.statSync(bugListPath).size + " bytes)");
 
-    // 8-4 修复：大鱼公告牌手册.md —— 大鱼模板「公告牌校验+发布」节引用它（发布前必读），必须复制到位
-    var fishManualPath = fishDir + "/大鱼公告牌手册.md";
-    fs.copyFileSync(assetDir + "/模板/大鱼公告牌手册.md", fishManualPath);
-    console.log("OK: 火影-大鱼/大鱼公告牌手册.md (" + fs.statSync(fishManualPath).size + " bytes)");
+    // 8-4 修复：bigfish_board_manual.md —— 大鱼模板「公告牌校验+发布」节引用它（发布前必读），必须复制到位
+    var fishManualPath = fishDir + "/bigfish_board_manual.md";
+    fs.copyFileSync(assetDir + "/role-templates/bigfish_board_manual.md", fishManualPath);
+    console.log("OK: fish/bigfish_board_manual.md (" + fs.statSync(fishManualPath).size + " bytes)");
 
-    // 8-5 修复：_大鱼实测教训.md —— 大鱼模板「实测教训」节引用它（运行时沉淀），必须复制到位
-    var fishLessonPath = fishDir + "/_大鱼实测教训.md";
-    fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonPath);
-    console.log("OK: 火影-大鱼/_大鱼实测教训.md (" + fs.statSync(fishLessonPath).size + " bytes)");
+    // 8-5 修复：_bigfish_lessons.md —— 大鱼模板「实测教训」节引用它（运行时沉淀），必须复制到位
+    var fishLessonPath = fishDir + "/_bigfish_lessons.md";
+    fs.copyFileSync(assetDir + "/role-templates/_bigfish_lessons.md", fishLessonPath);
+    console.log("OK: fish/_bigfish_lessons.md (" + fs.statSync(fishLessonPath).size + " bytes)");
 
-    // 大鱼工具手册.md —— 大鱼模板「周期验证」节引用它（monitor 24 种输出全解，免翻源码），必须复制到位
-    var fishToolManualPath = fishDir + "/大鱼工具手册.md";
-    fs.copyFileSync(assetDir + "/模板/大鱼工具手册.md", fishToolManualPath);
-    console.log("OK: 火影-大鱼/大鱼工具手册.md (" + fs.statSync(fishToolManualPath).size + " bytes)");
+    // bigfish_tool_manual.md —— 大鱼模板「周期验证」节引用它（monitor 24 种输出全解，免翻源码），必须复制到位
+    var fishToolManualPath = fishDir + "/bigfish_tool_manual.md";
+    fs.copyFileSync(assetDir + "/role-templates/bigfish_tool_manual.md", fishToolManualPath);
+    console.log("OK: fish/bigfish_tool_manual.md (" + fs.statSync(fishToolManualPath).size + " bytes)");
 
     console.log("DONE: " + projectDir);
     process.exit(0);
@@ -172,23 +172,23 @@ if (isFishMode) {
 
 // 创建基础目录（add 模式跳过——这些目录已存在）
 if (!isAddMode) {
-    fs.mkdirSync(projectDir + "/我的世界", { recursive: true });
+    fs.mkdirSync(projectDir + "/world", { recursive: true });
     // 部署团队须知到项目根目录（projectDir，角色窗口的父级），所有角色窗口共享
-    var teamNotice = path.resolve(assetDir, "..", "团队须知/团队须知.md");
-    // M6 修复：项目根 团队须知.md 已存在则不覆盖（与 monitor.js 的"已存在不覆盖"策略一致）——
+    var teamNotice = path.resolve(assetDir, "..", "team-notes/team_notes.md");
+    // M6 修复：项目根 team_notes.md 已存在则不覆盖（与 monitor.js 的"已存在不覆盖"策略一致）——
     // 避免 init 静默覆盖用户自写/旧版文件
-    if (!fs.existsSync(projectDir + "/团队须知.md")) {
-        fs.copyFileSync(teamNotice, projectDir + "/团队须知.md");
-        console.log("OK: 团队须知/团队须知.md → " + projectDir);
+    if (!fs.existsSync(projectDir + "/team_notes.md")) {
+        fs.copyFileSync(teamNotice, projectDir + "/team_notes.md");
+        console.log("OK: team-notes/team_notes.md → " + projectDir);
     } else {
-        console.log("SKIP: 团队须知/团队须知.md → " + projectDir + "（已存在，不覆盖）");
+        console.log("SKIP: team-notes/team_notes.md → " + projectDir + "（已存在，不覆盖）");
     }
 
-    fs.mkdirSync(projectDir + "/我的世界/产出", { recursive: true });
-    fs.mkdirSync(projectDir + "/我的世界/大鱼_老渣对讲", { recursive: true });
-    // B-8 修复：工具源码只读快照——复制 monitor/scaffold/工具脚本到 我的世界/skill文档/工具源码/，
+    fs.mkdirSync(projectDir + "/world/output", { recursive: true });
+    fs.mkdirSync(projectDir + "/world/fish_laozha_talk", { recursive: true });
+    // B-8 修复：工具源码只读快照——复制 monitor/scaffold/工具脚本到 world/skill文档/工具源码/，
     // 角色可读（ship path 有地形可查），不可写（信息边界意图保留）；版本戳防快照漂移（对话 T13 提案）
-    var srcSnap = projectDir + "/我的世界/skill文档/工具源码";
+    var srcSnap = projectDir + "/world/skill文档/工具源码";
     fs.mkdirSync(srcSnap, { recursive: true });
     var snapFiles = [
         [projectDir + "/monitor.js", "monitor.js"],
@@ -207,26 +207,26 @@ if (!isAddMode) {
             if (fs.existsSync(pair[0])) fs.copyFileSync(pair[0], srcSnap + "/" + pair[1]);
         } catch(_sn) {}
     });
-    // 外部审核修复（2026-08-12）：_Multi-pass_solo.md（单人输出终审格式参考）分发到 我的世界/skill文档/——
-    //   角色玩法文件 _单人输出模式.md 引用它（../我的世界/skill文档/_Multi-pass_solo.md），不分发 = 悬空引用；已存在不覆盖（与 scaffold 风格一致）
+    // 外部审核修复（2026-08-12）：_Multi-pass_solo.md（单人输出终审格式参考）分发到 world/skill文档/——
+    //   角色玩法文件 _solo_output_mode.md 引用它（../world/skill文档/_Multi-pass_solo.md），不分发 = 悬空引用；已存在不覆盖（与 scaffold 风格一致）
     try {
-        var _mpsDestInit = projectDir + "/我的世界/skill文档/_Multi-pass_solo.md";
-        if (!fs.existsSync(_mpsDestInit)) fs.copyFileSync(assetDir + "/老渣文档/_Multi-pass_solo.md", _mpsDestInit);
+        var _mpsDestInit = projectDir + "/world/skill文档/_Multi-pass_solo.md";
+        if (!fs.existsSync(_mpsDestInit)) fs.copyFileSync(assetDir + "/operator-docs/_Multi-pass_solo.md", _mpsDestInit);
     } catch(_mps) {}
     fs.writeFileSync(srcSnap + "/版本戳.txt", "快照时间: " + new Date().toISOString() + "\n来源: codex-ninja scaffold init（B-8 只读快照，角色可读不可写；更新=重跑 scaffold）\n", "utf8");
-    console.log("OK: 我的世界/skill文档/工具源码/ (B-8 只读快照 + 版本戳)");
+    console.log("OK: world/skill文档/工具源码/ (B-8 只读快照 + 版本戳)");
 } else {
     // add 模式：不重建基础目录，但补全 _Multi-pass_solo.md 分发——新增角色引用它，老项目（旧版 scaffold 建的）可能没有，
-    //   不补 = 新角色 _单人输出模式.md 的引用悬空（外部审核修复 2026-08-12）
+    //   不补 = 新角色 _solo_output_mode.md 的引用悬空（外部审核修复 2026-08-12）
     try {
-        var _mpsDestAdd = projectDir + "/我的世界/skill文档/_Multi-pass_solo.md";
+        var _mpsDestAdd = projectDir + "/world/skill文档/_Multi-pass_solo.md";
         if (!fs.existsSync(_mpsDestAdd)) {
-            fs.mkdirSync(projectDir + "/我的世界/skill文档", { recursive: true });
-            fs.copyFileSync(assetDir + "/老渣文档/_Multi-pass_solo.md", _mpsDestAdd);
-            console.log("OK: 我的世界/skill文档/_Multi-pass_solo.md (add 补全分发)");
+            fs.mkdirSync(projectDir + "/world/skill文档", { recursive: true });
+            fs.copyFileSync(assetDir + "/operator-docs/_Multi-pass_solo.md", _mpsDestAdd);
+            console.log("OK: world/skill文档/_Multi-pass_solo.md (add 补全分发)");
         }
     } catch(_mpsA) {}
-    console.log("SKIP: 我的世界/ (add 模式不重建)");
+    console.log("SKIP: world/ (add 模式不重建)");
 }
 
 // 处理每个角色
@@ -257,72 +257,72 @@ roles.forEach(function(r) {
 
     fs.writeFileSync(rd + "/AGENTS.md", content, "utf8");
 
-    // 角色目录 reasonix.toml：turn 内循环前置配置（bash_timeout=0）+ 沙箱根（write_file 可直接写 我的世界/）
+    // 角色目录 reasonix.toml：turn 内循环前置配置（bash_timeout=0）+ 沙箱根（write_file 可直接写 world/）
     var rxCfgPath = rd + "/reasonix.toml";
     if (!fs.existsSync(rxCfgPath)) {
-        var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
-        var tmpDirAbs = path.resolve(rd, "临时脚本").replace(/\\/g, "/");   // 角色自己的临时区（沙箱外专属可写，临时脚本不污染 我的世界）
+        var projectRootAbs = path.resolve(projectDir).replace(/\\/g, "/") + "/world";   // 收紧沙箱：write_file 只写 world（read_file 读公告牌/角色目录不受限）
+        var tmpDirAbs = path.resolve(rd, "temp-scripts").replace(/\\/g, "/");   // 角色自己的临时区（沙箱外专属可写，temp-scripts不污染 world）
         fs.writeFileSync(rxCfgPath,
             "[tools]\n" +
             "bash_timeout_seconds = 0   # turn 内循环：关闭 bash 前台上限，回合内可持续轮询直到收工\n" +
             "\n" +
             "[sandbox]\n" +
-            "workspace_root = \"" + projectRootAbs + "\"   # write_file 沙箱根=我的世界（收紧：角色只写干活区；读角色目录/玩法文件用 read_file 不受限）\n" +
-            "allow_write = [\"" + tmpDirAbs + "\"]   # 追加可写：角色自己的 临时脚本/ 目录（临时脚本/中间文件放这，不污染 我的世界）\n",
+            "workspace_root = \"" + projectRootAbs + "\"   # write_file 沙箱根=world（收紧：角色只写干活区；读角色目录/玩法文件用 read_file 不受限）\n" +
+            "allow_write = [\"" + tmpDirAbs + "\"]   # 追加可写：角色自己的 temp-scripts/ 目录（temp-scripts/中间文件放这，不污染 world）\n",
             "utf8");
-        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0 + sandbox + allow_write 临时脚本)");
+        console.log("OK: " + r.name + "/reasonix.toml (bash_timeout=0 + sandbox + allow_write temp-scripts)");
     }
-    // 角色临时脚本区（沙箱 allow_write 指向这里）
-    fs.mkdirSync(rd + "/临时脚本", { recursive: true });
+    // 角色temp-scripts区（沙箱 allow_write 指向这里）
+    fs.mkdirSync(rd + "/temp-scripts", { recursive: true });
 
     // 大鱼对讲目录
-    fs.mkdirSync(projectDir + "/我的世界/" + r.name + "_大鱼对讲", { recursive: true });
+    fs.mkdirSync(projectDir + "/world/" + r.name + "_talk", { recursive: true });
 
     // 复制协作模式文件
-    ["_双人对话模式.md", "_主笔审核模式.md", "_单人输出模式.md", "_辩论模式.md"].forEach(function(mf) {
+    ["_dual_chat_mode.md", "_lead_review_mode.md", "_solo_output_mode.md", "_debate_mode.md"].forEach(function(mf) {
         // H-1 修复：玩法文件含 {{ROLE_NAME}} 占位符（等文件内联循环的心跳路径），必须替换为角色名——
-        // 否则角色执行时心跳写入字面 {{ROLE_NAME}}_大鱼对讲/ 目录，monitor 读不到 → 误判 DEAD
-        var mfContent = fs.readFileSync(assetDir + "/玩法模式/" + mf, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); // 第四轮修复：函数替换防 $& 注入
+        // 否则角色执行时心跳写入字面 {{ROLE_NAME}}_talk/ 目录，monitor 读不到 → 误判 DEAD
+        var mfContent = fs.readFileSync(assetDir + "/play-modes/" + mf, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); // 第四轮修复：函数替换防 $& 注入
         fs.writeFileSync(rd + "/" + mf, mfContent, "utf8");
     });
 
     // 解耦四件套：启动多步曲/公告牌解读/干活流程/工具分类（2026-08-06 解耦改造新增）
     // 均含 {{ROLE_NAME}} 占位符（心跳路径/对讲目录），必须替换为角色名——与玩法文件同一逻辑
-    ["_启动多步曲.md", "_公告牌解读.md", "_干活流程.md", "_工具分类.md"].forEach(function(dec) {
-        var decContent = fs.readFileSync(assetDir + "/模板/" + dec, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
+    ["_startup_steps.md", "_board_reading.md", "_workflow.md", "_tool_guide.md"].forEach(function(dec) {
+        var decContent = fs.readFileSync(assetDir + "/role-templates/" + dec, "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
         fs.writeFileSync(rd + "/" + dec, decContent, "utf8");
         console.log("OK: " + r.name + "/" + dec + " (解耦四件套)");
     });
     // 8-4 精简：内联 fallback 独立文件（_工具分类 引用它，需一并复制；含占位符同样替换）
-    var fbContent = fs.readFileSync(assetDir + "/模板/_内联fallback.md", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
-    fs.writeFileSync(rd + "/_内联fallback.md", fbContent, "utf8");
-    console.log("OK: " + r.name + "/_内联fallback.md (8-4 内联 fallback 独立文件)");
+    var fbContent = fs.readFileSync(assetDir + "/role-templates/_inline_fallback.md", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; });
+    fs.writeFileSync(rd + "/_inline_fallback.md", fbContent, "utf8");
+    console.log("OK: " + r.name + "/_inline_fallback.md (8-4 内联 fallback 独立文件)");
 
     // 复制工具文件
     fs.copyFileSync(assetDir + "/_reasonix_poll.js", rd + "/_reasonix_poll.js");
     var sc = fs.readFileSync(assetDir + "/_sign.js", "utf8"); sc = sc.replace(/\{\{ROLE_NAME\}\}/g, function() { return r.name; }); fs.writeFileSync(rd + "/_sign.js", sc, "utf8"); // 第四轮修复：函数替换防 $& 注入
     fs.copyFileSync(assetDir + "/_lock.js", rd + "/_lock.js");
     fs.copyFileSync(assetDir + "/_deliver.js", rd + "/_deliver.js"); // v1.3: 行为约束工具脚本
-    fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", rd + "/_外部环境BUG清单.md");
+    fs.copyFileSync(assetDir + "/_env_bug_list.md", rd + "/_env_bug_list.md");
     // _wakeup.js 也放角色目录——虽然不是角色用，但方便测试和参考
     fs.copyFileSync(assetDir + "/_wakeup.js", rd + "/_wakeup.js");
-    // 7-5 沉淀：wait_file.js 标准等文件脚本 → 角色 临时脚本/（乔布斯体验报告建议）
-    fs.copyFileSync(assetDir + "/wait_file.js", rd + "/临时脚本/wait_file.js");
+    // 7-5 沉淀：wait_file.js 标准等文件脚本 → 角色 temp-scripts/（乔布斯体验报告建议）
+    fs.copyFileSync(assetDir + "/wait_file.js", rd + "/temp-scripts/wait_file.js");
 
     console.log("OK: " + r.name + (bg ? " (含深度背景 " + bg.length + " 字符)" : ""));
 });
 
 // 大鱼 AGENTS.md —— add 模式跳过（追加角色不需要重建大鱼）
 if (!isAddMode) {
-// 大鱼 AGENTS.md —— 写到火影-大鱼/目录下，不是项目根目录！
+// 大鱼 AGENTS.md —— 写到fish/目录下，不是项目根目录！
 // 检查是否已存在，不覆盖已有文件（角色不动项目动）
-var fishDir = projectDir + "/火影-大鱼";
+var fishDir = projectDir + "/fish";
 fs.mkdirSync(fishDir, { recursive: true });
 // H10 修复：init 模式同样生成大鱼 reasonix.toml（不存在才写，与角色目录一致）
 var fishRxCfgPath2 = fishDir + "/reasonix.toml";
 if (!fs.existsSync(fishRxCfgPath2)) {
-    var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/我的世界";   // 收紧沙箱：write_file 只写 我的世界（read_file 读公告牌/角色目录不受限）
-    var fishDirAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/火影-大鱼";   // 8-5 修复：大鱼自己的目录也追加可写（心跳/日志，与 fish 分支同逻辑）
+    var fishRootAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/world";   // 收紧沙箱：write_file 只写 world（read_file 读公告牌/角色目录不受限）
+    var fishDirAbs2 = path.resolve(projectDir).replace(/\\/g, "/") + "/fish";   // 8-5 修复：大鱼自己的目录也追加可写（心跳/日志，与 fish 分支同逻辑）
     fs.writeFileSync(fishRxCfgPath2,
         "[tools]\n" +
         "bash_timeout_seconds = 0   # 大鱼回合内可持续调度/轮询\n" +
@@ -331,14 +331,14 @@ if (!fs.existsSync(fishRxCfgPath2)) {
         "workspace_root = \"" + fishRootAbs2 + "\"   # write_file 沙箱根=项目根\n" +
         "allow_write = [\"" + fishDirAbs2 + "\"]   # 追加可写：大鱼自己的目录（心跳/日志，8-5 修复）\n",
         "utf8");
-    console.log("OK: 火影-大鱼/reasonix.toml (bash_timeout=0 + sandbox)");
+    console.log("OK: fish/reasonix.toml (bash_timeout=0 + sandbox)");
 }
 var fishAgentsPath = fishDir + "/AGENTS.md";
 if (!fs.existsSync(fishAgentsPath)) {
     fs.writeFileSync(fishAgentsPath, fishTpl, "utf8");
-    console.log("OK: 火影-大鱼/AGENTS.md (new)");
+    console.log("OK: fish/AGENTS.md (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/AGENTS.md (already exists)");
+    console.log("SKIP: fish/AGENTS.md (already exists)");
 }
 
 // 复制监控脚本 —— 已存在则不覆盖
@@ -354,7 +354,7 @@ if (!fs.existsSync(monitorPath)) {
 var wakeupDest = fishDir + "/_wakeup.js";
 if (!fs.existsSync(wakeupDest)) {
     fs.copyFileSync(assetDir + "/_wakeup.js", wakeupDest);
-    console.log("OK: 火影-大鱼/_wakeup.js (new)");
+    console.log("OK: fish/_wakeup.js (new)");
 } else {
     console.log("SKIP: _wakeup.js (already exists)");
 }
@@ -363,65 +363,65 @@ if (!fs.existsSync(wakeupDest)) {
 var fishLoopDest = fishDir + "/_fish_loop.js";
 if (!fs.existsSync(fishLoopDest)) {
     fs.copyFileSync(assetDir + "/_fish_loop.js", fishLoopDest);
-    console.log("OK: 火影-大鱼/_fish_loop.js (new)");
+    console.log("OK: fish/_fish_loop.js (new)");
 } else {
     console.log("SKIP: _fish_loop.js (already exists)");
 }
 
-// 复制_外部环境BUG清单.md到大鱼目录（大鱼模板引用 ./_外部环境BUG清单.md）
-var bugListDest = fishDir + "/_外部环境BUG清单.md";
+// 复制_env_bug_list.md到大鱼目录（大鱼模板引用 ./_env_bug_list.md）
+var bugListDest = fishDir + "/_env_bug_list.md";
 if (!fs.existsSync(bugListDest)) {
-    fs.copyFileSync(assetDir + "/_外部环境BUG清单.md", bugListDest);
-    console.log("OK: 火影-大鱼/_外部环境BUG清单.md (new)");
+    fs.copyFileSync(assetDir + "/_env_bug_list.md", bugListDest);
+    console.log("OK: fish/_env_bug_list.md (new)");
 } else {
-    console.log("SKIP: _外部环境BUG清单.md (already exists)");
+    console.log("SKIP: _env_bug_list.md (already exists)");
 }
 
-// 8-4 修复：init 分支也发 大鱼公告牌手册.md（与 fish 分支同逻辑——大鱼模板「公告牌校验+发布」节引用它，init 不发=悬空引用）
-var fishManualDest = fishDir + "/大鱼公告牌手册.md";
+// 8-4 修复：init 分支也发 bigfish_board_manual.md（与 fish 分支同逻辑——大鱼模板「公告牌校验+发布」节引用它，init 不发=悬空引用）
+var fishManualDest = fishDir + "/bigfish_board_manual.md";
 if (!fs.existsSync(fishManualDest)) {
-    fs.copyFileSync(assetDir + "/模板/大鱼公告牌手册.md", fishManualDest);
-    console.log("OK: 火影-大鱼/大鱼公告牌手册.md (new)");
+    fs.copyFileSync(assetDir + "/role-templates/bigfish_board_manual.md", fishManualDest);
+    console.log("OK: fish/bigfish_board_manual.md (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/大鱼公告牌手册.md (already exists)");
+    console.log("SKIP: fish/bigfish_board_manual.md (already exists)");
 }
 
-// 8-5 修复：init 分支也发 _大鱼实测教训.md（与 fish 分支同逻辑——大鱼模板「实测教训」节引用它，init 不发=悬空引用）
-var fishLessonDest = fishDir + "/_大鱼实测教训.md";
+// 8-5 修复：init 分支也发 _bigfish_lessons.md（与 fish 分支同逻辑——大鱼模板「实测教训」节引用它，init 不发=悬空引用）
+var fishLessonDest = fishDir + "/_bigfish_lessons.md";
 if (!fs.existsSync(fishLessonDest)) {
-    fs.copyFileSync(assetDir + "/模板/_大鱼实测教训.md", fishLessonDest);
-    console.log("OK: 火影-大鱼/_大鱼实测教训.md (new)");
+    fs.copyFileSync(assetDir + "/role-templates/_bigfish_lessons.md", fishLessonDest);
+    console.log("OK: fish/_bigfish_lessons.md (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/_大鱼实测教训.md (already exists)");
+    console.log("SKIP: fish/_bigfish_lessons.md (already exists)");
 }
 
-// 大鱼工具手册.md：init 分支也发（与 fish 分支同逻辑——大鱼模板「周期验证」节引用它，init 不发=悬空引用）
-var fishToolManualDest = fishDir + "/大鱼工具手册.md";
+// bigfish_tool_manual.md：init 分支也发（与 fish 分支同逻辑——大鱼模板「周期验证」节引用它，init 不发=悬空引用）
+var fishToolManualDest = fishDir + "/bigfish_tool_manual.md";
 if (!fs.existsSync(fishToolManualDest)) {
-    fs.copyFileSync(assetDir + "/模板/大鱼工具手册.md", fishToolManualDest);
-    console.log("OK: 火影-大鱼/大鱼工具手册.md (new)");
+    fs.copyFileSync(assetDir + "/role-templates/bigfish_tool_manual.md", fishToolManualDest);
+    console.log("OK: fish/bigfish_tool_manual.md (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/大鱼工具手册.md (already exists)");
+    console.log("SKIP: fish/bigfish_tool_manual.md (already exists)");
 }
 
 // 8-2 修复：init 分支也发 _deliver.js/_sign.js 给大鱼（与 fish 分支同逻辑——大鱼模板「专属任务交付闭环」引用这两个工具，init 不发=悬空引用）
 var fishDeliverDest = fishDir + "/_deliver.js";
 if (!fs.existsSync(fishDeliverDest)) {
     fs.copyFileSync(assetDir + "/_deliver.js", fishDeliverDest);
-    console.log("OK: 火影-大鱼/_deliver.js (new)");
+    console.log("OK: fish/_deliver.js (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/_deliver.js (already exists)");
+    console.log("SKIP: fish/_deliver.js (already exists)");
 }
 var fishSignDest = fishDir + "/_sign.js";
 if (!fs.existsSync(fishSignDest)) {
-    var fishSignContent2 = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "火影-大鱼"; });
+    var fishSignContent2 = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "fish"; });
     fs.writeFileSync(fishSignDest, fishSignContent2, "utf8");
-    console.log("OK: 火影-大鱼/_sign.js (new)");
+    console.log("OK: fish/_sign.js (new)");
 } else {
-    console.log("SKIP: 火影-大鱼/_sign.js (already exists)");
+    console.log("SKIP: fish/_sign.js (already exists)");
 }
 } else {
-    console.log("SKIP: 火影-大鱼/AGENTS.md (add 模式)");
+    console.log("SKIP: fish/AGENTS.md (add 模式)");
     console.log("SKIP: monitor.js (add 模式)");
 }
 console.log("DONE: " + projectDir);

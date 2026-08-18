@@ -8,8 +8,8 @@ var path = require("path");
 var N = process.argv[2];
 var msg = process.argv[3] || "";
 
-// L-13 修复：N 必须是数字——否则生成 完成_abc.md，monitor 永远等不到
-// F-13 修复：且必须是 >=1 的整数——"0"/"0.5" 会静默生成 完成_000.md（monitor 从 N=1 起查，永不匹配）
+// L-13 修复：N 必须是数字——否则生成 done_abc.md，monitor 永远等不到
+// F-13 修复：且必须是 >=1 的整数——"0"/"0.5" 会静默生成 done_000.md（monitor 从 N=1 起查，永不匹配）
 var nN = parseInt(N, 10);
 if (!N || isNaN(nN) || nN < 1 || String(nN) !== String(N).trim()) { console.log("用法: node _sign.js <轮次号> [消息]"); process.exit(1); }
 N = nN;
@@ -17,10 +17,10 @@ N = nN;
 // 角色名由scaffold在生成时焊死，不读AGENTS.md——省掉readFileSync+正则，防系统负载超时
 var roleName = "{{ROLE_NAME}}";
 
-var signDir = path.resolve(__dirname, "..", "我的世界", roleName + "_大鱼对讲");
+var signDir = path.resolve(__dirname, "..", "world", roleName + "_talk");
 fs.mkdirSync(signDir, { recursive: true });
 
-var signFile = signDir + "/完成_" + String(N).padStart(3, "0") + ".md";
+var signFile = signDir + "/done_" + String(N).padStart(3, "0") + ".md";
 
 // 快速路径：签字文件已存在且非空 → 直接跳过
 // ⚠️ L14 说明：若签错轮/内容错误需要重签，先手动删除旧签字文件再运行本脚本（已有有效签字不会自动覆盖）

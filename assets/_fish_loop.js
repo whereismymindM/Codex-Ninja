@@ -8,7 +8,7 @@
  * 本脚本【只检测+报告】：不校验、不发布、不打回、不唤醒——决策权全在大鱼。
  *
  * 用法：node _fish_loop.js [--board-dir <公告牌源目录>] [--monitor <monitor.js 路径>] [--once]
- *   默认 board-dir = 当前目录（火影-大鱼/），monitor = 上级目录/monitor.js
+ *   默认 board-dir = 当前目录（fish/），monitor = 上级目录/monitor.js
  *   --once（12-25）：单轮检测汇总后退出（公告牌 + monitor 各跑一次）——大鱼每轮轮询一条命令替代手动 sleep+tail+ls
  */
 
@@ -50,7 +50,7 @@ function checkBoards() {
   var found = [];
   try {
     var files = fs.readdirSync(boardDir).filter(function(f) {
-      return /^公告牌_\d+\.md$/.test(f);
+      return /^board_\d+\.md$/.test(f);
     }).sort();
     files.forEach(function(f) {
       var full = path.join(boardDir, f);
@@ -74,13 +74,13 @@ function checkBoards() {
   }
 }
 
-// 对讲目录监控：检测 我的世界/大鱼_老渣对讲/ 的新文件（老渣发的任务/回执）
+// 对讲目录监控：检测 world/fish_laozha_talk/ 的新文件（老渣发的任务/回执）
 // 背景：大鱼 AI 只在回合内查对讲目录；回合间隙老渣放的任务可能悬空。
 // 本函数让脚本也检测对讲目录——即使大鱼 AI 不在场，老渣放的任务也会被提示，不遗漏。
 // 排除：收工三件套（产出总结/审计报告/项目完成，大鱼自己写的，不算任务）
 function checkTalkDir() {
   var found = [];
-  var talkDir = path.resolve(__dirname, "..", "我的世界", "大鱼_老渣对讲");
+  var talkDir = path.resolve(__dirname, "..", "world", "fish_laozha_talk");
   try {
     if (!fs.existsSync(talkDir)) return;
     var files = fs.readdirSync(talkDir).sort();
@@ -104,7 +104,7 @@ function checkTalkDir() {
     return;
   }
   if (found.length > 0) {
-    console.log("[" + ts() + "] NEW_TASK: " + found.join(", ") + " ← 我的世界/大鱼_老渣对讲/");
+    console.log("[" + ts() + "] NEW_TASK: " + found.join(", ") + " ← world/fish_laozha_talk/");
     console.log("    → 去读任务并处理（老渣发的任务走交付闭环：读→干→deliver→sign→汇报）");
   }
 }
@@ -132,14 +132,14 @@ console.log("  [纯检测+提示，发布/校验/打回/唤醒决策归大鱼]\n
 // 初始化：记录当前已有公告牌（不当作"新"）
 try {
   fs.readdirSync(boardDir).forEach(function(f) {
-    if (/^公告牌_\d+\.md$/.test(f)) {
+    if (/^board_\d+\.md$/.test(f)) {
       knownBoards[f] = fs.statSync(path.join(boardDir, f)).mtimeMs;
     }
   });
 } catch (e) {}
 // 初始化：记录对讲目录已有文件（不当作"新任务"）
 try {
-  var _talkInitDir = path.resolve(__dirname, "..", "我的世界", "大鱼_老渣对讲");
+  var _talkInitDir = path.resolve(__dirname, "..", "world", "fish_laozha_talk");
   if (fs.existsSync(_talkInitDir)) {
     fs.readdirSync(_talkInitDir).forEach(function(f) {
       if (f === "产出总结.md" || f === "审计报告_外部观测.md" || f === "项目完成.md") return;
@@ -151,7 +151,7 @@ try {
 var tick = 0;
 if (onceMode) {
   // 12-25 大鱼工具复盘最卡①：--once 单轮汇总——跑一轮检测后退出（大鱼每轮轮询从"sleep 55 + tail + ls"三条命令变一条）
-  // 13-y 大鱼自检 4-7/P2-1：后台 _fish_loop 在跑时 --once 再跑 monitor → 两实例并发写监控日志.md（每秒多行不可读）
+  // 13-y 大鱼自检 4-7/P2-1：后台 _fish_loop 在跑时 --once 再跑 monitor → 两实例并发写monitor-log.md（每秒多行不可读）
   //   → --once 检测 _fish_loop.log 新鲜度（60s 内更新 = 后台在跑）→ 跳过 monitor 段，只报公告牌 + 提示
   var _loopLog = path.join(boardDir, "_fish_loop.log");
   var _bgFresh = false;
@@ -162,7 +162,7 @@ if (onceMode) {
   checkBoards();
   checkTalkDir(); // 13-y 补充：对讲目录也检测（老渣任务/回执）
   if (!_bgFresh) runMonitor();
-  else console.log("[" + ts() + "] 后台 _fish_loop.log 60s 内有更新（后台监控在跑），monitor 段跳过避免并发写监控日志（13-y 大鱼自检 P2-1）");
+  else console.log("[" + ts() + "] 后台 _fish_loop.log 60s 内有更新（后台监控在跑），monitor 段跳过避免并发写monitor-log（13-y 大鱼自检 P2-1）");
   process.exit(0);
 }
 while (true) {
