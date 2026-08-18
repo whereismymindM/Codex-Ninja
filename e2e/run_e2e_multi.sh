@@ -48,8 +48,8 @@ cat > fish/board_001.md <<'EOF'
 - 测试丙（状态：待命）
 - 任务: 测试甲深挖需求，测试乙倾囊相授，聊完产出需求文档
 - 产出负责人: 测试甲
-- 产出: world/output/task001_需求/需求文档.md
-- 任务目录: world/task001_需求/
+- 产出: world/output/task001_req/需求文档.md
+- 任务目录: world/task001_req/
 EOF
 cat > fish/board_002.md <<'EOF'
 # 公告牌 第002轮
@@ -60,8 +60,8 @@ cat > fish/board_002.md <<'EOF'
 - 测试丙（状态：待命）
 - 任务: 测试甲写产品方案，测试乙审核（可打回），通过后交付
 - 产出负责人: 测试甲
-- 产出: world/output/task002_方案/产品方案.md
-- 任务目录: world/task002_方案/
+- 产出: world/output/task002_proposal/产品方案.md
+- 任务目录: world/task002_proposal/
 EOF
 cat > fish/board_003.md <<'EOF'
 # 公告牌 第003轮
@@ -89,30 +89,30 @@ check "4 张公告牌发布" "board_004" "$(ls world/board_*.md | tr '\n' ' ')"
 
 echo ""
 echo "===== 2. 001 双人对话：问2轮 → 问方交付+签字，答方签字 ====="
-mkdir -p world/task001_需求 world/output/task001_需求
-D=world/task001_需求
+mkdir -p world/task001_req world/output/task001_req
+D=world/task001_req
 printf 'T1问：微服务适合什么场景？\n' > $D/chat_001_T1_ask.md; touch $D/chat_001_T1_ask.md.signal
 printf 'T1答：适合大团队、独立伸缩、故障隔离……\n' > $D/chat_001_T1_answer.md; touch $D/chat_001_T1_answer.md.signal
 printf 'T2问：单体何时更好？团队多小不该拆？\n' > $D/chat_001_T2_ask.md; touch $D/chat_001_T2_ask.md.signal
 printf 'T2答：同义复述（无新东西）……\n' > $D/chat_001_T2_answer.md; touch $D/chat_001_T2_answer.md.signal
 touch $D/chat-end.signal
-printf '# 需求文档\n基于对话提炼的核心洞察\n' > world/output/task001_需求/需求文档.md
-OUT=$(cd 测试甲 && node _deliver.js 需求文档.md task001_需求); check "问方 deliver" "DELIVERED" "$OUT"
+printf '# 需求文档\n基于对话提炼的核心洞察\n' > world/output/task001_req/需求文档.md
+OUT=$(cd 测试甲 && node _deliver.js 需求文档.md task001_req); check "问方 deliver" "DELIVERED" "$OUT"
 OUT=$(cd 测试甲 && node _sign.js 1); check "问方 sign" "SIGNED" "$OUT"
 OUT=$(cd 测试乙 && node _sign.js 1); check "答方 sign" "SIGNED" "$OUT"
 OUT=$(node monitor.js); check "001 完成推进" "WAIT N=2" "$OUT"
 
 echo ""
 echo "===== 3. 002 主笔审核：先打回（验 F-2 signal 归档）→ 再通过 → 主笔交付 ====="
-mkdir -p world/task002_方案 world/output/task002_方案
-D2=world/task002_方案
-printf '# 产品方案 v1\n第一版内容\n' > world/output/task002_方案/产品方案.md
+mkdir -p world/task002_proposal world/output/task002_proposal
+D2=world/task002_proposal
+printf '# 产品方案 v1\n第一版内容\n' > world/output/task002_proposal/产品方案.md
 printf 'please-review v1\n' > $D2/please-review.md; touch $D2/please-review.md.signal
 printf '状态：不通过\n缺少数据支撑\n' > $D2/review-result.md; touch $D2/review-result.md.signal
 # 主笔处理打回：改名归档 .md + .signal（F-2 协议），改产出，重发please-review
 mv $D2/review-result.md $D2/review-result_第1次.md
 mv $D2/review-result.md.signal $D2/review-result_第1次.md.signal_acked
-printf '# 产品方案 v2\n第一版内容+数据支撑\n' > world/output/task002_方案/产品方案.md
+printf '# 产品方案 v2\n第一版内容+数据支撑\n' > world/output/task002_proposal/产品方案.md
 printf 'please-review v2\n' > $D2/please-review.md; touch $D2/please-review.md.signal
 # 审核方：改名旧please-review + 归档 signal（F-2 审核侧），写通过
 mv $D2/please-review.md $D2/please-review_已处理.md
@@ -122,7 +122,7 @@ printf '状态：通过\n达标\n' > $D2/review-result.md; touch $D2/review-resu
 check "F-2 主笔侧归档(.md.signal_acked)" "1" "$(ls $D2/review-result_第1次.md.signal_acked 2>/dev/null | wc -l)"
 check "F-2 审核侧归档(please-review.signal_acked)" "1" "$(ls $D2/please-review_已处理.md.signal_acked 2>/dev/null | wc -l)"
 check "有效 signal 仅 1 个（当前轮）" "1" "$(ls $D2/*.signal 2>/dev/null | wc -l)"
-OUT=$(cd 测试甲 && node _deliver.js 产品方案.md task002_方案); check "主笔 deliver" "DELIVERED" "$OUT"
+OUT=$(cd 测试甲 && node _deliver.js 产品方案.md task002_proposal); check "主笔 deliver" "DELIVERED" "$OUT"
 OUT=$(cd 测试甲 && node _sign.js 2); check "主笔 sign" "SIGNED" "$OUT"
 OUT=$(cd 测试乙 && node _sign.js 2); check "审核 sign" "SIGNED" "$OUT"
 OUT=$(node monitor.js); check "002 完成推进" "WAIT N=3" "$OUT"

@@ -44,6 +44,8 @@ NNN=3位补零（如001、002）。
 - 任务目录: world/taskNNN_XXX/
 ```
 
+> 📌 **taskNNN_XXX 子名建议 ASCII**：XXX（任务名）建议用英文/拼音（如 `task001_req`、`task002_review`），不要用中文——千问等模型拼路径时中文易出错（本分支已英文化全部运行时路径，任务目录子名是最后的中文面）。用中文子名也能跑（monitor 按字面匹配），但千问写牌/拼路径时可能踩坑。
+
 > 说明（不进公告牌，仅老渣看）：
 > - **玩法文件** = `assets/play-modes/` 下按模式分发的 4 个模式文件（_dual_chat_mode.md/_lead_review_mode.md/_debate_mode.md/_solo_output_mode.md）——scaffold 复制到每个角色目录；角色按「模式」字段读对应玩法文件执行流程，公告牌任务文字不需要重复玩法细节
 > - **任务轮里的待命角色**：写 `状态：待命`；仅**待命轮**（`模式: 待命`）的角色行才写 `状态：待命，等通知`
@@ -148,13 +150,13 @@ monitor 根据产出行的写法自动切换两种检查模式：
 
 **格式A（推荐）：带文件名**
 ```
-- 产出: world/output/task001_引擎/server.js, search-engines.js
+- 产出: world/output/task001_engine/server.js, search-engines.js
 ```
 monitor 在产出目录下逐项检查 `server.js.ready` 和 `search-engines.js.ready`。deliver() 交付时自动在同目录生成 .ready 信号——两者一一对应。全部 .ready 就位才判定通过。
 
 **格式B：仅目录名**
 ```
-- 产出: world/output/task001_引擎/
+- 产出: world/output/task001_engine/
 ```
 monitor 在产出目录下扫描，存在任意 .ready 文件即通过。
 
@@ -163,8 +165,8 @@ monitor 在产出目录下扫描，存在任意 .ready 文件即通过。
 
 多个产出目录用多行写：
 ```
-- 产出: world/output/task001_前端/index.html
-- 产出: world/output/task001_后端/server.js
+- 产出: world/output/task001_frontend/index.html
+- 产出: world/output/task001_backend/server.js
 ```
 ### 产出类型：代码 vs 文档
 
@@ -272,7 +274,7 @@ monitor 在产出目录下扫描，存在任意 .ready 文件即通过。
 ### 第 4 步：串依赖（轮间怎么接）
 
 轮与轮之间靠**产出传递**。规则：
-- **依赖必须显式写路径**：任务描述里写"读 `output/task001_需求/需求文档.md`，然后……"——不写 = 角色可能不等直接干 = 产出对不上
+- **依赖必须显式写路径**：任务描述里写"读 `output/task001_req/需求文档.md`，然后……"——不写 = 角色可能不等直接干 = 产出对不上
 - **路径写真实位置**：写牌前确认依赖文件当前在哪（可能被移过）；历史素材可能被移入 `_回收站/…` 或归档目录——写牌前 `ls output/` 核对文件真实在册，"归档位置"与"依赖本体位置"分开标注
 - **任务描述不覆盖玩法文件路径**：辩论/双人等中间文件路径以玩法文件为准，任务描述只写产出清单（否则路径分叉卡死）
 

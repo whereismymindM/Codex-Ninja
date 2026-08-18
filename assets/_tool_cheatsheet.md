@@ -132,7 +132,7 @@ node _sign.js <轮次号> [消息]
 
 ```bash
 node _deliver.js <产出文件名> [任务目录名] [源文件路径]
-# 示例：node _deliver.js 需求文档.md task001_需求设计 ../源代码/需求文档.md
+# 示例：node _deliver.js 需求文档.md task001_req-design ../源代码/需求文档.md
 ```
 
 - 传第 3 参（任务目录名）→ 快速路径，跳过公告牌扫描

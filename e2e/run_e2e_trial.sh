@@ -45,8 +45,8 @@ cat > "$S/world/board_001.md" << 'EOF'
 - 模式: 试用
 - 测试甲（状态：待命）
 - 产出负责人: 测试甲
-- 产出: world/output/task001_试用/试用报告.md
-- 任务目录: world/task001_试用/
+- 产出: world/output/task001_trial/试用报告.md
+- 任务目录: world/task001_trial/
 EOF
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T1 等真人反馈（TRIAL）──"
@@ -55,8 +55,8 @@ check "TRIAL 输出出现" "$OUT" "TRIAL N=1" "STANDBY"
 # ── T2：T1 + 写入 试用反馈.md → WAIT 含原因，无 TRIAL/STANDBY ──
 S="$TMPROOT/t2"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
-mkdir -p "$S/world/task001_试用"
-echo "反馈：请验证 TRIAL 输出" > "$S/world/task001_试用/试用反馈.md"
+mkdir -p "$S/world/task001_trial"
+echo "反馈：请验证 TRIAL 输出" > "$S/world/task001_trial/试用反馈.md"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T2 反馈已到（WAIT+原因）──"
 check "WAIT N=1 且含原因" "$OUT" "WAIT N=1" ""
@@ -65,9 +65,9 @@ check "含 试用反馈已到" "$OUT" "试用反馈已到" "TRIAL"
 # ── T3：T2 + 产出 .ready + 签字 → 推进 WAIT N=2（既有机制，非 DONE）──
 S="$TMPROOT/t3"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
-mkdir -p "$S/world/task001_试用" "$S/world/output/task001_试用" "$S/world/测试甲_talk"
-echo "反馈" > "$S/world/task001_试用/试用反馈.md"
-echo "OK" > "$S/world/output/task001_试用/试用报告.md.ready"
+mkdir -p "$S/world/task001_trial" "$S/world/output/task001_trial" "$S/world/测试甲_talk"
+echo "反馈" > "$S/world/task001_trial/试用反馈.md"
+echo "OK" > "$S/world/output/task001_trial/试用报告.md.ready"
 echo "sign" > "$S/world/测试甲_talk/done_001.md"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T3 产出就位（推进 WAIT N=2）──"
@@ -86,8 +86,8 @@ check "无 WAIT_OVERDUE" "$OUT" "TRIAL N=1" "WAIT_OVERDUE"
 # ── T5：T2 + waitSince 31 分钟前 → 含 WAIT_OVERDUE（反馈后熔断恢复）──
 S="$TMPROOT/t5"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
-mkdir -p "$S/world/task001_试用"
-echo "反馈" > "$S/world/task001_试用/试用反馈.md"
+mkdir -p "$S/world/task001_trial"
+echo "反馈" > "$S/world/task001_trial/试用反馈.md"
 echo "{\"N\":1,\"waitSinceN\":1,\"waitSince\":$PAST_MS}" > "$S/world/.monitor_state.json"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T5 反馈后熔断恢复 ──"
