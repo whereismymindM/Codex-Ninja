@@ -16,8 +16,8 @@ description: |
 
 你是老渣。你的武器是公告牌，不是键盘。
 
-- 你写公告牌文件，一次性写完，放大鱼目录（`火影-大鱼/`——**首个项目名固化为默认大鱼目录名，换项目名时改 `scaffold.js` 的鱼目录常量**）
-- 大鱼校验后全量发布到 我的世界/，不改一字（有待命轮则大鱼会扣留收工轮——详情见：assets/operator-docs/board_complete_guide.md）
+- 你写公告牌文件，一次性写完，放大鱼目录（`fish/`——**首个项目名固化为默认大鱼目录名，换项目名时改 `scaffold.js` 的鱼目录常量**）
+- 大鱼校验后全量发布到 world/，不改一字（有待命轮则大鱼会扣留收工轮——详情见：assets/operator-docs/board_complete_guide.md）
 - 你在旁边窗口盯场救火、看产出、陪用户聊天（给用户/自己看进度：`node <skill路径>/scripts/ecoscope.js <项目根目录> --html > 批次状态.html` 生成浏览器单文件视图）
 - 读到本 Skill 的就是老渣，不是大鱼
 
@@ -49,12 +49,12 @@ description: |
 > **职位化命名**：`name` 的职位=身份（目录/对讲/签字/退场全按 name 走），灵魂=人格（background 决定）。
 > - **单人职位** → name 直接用职位（如 `架构师`）——模板占位符就是它，编排免替换；**角色池复用**：生成后长期有效，要用谁开谁窗口；需要不同人格 → 生成新实例（多建目录各配灵魂），不碰旧实例
 > - **同职位多人** → name 用 `职位-人名`（如 `码农-张三`、`码农-李四`）——每实例一行角色行，各自独立对讲/签字/退场
-> - 模板（scripts/templates/*.json）占位符写职位（`{码农}`）= 草稿提示，编排时展开成 N 个实例角色行；**协议只认角色行实例名**（monitor 按实例校验签字/退场/产出，产出负责人=各自 时校验每个活跃实例都有带自己 `producer:` 的 `.ready`——归属校验，一人重复交付凑数判不过）
+> - 模板（scripts/templates/*.json）占位符写职位（`{码农}`）= 草稿提示，编排时展开成 N 个实例角色行；**协议只认角色行实例名**（monitor 按实例校验签字/退场/output，产出负责人=各自 时校验每个活跃实例都有带自己 `producer:` 的 `.ready`——归属校验，一人重复交付凑数判不过）
 
 ### 2. 跑 scaffold
 
 ```bash
-node <skill路径>/scripts/scaffold.js <项目根目录> roles.json        # init（全新项目，项目根=我的世界的上级，如 项目A-开发部）
+node <skill路径>/scripts/scaffold.js <项目根目录> roles.json        # init（全新项目，项目根=world的上级，如 项目A-开发部）
 node <skill路径>/scripts/scaffold.js <项目根目录> roles.json add    # add（追加角色，不碰大鱼和monitor）
 node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fish（重建大鱼，window=窗口常驻/run=run拉起）
 ```
@@ -63,13 +63,13 @@ node <skill路径>/scripts/scaffold.js <项目根目录> fish window|run   # fis
 
 ### 3. 部署团队须知
 
-scaffold init（默认命令）已自动把 `team-notes/team_notes.md` 复制到项目根目录（= 我的世界/ 的上级）。**新项目请走 init（默认命令，角色+团队须知一步生成，不用管）**；**仅用 add 补角色时**（或重建时只跑了 fish/add 没跑 init），团队须知不会自动复制，需手动补：
+scaffold init（默认命令）已自动把 `team-notes/team_notes.md` 复制到项目根目录（= world/ 的上级）。**新项目请走 init（默认命令，角色+团队须知一步生成，不用管）**；**仅用 add 补角色时**（或重建时只跑了 fish/add 没跑 init），团队须知不会自动复制，需手动补：
 
 ```powershell
 Copy-Item <skill路径>/team-notes/team_notes.md <项目根目录>/team_notes.md
 ```
 
-> ⚠️ **重建三件套（缺一不可）**：重建项目 = `init`（补团队须知+我的世界基础+工具快照）→ `add`（角色）→ `fish`（大鱼）。**只跑 fish+add 会漏团队须知**——角色窗口启动读不到"大鱼是谁/目录结构/沟通找谁"。
+> ⚠️ **重建三件套（缺一不可）**：重建项目 = `init`（补团队须知+world基础+工具快照）→ `add`（角色）→ `fish`（大鱼）。**只跑 fish+add 会漏团队须知**——角色窗口启动读不到"大鱼是谁/目录结构/沟通找谁"。
 
 ### 4. 写公告牌
 
@@ -88,11 +88,11 @@ Copy-Item <skill路径>/team-notes/team_notes.md <项目根目录>/team_notes.md
 
 | # | 待办 | 做什么 | 数据源 |
 |---|------|--------|--------|
-| 1 | 查推进节奏 | 看 `火影-大鱼/_fish_loop.log`（大鱼循环日志）+ `我的世界/monitor-log.md`（monitor 周期记录），确认全程无卡死/异常 | 日志自动记录，不用大鱼复述 |
-| 2 | 核对产出 | 跑 `node <skill路径>/scripts/check.js <项目根目录>`（收工核对工具，判据与 monitor 同源）——全链路校验发布一致性/产出 .ready/签字/退场/两件套，对照 `我的世界/大鱼_老渣对讲/产出总结.md` 的逐轮矩阵核实 | 文件系统 + check.js |
+| 1 | 查推进节奏 | 看 `fish/_fish_loop.log`（大鱼循环日志）+ `world/monitor-log.md`（monitor 周期记录），确认全程无卡死/异常 | 日志自动记录，不用大鱼复述 |
+| 2 | 核对产出 | 跑 `node <skill路径>/scripts/check.js <项目根目录>`（收工核对工具，判据与 monitor 同源）——全链路校验发布一致性/output .ready/签字/退场/两件套，对照 `world/fish_laozha_talk/产出总结.md` 的逐轮矩阵核实 | 文件系统 + check.js |
 | 3 | 时序校验 | 跑 `bash <skill路径>/scripts/sequence_check.sh <项目根目录>`（`<skill路径>` = 本仓库路径）——自动查三种模式顺序违规（双人抢答/辩论跳步/审核打回异常），mtime 判定零成本 | 文件 mtime + 操作日志 |
-| 4 | 发大鱼侧调查 | 把 `assets/operator-docs/bigfish_survey.md` 的任务发到 `我的世界/大鱼_老渣对讲/`（收工配套，问大鱼主观体验） | 对讲目录 |
-| 5 | 归档产出 | 产出移到 `重构交接/测试结果/场景N_*/`（供用户查看）——场景编号从 1 起按次递增（场景1_/场景2_/…），归档范围 = `我的世界/` 下全套（output/公告牌/大鱼报告/对话记录/签字与退场） | — |
+| 4 | 发大鱼侧调查 | 把 `assets/operator-docs/bigfish_survey.md` 的任务发到 `world/fish_laozha_talk/`（收工配套，问大鱼主观体验） | 对讲目录 |
+| 5 | 归档产出 | 产出移到 `重构交接/测试结果/场景N_*/`（供用户查看）——场景编号从 1 起按次递增（场景1_/场景2_/…），归档范围 = `world/` 下全套（output/公告牌/大鱼报告/对话记录/签字与退场） | — |
 | 6 | 迭代 Skill | 分析调查反馈（协作/时间/大鱼调查）→ 改模板 → **改完跑 `node <skill路径>/scripts/doc-consistency.js` 自查漂移（用前读 <skill路径>/scripts/doc-consistency_guide.md）** → 重建角色跑下一轮 | — |
 
 > 💡 **为什么审计报告取消了**：推进节奏/时间线/掉线统计全在日志里自动记录（数据采集与汇报分离），老渣待办 #1 直接查日志即可，大鱼不再复述成报告（省 token）。
@@ -129,7 +129,7 @@ N 个角色各开独立窗口 `reasonix code`，角色窗口自动轮询公告�
 | assets/operator-docs/README.md | 老渣文档索引（标准模板/完全指南/Multi-pass/goal/示例） |
 | assets/board-templates/ | 标准化公告牌模板集（调查轮×6/待命/收工/老渣对讲/流程体验/自检——复制改名 `board_NNN.md` 即用） |
 | scripts/compose.js + scripts/templates/ | 编排自动化：JSON 声明式生成公告牌+状态矩阵+编译期流转校验（19 个现实团队流程模板，`node compose.js --list` 查看） |
-| scripts/boardlint.js | 公告牌契约校验（发布前，协议合规工具族 P0 第一件）——编号连续/模式枚举/收工轮格式/角色枚举/状态流转/产出格式/铁律8/前置依赖/第一原则 9 项，🔴 阻断必改再发 🟡 警告建议规范化；判据与 compose/monitor/大鱼手册同源 |
+| scripts/boardlint.js | 公告牌契约校验（发布前，协议合规工具族 P0 第一件）——编号连续/模式枚举/收工轮格式/角色枚举/状态流转/output格式/铁律8/前置依赖/第一原则 9 项，🔴 阻断必改再发 🟡 警告建议规范化；判据与 compose/monitor/大鱼手册同源 |
 | assets/role-templates/bigfish_AGENTS_template.md | 大鱼模板·形态选择入口（选一生成） |
 | assets/role-templates/bigfish_AGENTS_template_window.md | 大鱼模板（窗口常驻形态，reasonix code） |
 | assets/role-templates/bigfish_AGENTS_template_run.md | 大鱼模板（run 拉起形态，调度唤醒） |

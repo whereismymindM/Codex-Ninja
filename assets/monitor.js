@@ -233,7 +233,7 @@ try {
     }
 } catch(_pe2) {}
 if (_fishDead) {
-    console.log("FISH_DEAD (heartbeat: " + Math.round(_fishHbAge/1000) + "s stale, no recent output)");
+    console.log("FISH_DEAD (heartbeat: " + Math.round(_fishHbAge/1000) + "s stale, no recent 产出)");
     logMonitor("FISH_DEAD 大鱼心跳 stale");
     try {
         var _fishIv = base + "/world/fish_laozha_talk/needs-intervention_大鱼.md";
@@ -742,7 +742,7 @@ if (fs.existsSync(worldDir)) {
                 var hasRecentOutput = false;
                 try {
                     // 扫 world/output 与 world/任务* 下最近 timeoutMs 内修改的文件
-                    var _scanDirs = [worldDir + "/产出"];
+                    var _scanDirs = [worldDir + "/output"];
                     try {
                         var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^task\d+/.test(td); });
                         _taskDirs.forEach(function(td) { _scanDirs.push(worldDir + "/" + td); });
@@ -833,7 +833,7 @@ if (fs.existsSync(worldDir)) {
                     console.log("SKIP " + roleName + " (心跳超时但窗口内有新产出文件——干活中)");
                     return;
                 }
-                console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale, no recent output)");
+                console.log("DEAD " + roleName + " (heartbeat: " + Math.round(hbAge/1000) + "s stale, no recent 产出)");
                 if (F_SCHEDULED) {
                     console.log("SKIP " + roleName + " (F-mode: 大鱼调度决定是否唤醒)");
                     return; // F 模式：不写 _wakeup.md，唤醒由大鱼负责

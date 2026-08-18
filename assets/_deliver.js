@@ -64,7 +64,7 @@ if (taskDirHint) {
       // 复核补充：readFileSync 包 try——读失败保持默认 任务N 推导，不崩溃
       try {
         var board = fs.readFileSync(boardFile, "utf8");
-        var m = board.match(/^-\s*(?:产出|任务目录)[：:]\s*world\/(?:output\/)?(task\d+_?[^\s(\[{\/（]+)(?:\/[^\s]+(?:\s*,\s*[^\s]+)*)?\/?\s*$/m);
+        var m = board.match(/^-\s*(?:产出|任务目录)[：:]\s*world\/(?:产出\/)?(task\d+_?[^\s(\[{\/（]+)(?:\/[^\s]+(?:\s*,\s*[^\s]+)*)?\/?\s*$/m);
         if (m) {
             taskDir = m[1];
         }

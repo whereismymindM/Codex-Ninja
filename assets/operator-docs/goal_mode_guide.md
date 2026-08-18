@@ -65,7 +65,7 @@ reasonix 的 `/goal` 模式 = **平台保活**：回合不因模型输出最终�
 
 ## 六、evidence 合格标准（模型补 evidence 时）
 
-- **objective_evidence**：kind=file，paths 用**相对路径**（`我的世界/output/taskNNN/文件名.md`），summary 写**文件系统事实**（产出+.ready 在位/签字在位/退场文件在位），accepted=true
+- **objective_evidence**：kind=file，paths 用**相对路径**（`world/output/taskNNN/文件名.md`），summary 写**文件系统事实**（产出+.ready 在位/签字在位/退场文件在位），accepted=true
 - **verification**：kind=verification，command 填**实际跑过的命令**，summary 写**命令输出结果**，accepted=true
 - 不合格：无文件/命令证据、"我干了XX"、绝对路径、推断性 summary（事实与推断分离）
 

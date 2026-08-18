@@ -14,8 +14,8 @@ node scaffold.js <项目目录> <roles.json> add      # add：追加角色
 node scaffold.js <项目目录> fish [window|run]      # fish：只重建大鱼+monitor（window=窗口常驻/run=run拉起，默认window）
 ```
 
-- projectDir 不能以 `/我的世界` 结尾（有防呆检查）
-- `add` 不碰大鱼和 monitor，不重建 `我的世界/`
+- projectDir 不能以 `/world` 结尾（有防呆检查）
+- `add` 不碰大鱼和 monitor，不重建 `world/`
 - `fish` 不注入灵魂——大鱼是纯执行器
 - 跑完删 roles.json
 
@@ -23,7 +23,7 @@ node scaffold.js <项目目录> fish [window|run]      # fish：只重建大鱼+
 
 ```bash
 node scripts/boardlint.js <公告牌目录>
-# 例：node scripts/boardlint.js "火影-大鱼/"（目录下找 board_*.md，支持草稿目录；写牌完、放大鱼目录前跑）
+# 例：node scripts/boardlint.js "fish/"（目录下找 board_*.md，支持草稿目录；写牌完、放大鱼目录前跑）
 ```
 
 - **发布前跑**（协议合规工具族 P0 第一位，共识：生态工具清单）——公告牌契约校验 9 项：编号连续（🔴）/ 模式枚举 7 值（🟡）/ 收工轮格式（🔴）/ 角色枚举（🔴）/ 状态流转硬冲突（🔴）/ 产出格式（🔴）/ 铁律8 目录一字不差（🔴）/ 前置依赖显式路径（🟡）/ 第一原则行（🔴）
@@ -42,7 +42,7 @@ bash scripts/sequence_check.sh <项目根目录>
   - 双人对话：问先答后（答.md 早于 问.md = 抢答）
   - 辩论：01→02→03→04→05→06 mtime 单调递增（03 早于 02 = 跳步；`debate-end.md` 合法提前收敛）
   - 主笔审核：每次 please-review ≤ 对应 review-result（结果无请审 = 打回异常）
-- 退出码：0=全部合规 1=发现违规 2=参数缺失/项目目录无效（找不到 `我的世界/`）
+- 退出码：0=全部合规 1=发现违规 2=参数缺失/项目目录无效（找不到 `world/`）
 
 ### doc-consistency.js（文档一致性校验，改文档/模板后自查）
 
@@ -58,10 +58,10 @@ node scripts/doc-consistency.js --smoke      # wait_file 命令实测
 
 ```bash
 node scripts/check.js <项目根目录>
-# 例：node scripts/check.js "项目根目录"（项目根 = 含 我的世界/ 与 火影-大鱼/ 的目录）
+# 例：node scripts/check.js "项目根目录"（项目根 = 含 world/ 与 fish/ 的目录）
 ```
 
-- **收工后跑**（老渣待办 #2）——全链路只读校验 5 项：发布一致性（火影-大鱼 vs 我的世界 清单+内容）/ 逐轮产出 .ready（格式A/B + producer 归属）/ 逐轮签字（done_NNN.md size>20）/ 退场文件（收工轮全员 {角色名}retired_NNN）/ 收口证据链（DONE 推断 + 两件套）
+- **收工后跑**（老渣待办 #2）——全链路只读校验 5 项：发布一致性（fish vs world 清单+内容）/ 逐轮产出 .ready（格式A/B + producer 归属）/ 逐轮签字（done_NNN.md size>20）/ 退场文件（收工轮全员 {角色名}retired_NNN）/ 收口证据链（DONE 推断 + 两件套）
 - 判据与 monitor.js 同源（公告牌解析/output/签字/退场），**改判据必须双改**（脚本头部有同源声明）；顺序合规（抢答/跳步/打回）不归它管——那是 `sequence_check.sh`
 - 退出码：0=全部合规 1=发现异常 2=参数错误
 
@@ -73,7 +73,7 @@ node scripts/ecoscope.js <项目根目录> --html > 批次状态.html  # HTML �
 # 例：node scripts/ecoscope.js "项目根目录" --html > 批次状态.html
 ```
 
-- **离线随时看**（共识 P0/P1 第二位，生态工具清单；v1.1 定位修正：**不是盯场**——在线检测是 monitor 的活；**不是校验**——收工核对是 check.js 的活；唯一真空白=离线一页给用户看）——只读不写文件：角色存活表（心跳 mtime + 新鲜度 + 判定，静默下线一眼可见）+ 轮次进度矩阵（签字/产出含 producer 归属）+ 告警汇总
+- **离线随时看**（共识 P0/P1 第二位，生态工具清单；v1.1 定位修正：**不是盯场**——在线检测是 monitor 的活；**不是校验**——收工核对是 check.js 的活；唯一真空白=离线一页给用户看）——只读不写文件：角色存活表（心跳 mtime + 新鲜度 + 判定，静默下线一眼可见）+ 轮次进度矩阵（签字/output含 producer 归属）+ 告警汇总
 - `--html` 输出**自包含单文件**（内联 CSS、meta 30s 自动刷新、0 外部依赖），双击即用——用户离线看进度；CLI 文本为调试/备查
 - 心跳阈值与 monitor 同源（窗口常驻 2min / run 拉起 10min，读 `_运行形态.mode`）；退场角色心跳停标记"已退场（正常）"不误报
 - 退出码：0=正常输出 2=参数错误（视图非校验——异常在输出里标 ⚠️）
@@ -85,7 +85,7 @@ node scripts/ecoscope.js <项目根目录> --html > 批次状态.html  # HTML �
 ### monitor.js（周期验证监控）
 
 ```bash
-node ../monitor.js    # 大鱼在火影-大鱼/下执行，我的世界/ 在 monitor.js 同级
+node ../monitor.js    # 大鱼在fish/下执行，world/ 在 monitor.js 同级
 ```
 
 - 每次运行检查一轮，输出 WAIT（继续等）/ DONE（完成）/ **STANDBY**（待命轮，等通知）/ **TRIAL**（试用轮等真人反馈）/ SIGN / ROLE xxx DONE|PENDING / HELP / DEAD / RETIRE（退场确认）/ FLOW（流水账校验）/ WAKE / DEADLOCK / RETRY / CRASH
@@ -102,7 +102,7 @@ node _wakeup.js <角色名> [原因]
 # 示例：node _wakeup.js <角色名> <原因>
 ```
 
-- 在 `我的世界/{角色名}_talk/` 下创建 `_wakeup.md`
+- 在 `world/{角色名}_talk/` 下创建 `_wakeup.md`
 - 角色低功耗轮询（poll）检测到后**删除** `_wakeup.md` 确认收到（poll 路径=删除；wait_file 等待路径=自动改名 `_wakeup_acked.md`，两条均有效）→ 切回活跃
 - 有休眠角色时逐个调用（`node _wakeup.js 角色名 原因`）
 
@@ -124,7 +124,7 @@ node _sign.js <轮次号> [消息]
 ```
 
 - 角色名由 scaffold 生成时焊死在代码里，不会签错人
-- 签字文件：`我的世界/{角色名}_talk/done_NNN.md`
+- 签字文件：`world/{角色名}_talk/done_NNN.md`
 - 已有有效签字 → 快速跳过，不重写
 - 重试 1 次 + 自检验证（原子写入本身可靠，重试多了给 shell 超时送人头）
 
@@ -149,7 +149,7 @@ node _lock.js release [锁名]               # 释放
 ```
 
 - `wx` 标志原子抢锁——不存在才创建，操作系统级原子
-- 锁文件：`我的世界/写锁_{锁名}.lock`，默认锁名"写锁"
+- 锁文件：`world/写锁_{锁名}.lock`，默认锁名"写锁"
 - 过期锁自动回收（>10分钟未更新，**且持有进程已死**——持有进程存活=长任务，不回收；读锁内容失败/EPERM 按存活保守处理）
 - 等待间隔 5s
 

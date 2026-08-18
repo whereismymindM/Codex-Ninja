@@ -1,6 +1,6 @@
 // ecoscope.js —— 生态仪表盘（EcoScope）v1.1（2026-08-16）
-// 用途: 离线批次状态视图——读 world/（公告牌/对讲/产出），输出角色存活（心跳 mtime）+
-//       轮次进度 + 签字/产出完成矩阵。定位: **给用户/老渣离线看批次进度**（不是盯场——
+// 用途: 离线批次状态视图——读 world/（公告牌/对讲/output），输出角色存活（心跳 mtime）+
+//       轮次进度 + 签字/output完成矩阵。定位: **给用户/老渣离线看批次进度**（不是盯场——
 //       在线检测是 monitor 的活；不是收工校验——那是 check.js 的活）。
 //       共识来源: 阅览室/评审记录_20260816_生态工具清单/生态工具清单_共识.md（P0/P1 第二位，
 //       EcoScope + status-board + HeartbeatBoard 三合一，只读文件系统 + 时间戳比对，无状态）
@@ -221,7 +221,7 @@ function collectData(root) {
             }
           } catch (e2) { ok = false; }
         }
-        prodStr.push({ name: o.dir.replace(/^output\//, ""), ok: ok });
+        prodStr.push({ name: o.dir.replace(/^产出\//, ""), ok: ok });
         if (!ok) alerts.push("第" + pad3(b.n) + "轮 产出未就位: " + o.dir);
       });
     }
@@ -271,7 +271,7 @@ function renderText(d) {
   out.push("");
 
   out.push("### 告警汇总");
-  if (d.alerts.length === 0) out.push("无告警——全员心跳新鲜、签字/产出齐全（当前轮未完成属正常推进）");
+  if (d.alerts.length === 0) out.push("无告警——全员心跳新鲜、签字/output齐全（当前轮未完成属正常推进）");
   else d.alerts.forEach(function(a) { out.push("⚠️ " + a); });
   out.push("");
   out.push("> 视图提示: 心跳阈值 " + d.hbTimeoutMin + "min 与 monitor 同源；run 形态干完即退心跳停是正常态（不是掉线）；--html 输出浏览器单文件视图");
@@ -301,7 +301,7 @@ function renderHtml(d) {
   }).join("\n");
 
   var alertHtml = d.alerts.length === 0
-    ? '<div class="no-alert">无告警 —— 全员心跳新鲜、签字/产出齐全（当前轮未完成属正常推进）</div>'
+    ? '<div class="no-alert">无告警 —— 全员心跳新鲜、签字/output齐全（当前轮未完成属正常推进）</div>'
     : d.alerts.map(function(a) { return '<div class="alert-item">⚠️ ' + esc(a) + "</div>"; }).join("\n");
 
   return '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n'

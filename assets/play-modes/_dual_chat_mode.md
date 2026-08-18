@@ -29,7 +29,7 @@ while (true) {
   if (_fs.default.existsSync("YOUR_FILE_PATH")) break;
   // 续心跳（防 monitor 2min 误判 DEAD）：每 60 次（约30s）写一次
   if (++_hbCtr % 60 === 0) {
-    var _hbPath = "../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt";
+    var _hbPath = "../world/{{ROLE_NAME}}_talk/_heartbeat.txt";
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
@@ -57,7 +57,7 @@ while (true) {
   if (_fs.default.existsSync("FILE_B")) break;
   // 续心跳（防 monitor 2min 误判 DEAD）：每 60 次（约30s）写一次
   if (++_hbCtr % 60 === 0) {
-    var _hbPath = "../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt";
+    var _hbPath = "../world/{{ROLE_NAME}}_talk/_heartbeat.txt";
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
@@ -100,7 +100,7 @@ while (true) {
 > ⚠️ **T 序号递增防旧信号秒返**：新问 T = 当前最大 T + 1——先 `ls <任务目录> | grep -oE "T[0-9]+" | sort -t T -k2 -n | tail -1` 取最大 T（**`<任务目录>` 为占位符，替换为实际路径**），**禁止凭记忆手写序号**（写错成旧序号 → 命中残留旧 .signal 秒返 → 读到旧内容重复回答）。
 
 **2. 等答方回答**
-**优先用 `temp-scripts/wait_file.js`**：`node temp-scripts/wait_file.js <任务目录>/chat_{公告牌轮次}_T{第几问}_answer.md.signal --hb <心跳> --timeout 20 --watch-hb ../我的世界/{答方角色名}_talk/_heartbeat.txt`
+**优先用 `temp-scripts/wait_file.js`**：`node temp-scripts/wait_file.js <任务目录>/chat_{公告牌轮次}_T{第几问}_answer.md.signal --hb <心跳> --timeout 20 --watch-hb ../world/{答方角色名}_talk/_heartbeat.txt`
 （**`<任务目录>`/`<心跳>`/`{答方角色名}` 为占位符，复制后必须替换**；缺省用默认 timeout 20/自动推导心跳；`--watch-hb` 监控答方失联，见下）
 
 检测到就位后读 `chat_{公告牌轮次}_T{第几问}_answer.md` 内容，**wait_file 自动 ack（改名为 `.signal_acked`）后无需再删**。
@@ -117,13 +117,13 @@ while (true) {
 > "说了收尾"不等于"现在结束"，说过预告≠同步创建（否则答方 wait_file --any 同时看到"问+结束信号"，比较 mtime 结束信号晚→误收尾丢掉最后一问的答案）。
 > 🚫 **创建结束信号前确认当前无未答之问**（T{N} 已答或明确放弃）；**创建后禁止再发新问**——确需追加 → 先把 `chat-end.signal` 改名 `chat-end_已处理.signal`（铁律 2 允许改 .signal）再发新问。
 > ⏱️ **问方等待答案超时**：等答方回答 20 分钟超时 → **必须先创建 `chat-end.signal`**（解锁答方，让它收尾）→ 再按超时规则推进output/签字。
-> ⏱️ **问方侧也要监控答方失联**：等待答案时同样每 15 分钟查答方心跳（`--watch-hb ../我的世界/{答方角色名}_talk/_heartbeat.txt`），答方失联 → 写求助 → 创建结束信号收尾（产出按已有材料整理）。
+> ⏱️ **问方侧也要监控答方失联**：等待答案时同样每 15 分钟查答方心跳（`--watch-hb ../world/{答方角色名}_talk/_heartbeat.txt`），答方失联 → 写求助 → 创建结束信号收尾（产出按已有材料整理）。
 
 **5. 写产出（默认中文——与对话/搭档一致，零Shell直写）**
-**产出负责人 = 问方（本模式固定）**：把对话精华整理成产出（不是抄对话，是提炼核心洞察）→ **写产出前先检查目标 `.ready` 是否已存在**（存在 = 已被交付/代交付 → 不覆盖，读已有产出补充即可）→ 写到 `../我的世界/output/` 目录 → `node _deliver.js <产出文件名> <任务目录>` 发 .ready 信号（独立脚本优先）。
+**产出负责人 = 问方（本模式固定）**：把对话精华整理成产出（不是抄对话，是提炼核心洞察）→ **写产出前先检查目标 `.ready` 是否已存在**（存在 = 已被交付/代交付 → 不覆盖，读已有产出补充即可）→ 写到 `../world/output/` 目录 → `node _deliver.js <产出文件名> <任务目录>` 发 .ready 信号（独立脚本优先）。
 
 > **代码类产出**（修改已有源文件）：源文件原地改完 → 直接 `node _deliver.js 文件名.js taskNNN 源文件路径`，只发 .ready 信号，不搬运文件。
-> **文档类产出**（新建报告、设计文档等）：先 fs.writeFileSync 写到 `../我的世界/output/` 目录 → 再 `node _deliver.js 文件名 taskNNN` 发信号。
+> **文档类产出**（新建报告、设计文档等）：先 fs.writeFileSync 写到 `../world/output/` 目录 → 再 `node _deliver.js 文件名 taskNNN` 发信号。
 **6. 签字**
 用 `node _sign.js N` 签字。（独立脚本优先）
 
@@ -157,7 +157,7 @@ while (true) {
 **循环执行，直到问方喊停：**
 
 **1. 等结束信号或下一问（先检查结束信号）**
-**优先用 `wait_file.js --any`（任一目标就位即返回）**：`node temp-scripts/wait_file.js <任务目录>/chat-end.signal <任务目录>/chat_{公告牌轮次}_T{第几问}_ask.md.signal --any --watch-hb ../我的世界/{问方角色名}_talk/_heartbeat.txt`
+**优先用 `wait_file.js --any`（任一目标就位即返回）**：`node temp-scripts/wait_file.js <任务目录>/chat-end.signal <任务目录>/chat_{公告牌轮次}_T{第几问}_ask.md.signal --any --watch-hb ../world/{问方角色名}_talk/_heartbeat.txt`
 （**`<任务目录>`/`{问方角色名}` 为占位符，复制后必须替换**）
 ——**必须带 `--any`**（不带 = AND 语义两个都等，chat-end没有新问时会卡死）与 **`--watch-hb`**（搭档失联检测，问方失联 → PARTNER_DEAD + exit 4 → 见下「失联分支」；wait_file 无 --hb 也会自动续自己的心跳）。
 或用手写双文件内联轮询（FILE_A = `chat-end.signal`——问方喊停，这本身就是信号文件；FILE_B = 任务目录下 `chat_{公告牌轮次}_T{第几问}_ask.md.signal`），循环结束后**先检查结束信号**（存在 → 收尾），没有才处理下一问（第 2 步）。
@@ -173,7 +173,7 @@ while (true) {
 > 🚫 **答方永不自行判断对话完成（防呆）**：每轮答完**必须回到本步**，继续等"chat-end.signal **或** 下一问.signal"（`--any`，**先检查结束信号**——在则收尾，不在才处理下一问）；对话何时结束**只由问方决定**（问方觉得可以结束 → 它创建 `chat-end.signal`）。
 > **禁止**自行宣布"对话完成"后只等结束信号——那会错过问方发来的下一问，造成双方互锁（问方等你答新问、你等它结束信号）。你永远不知道对话还剩几轮，**每次答完都当"可能还有下一问"来等**。
 >
-> ⏱️ **问方失联检测（防盲等）**：等待中**每 15 分钟检查一次**问方心跳（`../我的世界/{问方角色名}_talk/_heartbeat.txt`）——
+> ⏱️ **问方失联检测（防盲等）**：等待中**每 15 分钟检查一次**问方心跳（`../world/{问方角色名}_talk/_heartbeat.txt`）——
 > 若问方**心跳超过阈值（默认 15 分钟，`--watch-hb-dead` 可调）未更新，且其output/任务/对讲目录均无新文件**（与 monitor 判 DEAD 同源判据——对讲目录静默但output/任务有活 = 在干活不算失联，见下方「失联判据宽容」；问方下线/失联，结束信号永远不会来）→ **立即退出等待，写求助给大鱼**（"问方失联，对话卡在第 N 问"），
 不要盲等 20 分钟超时。
 

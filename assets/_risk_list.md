@@ -17,7 +17,7 @@
 | 4 | poll 无容错——一行抛异常角色静默挂 | 循环体包 `try-catch`（4 个模式模板） |
 | 5 | 角色掉线无人知——自以为在轮询实则已断 | `_reasonix_poll.js` 按 `_hb_state.json` 批量写心跳（待命 30s/休眠 15s） |
 | 6 | monitor 只报告不行动——看到掉线不会自动捞 | 心跳超 2 分钟自动写 `_wakeup.md` 唤醒（monitor.js） |
-| 7 | scaffold 把角色生成到我的世界里面 | scaffold.js 防呆：拒绝以 `/我的世界` 结尾的 projectDir |
+| 7 | scaffold 把角色生成到world里面 | scaffold.js 防呆：拒绝以 `/world` 结尾的 projectDir |
 | 8 | 内联 lock() 无原子保护——角色崩溃导致全员死锁 | wx 原子抢锁 + 过期回收(10min) + 超时(180s) + 持有进程存活校验（`_lock.js`，需 re-scaffold 生效） |
 | 9 | monitor 正则扫全文——任务描述中的相似文本被误匹配 | 角色解析正则限定 `headerPart`（`任务:` 行之前）（monitor.js） |
 | 10 | monitor 心跳唤醒与角色恢复的竞争条件 | 写 `_wakeup.md` 前重读心跳，<30s 内恢复则跳过（monitor.js） |
@@ -31,7 +31,7 @@
 
 | 17 | 写方漏发 .signal——搭档空等 | wait_file 缺信号检测机制化（13-2/3/4/7：MISSING_SIGNAL_ABORT 告警+exit 5+命名兼容+扫描收窄）——漏发从静默变失败 |
 | 18 | 多审核方信号共享缺陷（please-review单信号） | 双侧闭环：review-result带角色名（13-5）+ please-review带角色名（3600269，方案A与13-5对称）——多审核方信号全程独立确认 |
-| 21 | _reasonix_poll argv 角色名零净化（可写出 我的世界/） | 机制审查 #21：对齐 _wakeup.js 同款校验（拒分隔符/../纯点，非法 exit 4）（bfa372b） |
+| 21 | _reasonix_poll argv 角色名零净化（可写出 world/） | 机制审查 #21：对齐 _wakeup.js 同款校验（拒分隔符/../纯点，非法 exit 4）（bfa372b） |
 | 22 | monitor 公告牌文本角色名/产出路径无净化（手写公告牌可逃逸） | 机制审查 #22：角色名/产出路径禁 ..（主/自检/复检三处同步，OUTPUT-FORMAT 告警拒绝）（bfa372b） |
 | 23 | _lock 等锁心跳角色名从 AGENTS.md 首行推导（与 P1-16 同源） | 机制审查 #23：统一为 path.basename(__dirname)（与 :82 同款，弃首行推导）（bfa372b） |
 | 24 | wait_file 空 .md 算就位（秒返误判完成） | 机制审查 #24：.md 目标就位加 size>0 非空校验（.signal 保持存在即就位）（bfa372b） |

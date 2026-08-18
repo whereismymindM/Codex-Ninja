@@ -14,7 +14,7 @@
 | **系统学习**（状态机/扣留/追加/常见错误） | `board_complete_guide.md`（完整参考） |
 | **多轮编排思路**（状态矩阵/角色接力） | `example_RSS_digest.md`（⚠️历史示例：字段格式过时，只学编排思路） |
 | **小项目单窗口换帽子** | `_Multi-pass_solo.md` |
-| **收工后问大鱼体验** | `bigfish_survey.md`（走对讲目录，放 我的世界/大鱼_老渣对讲/） |
+| **收工后问大鱼体验** | `bigfish_survey.md`（走对讲目录，放 world/fish_laozha_talk/） |
 | **goal 模式项目**（平台保活/收口/警告栏措辞） | `goal_mode_guide.md`（单一事实源：双轨模型/三层配合/收工顺序/evidence/常见问题） |
 
 ---

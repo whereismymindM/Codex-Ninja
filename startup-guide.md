@@ -33,9 +33,9 @@ bash_timeout_seconds = 0   # 关闭 bash 前台上限，角色可在回合内持
 
 > ⚠️ 旧项目（scaffold 早于 2026-08-02 生成的）角色 `reasonix.toml` 可能缺 `[sandbox]`——**删掉该角色目录后重跑 `node scaffold.js <项目目录> <roles.json> add`** 会重新生成全套（单独删 reasonix.toml 无效：scaffold add 对已有角色目录 SKIP，见下条）；或手动补 toml。
 >
-> ⚠️ **大鱼 `reasonix.toml` 同样存在旧版问题**：scaffold 对 `火影-大鱼/reasonix.toml` 也是"不存在才写"（fish/init 两条路径均如此）——
-> **2026-08-05 前生成的大鱼 toml 缺 `allow_write = [火影-大鱼]`**（大鱼写自己目录的 `_heartbeat.txt`/日志需此权限，缺则 write_file 被沙箱拦截 → bash 绕行 或 心跳写不进 → FISH_DEAD 误报）。
-> **重跑 fish 重建不会更新已有 toml**。修复：删除 `火影-大鱼/reasonix.toml` → 重跑 `node scaffold.js <项目目录> fish window|run` 重新生成（toml 只有 bash_timeout/sandbox/allow_write 三条配置，无自定义内容，可安全删除重建）。
+> ⚠️ **大鱼 `reasonix.toml` 同样存在旧版问题**：scaffold 对 `fish/reasonix.toml` 也是"不存在才写"（fish/init 两条路径均如此）——
+> **2026-08-05 前生成的大鱼 toml 缺 `allow_write = [fish]`**（大鱼写自己目录的 `_heartbeat.txt`/日志需此权限，缺则 write_file 被沙箱拦截 → bash 绕行 或 心跳写不进 → FISH_DEAD 误报）。
+> **重跑 fish 重建不会更新已有 toml**。修复：删除 `fish/reasonix.toml` → 重跑 `node scaffold.js <项目目录> fish window|run` 重新生成（toml 只有 bash_timeout/sandbox/allow_write 三条配置，无自定义内容，可安全删除重建）。
 
 > ⚠️ **角色目录版本同步**：模板/工具脚本升级后，**已生成的角色目录仍是旧版**——scaffold add 对已存在角色 SKIP（不覆盖），升级角色 = **删除该角色目录 → 重跑 `node scaffold.js <项目目录> <roles.json> add`**。
 > 典型场景：修复前生成的角色，`_双人/主笔/辩论模式.md` 里的 `{{ROLE_NAME}}` 心跳路径未替换，等文件内联循环的心跳会写入字面占位符目录 → monitor 读不到 → 误判 DEAD。
@@ -44,20 +44,20 @@ bash_timeout_seconds = 0   # 关闭 bash 前台上限，角色可在回合内持
 
 ### 角色原生工具权限（reasonix.toml 必配，别省）
 
-角色要有**原生 write_file 权限**直接写 我的世界/（共享空间），必须配好 `[sandbox]`：
+角色要有**原生 write_file 权限**直接写 world/（共享空间），必须配好 `[sandbox]`：
 
 ```toml
 [sandbox]
-workspace_root = "<项目根目录绝对路径>/我的世界"   # write_file 沙箱根=我的世界（角色只写干活区，绝对路径 / 分隔；read_file 读公告牌/角色目录不受限；scaffold 已自动生成，勿手动配错）
+workspace_root = "<项目根目录绝对路径>/world"   # write_file 沙箱根=world（角色只写干活区，绝对路径 / 分隔；read_file 读公告牌/角色目录不受限；scaffold 已自动生成，勿手动配错）
 ```
 
-- **作用**：`workspace_root` = write_file 沙箱根 = **`我的世界/`**（scaffold 自动生成，已收紧）→ 角色用**原生 write_file 工具**直接写共享区，免 bash 绕行（`cat > file` 之类）；`read_file` 全局可读不受限（角色仍能读 AGENTS.md/玩法文件/公告牌）
+- **作用**：`workspace_root` = write_file 沙箱根 = **`world/`**（scaffold 自动生成，已收紧）→ 角色用**原生 write_file 工具**直接写共享区，免 bash 绕行（`cat > file` 之类）；`read_file` 全局可读不受限（角色仍能读 AGENTS.md/玩法文件/公告牌）
 - **不配的后果**：write_file 被沙箱拦截 → 角色被迫走 bash 绕行 → **慢 + 易错**（实测踩过：角色写文件全走 bash，轮询被拖垮）
-- **配错路径的后果**：workspace_root 不是 我的世界 → 角色写 我的世界/ 仍被拦，同样走 bash 绕行
+- **配错路径的后果**：workspace_root 不是 world → 角色写 world/ 仍被拦，同样走 bash 绕行
 - **排查**：角色动作明显变慢 / 日志里大量 bash 写文件 = 大概率 sandbox 没配好，检查该角色 reasonix.toml
-- ⚠️ **沙箱已收紧**：角色/大鱼的 workspace_root = `项目根/我的世界`——write_file 只能写干活区，杜绝误写 monitor.js/角色目录；**现有角色需删除重建才生效**
+- ⚠️ **沙箱已收紧**：角色/大鱼的 workspace_root = `项目根/world`——write_file 只能写干活区，杜绝误写 monitor.js/角色目录；**现有角色需删除重建才生效**
 
-**公告牌发布**：老渣把所有公告牌（001 → 收工）写完放大鱼目录（`火影-大鱼/`），大鱼发布时校验 + 全量复制到 `我的世界/`（有待命轮则扣留收工轮，10 分钟后补搬——见大鱼模板）。
+**公告牌发布**：老渣把所有公告牌（001 → 收工）写完放大鱼目录（`fish/`），大鱼发布时校验 + 全量复制到 `world/`（有待命轮则扣留收工轮，10 分钟后补搬——见大鱼模板）。
 
 ---
 
@@ -66,7 +66,7 @@ workspace_root = "<项目根目录绝对路径>/我的世界"   # write_file 沙
 ### 启动大鱼
 
 ```powershell
-# 进入火影-大鱼 目录，运行
+# 进入fish 目录，运行
 reasonix code
 # 输入「进入角色」——大鱼开始：发布校验 → 全量发布（扣留收工轮按需）→ 周期 monitor
 ```
@@ -82,7 +82,7 @@ reasonix code
 批量启动（每个角色目录并行开一个窗口）：
 
 > 现成脚本：把 `scripts/start-all.ps1`（Skill 仓库内）复制到项目根目录，双击运行即可。
-> 脚本自动识别角色目录（含 AGENTS.md + reasonix.toml），不再需要手动维护 skip 黑名单；防重复开窗；如需把火影-大鱼一起开：`powershell -File start-all.ps1 -IncludeFish`。
+> 脚本自动识别角色目录（含 AGENTS.md + reasonix.toml），不再需要手动维护 skip 黑名单；防重复开窗；如需把fish一起开：`powershell -File start-all.ps1 -IncludeFish`。
 > 在每个窗口输入「进入角色」即可。
 
 ```powershell
@@ -91,7 +91,7 @@ Copy-Item <skill路径>/scripts/start-all.ps1 <项目根目录>/
 # 然后双击 start-all.ps1（或 右键 → 用 PowerShell 运行）
 ```
 
-> ⚠️ 大鱼窗口（火影-大鱼/）默认不在此脚本内——按上方「启动大鱼」单独开；或用 `-IncludeFish` 一起开。
+> ⚠️ 大鱼窗口（fish/）默认不在此脚本内——按上方「启动大鱼」单独开；或用 `-IncludeFish` 一起开。
 
 ### 角色轮询机制
 
@@ -110,7 +110,7 @@ node <skill>/scripts/start-fish.js <项目根目录>
 
 前置：
 1. **scaffold fish run**（生成 run拉起大鱼 + `_运行形态.mode` 标志，monitor 靠它区分心跳处理）：`node <skill>/scripts/scaffold.js <项目根目录> fish run`
-2. **公告牌已放大鱼目录**（老渣写好 001→收工）——启动大鱼后，大鱼按启动流程先看牌 → 校验 → 全量发布到 我的世界/（与窗口常驻同一套流程）；**发布完成前角色不会有反应，属正常**
+2. **公告牌已放大鱼目录**（老渣写好 001→收工）——启动大鱼后，大鱼按启动流程先看牌 → 校验 → 全量发布到 world/（与窗口常驻同一套流程）；**发布完成前角色不会有反应，属正常**
 之后大鱼自动开始调度循环——每 60s 跑 monitor，按 `ROLE <角色> DONE|PENDING` 输出判断该唤醒谁，用 `reasonix run --continue`（省 34% 冷启动）或冷启动唤醒，角色干完即退。
 
 ### 角色生命周期

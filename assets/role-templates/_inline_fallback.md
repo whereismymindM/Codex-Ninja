@@ -9,8 +9,8 @@
 var sign = async function(roundN) {
   const fs = await import("node:fs");
   const path = await import("node:path");
-  var worldDir = "../我的世界";
-  if (!fs.default.existsSync(worldDir)) throw new Error("WORLDDIR_MISSING: ../我的世界 不存在（CWD 可能错: " + process.cwd() + "）——禁止静默创建嵌套目录！请先 cd 回角色目录再执行。");
+  var worldDir = "../world";
+  if (!fs.default.existsSync(worldDir)) throw new Error("WORLDDIR_MISSING: ../world 不存在（CWD 可能错: " + process.cwd() + "）——禁止静默创建嵌套目录！请先 cd 回角色目录再执行。");
   var ag = fs.default.readFileSync("./AGENTS.md", "utf8");
   var roleMatch = ag.match(/^# (.+)$/m);
   var roleName = roleMatch ? roleMatch[1].trim() : "{{ROLE_NAME}}";
@@ -28,8 +28,8 @@ var sign = async function(roundN) {
 var deliver = async function(filename, taskDirName, sourcePath) {
   const fs = await import("node:fs");
   const path = await import("node:path");
-  var worldDir = "../我的世界";
-  if (!fs.default.existsSync(worldDir)) throw new Error("WORLDDIR_MISSING: ../我的世界 不存在（CWD 可能错: " + process.cwd() + "）——禁止静默创建嵌套目录！请先 cd 回角色目录再执行。");
+  var worldDir = "../world";
+  if (!fs.default.existsSync(worldDir)) throw new Error("WORLDDIR_MISSING: ../world 不存在（CWD 可能错: " + process.cwd() + "）——禁止静默创建嵌套目录！请先 cd 回角色目录再执行。");
   var outDir = path.default.join(worldDir, "产出", taskDirName);
   if(!fs.default.existsSync(outDir)) fs.default.mkdirSync(outDir, {recursive: true});
   var outPath = path.default.join(outDir, filename);
@@ -60,7 +60,7 @@ var deliver = async function(filename, taskDirName, sourcePath) {
 var lock = async function(op, lockName) {
   const fs = await import("node:fs");
   var name = (lockName || "写锁").replace(/[\\/]/g, "_");
-  var lockFile = "../我的世界/写锁_" + name + ".lock";
+  var lockFile = "../world/写锁_" + name + ".lock";
   var LOCK_STALE_SEC = 600;
   var WAIT_TIMEOUT = 180;
   var _hbCtr15 = 0;
@@ -90,8 +90,8 @@ var lock = async function(op, lockName) {
         if((Date.now() - start) / 1000 > WAIT_TIMEOUT) return "LOCK_TIMEOUT";
         if (++_hbCtr15 % 12 === 0) {
           try {
-            fs.default.mkdirSync("../我的世界/{{ROLE_NAME}}_talk", { recursive: true });
-            fs.default.writeFileSync("../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt", String(Date.now()), "utf8");
+            fs.default.mkdirSync("../world/{{ROLE_NAME}}_talk", { recursive: true });
+            fs.default.writeFileSync("../world/{{ROLE_NAME}}_talk/_heartbeat.txt", String(Date.now()), "utf8");
           } catch(_hb) {}
         }
         await new Promise(r=>setTimeout(r,5000));

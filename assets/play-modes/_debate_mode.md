@@ -42,13 +42,13 @@ while (true) {
   if (_fs.default.existsSync("YOUR_FILE_PATH")) break;
   // 续心跳（防 monitor 2min 误判 DEAD）：每 60 次（约30s）写一次
   if (++_hbCtr % 60 === 0) {
-    var _hbPath = "../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt";
+    var _hbPath = "../world/{{ROLE_NAME}}_talk/_heartbeat.txt";
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
   // 辩论模式超时不写 _deadlock.md（裁判是天然兜底，不需要 monitor 救场）——只记轮询日志，自己不卡等
   if (Date.now() > _deadline) {
-    var _dlDir = "../我的世界/{{ROLE_NAME}}_talk";
+    var _dlDir = "../world/{{ROLE_NAME}}_talk";
     _fs.default.mkdirSync(_dlDir, { recursive: true });
     var _logName = _dlDir.split("/").pop().replace("_talk", "");
     _fs.default.appendFileSync(_dlDir + "/" + _logName + "_轮询日志.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
@@ -74,13 +74,13 @@ while (true) {
   if (_fs.default.existsSync("debate-end.md")) break;
   // 续心跳（防 monitor 2min 误判 DEAD）：每 60 次（约30s）写一次
   if (++_hbCtr % 60 === 0) {
-    var _hbPath = "../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt";
+    var _hbPath = "../world/{{ROLE_NAME}}_talk/_heartbeat.txt";
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
   // 辩论超时不写 _deadlock——裁判是天然兜底，只记日志后 break
   if (Date.now() > _deadline) {
-    var _dlDir = "../我的世界/{{ROLE_NAME}}_talk";
+    var _dlDir = "../world/{{ROLE_NAME}}_talk";
     _fs.default.mkdirSync(_dlDir, { recursive: true });
     var _logName = _dlDir.split("/").pop().replace("_talk", "");
     _fs.default.appendFileSync(_dlDir + "/" + _logName + "_轮询日志.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
@@ -111,7 +111,7 @@ while (true) {
 
 ### 第1步：pro-stmt
 
-正方写 `../我的世界/<任务目录>/debate_01_pro-stmt.md`
+正方写 `../world/<任务目录>/debate_01_pro-stmt.md`
 
 内容要求：
 - 清晰陈述你的立场
@@ -122,7 +122,7 @@ while (true) {
 
 ### 第2步：con-stmt
 
-反方读pro-stmt后，写 `../我的世界/<任务目录>/debate_02_con-stmt.md`
+反方读pro-stmt后，写 `../world/<任务目录>/debate_02_con-stmt.md`
 
 内容要求同上——站在你的对立立场，独立立论，不反驳正方（反驳在第3步）。
 
@@ -130,7 +130,7 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 
 ### 第3步：con-attack
 
-反方读pro-stmt，写 `../我的世界/<任务目录>/debate_03_con-attack.md`
+反方读pro-stmt，写 `../world/<任务目录>/debate_03_con-attack.md`
 
 逐条检视pro-stmt——找错误、找盲区、质疑前提：
 
@@ -150,7 +150,7 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 
 ### 第4步：pro-attack
 
-正方读con-stmt，写 `../我的世界/<任务目录>/debate_04_pro-attack.md`
+正方读con-stmt，写 `../world/<任务目录>/debate_04_pro-attack.md`
 
 规则同上——对着con-stmt逐条找。
 
@@ -160,7 +160,7 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 
 公告牌**可选**指定 N 轮作上限（如 "辩论 3 轮"）；**不指定 = 自由发挥**——任一方觉得争论已充分，写 `debate-end.md` 即收敛（下方"提前终结"）。
 
-正方先手，写 `../我的世界/<任务目录>/debate_05_T1_pro.md` → 反方 poll 到后写 `../我的世界/<任务目录>/debate_05_T1_con.md` → 回合交替。
+正方先手，写 `../world/<任务目录>/debate_05_T1_pro.md` → 反方 poll 到后写 `../world/<任务目录>/debate_05_T1_con.md` → 回合交替。
 
 ⚠️ **自由辩论轮内等对方文件时，一律用上面的双文件轮询**（同时检测 `debate-end.md`）——任一方写终结信号，另一方应立即感知并跳第6步，而不是等 20 分钟超时。
 
@@ -169,13 +169,13 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 - 推进辩护或反驳深度
 - 引入新证据可以，但不能重复前面说过的
 
-提前终结：任一方觉得争论已充分，写 `../我的世界/<任务目录>/debate-end.md`，内容写"辩论终结：{理由}"。对方 poll 到后直接跳到第6步。**自由辩论不设固定轮数**（公告牌未写轮数时）——终结信号是收敛机制；公告牌写了上限时，轮数满了自动进第6步。
+提前终结：任一方觉得争论已充分，写 `../world/<任务目录>/debate-end.md`，内容写"辩论终结：{理由}"。对方 poll 到后直接跳到第6步。**自由辩论不设固定轮数**（公告牌未写轮数时）——终结信号是收敛机制；公告牌写了上限时，轮数满了自动进第6步。
 
 > 🔑 **收敛引导（不强制轮数）**：自由发挥 ≠ 无限拖延——**连续 2-3 轮双方都没提出新论点/新证据**（只是在重复或换说法）→ **主动写 `debate-end.md` 收敛**（理由写"论点已充分交换，无新内容"）。终结信号是你自己的判断，不是系统强制；只是提醒你"争论已充分"该收口了。若你认为对方还有新料可挖、或立场有实质分歧未展开 → 继续辩，不受此限。
 
 ### 第6步：总结陈词
 
-正方写 `../我的世界/<任务目录>/debate_06_pro-summary.md` → 反方写 `../我的世界/<任务目录>/debate_06_con-summary.md`
+正方写 `../world/<任务目录>/debate_06_pro-summary.md` → 反方写 `../world/<任务目录>/debate_06_con-summary.md`
 
 总结要求（每人）：
 - 重申核心立场（1句）
@@ -203,7 +203,7 @@ while (true) {
   if (_fs.default.existsSync("YOUR_TASK_DIR/debate_06_pro-summary.md") && _fs.default.existsSync("YOUR_TASK_DIR/debate_06_con-summary.md")) break;
   // 续心跳（防 monitor 2min 误判 DEAD）：每 60 次（约30s）写一次
   if (++_hbCtr % 60 === 0) {
-    var _hbPath = "../我的世界/{{ROLE_NAME}}_talk/_heartbeat.txt";
+    var _hbPath = "../world/{{ROLE_NAME}}_talk/_heartbeat.txt";
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
@@ -224,9 +224,9 @@ try { _fs.default.renameSync("YOUR_TASK_DIR/debate_06_con-summary.md.signal", "Y
 > **若 monitor/大鱼提示"裁判失联、缺裁判结论"**（心跳 stale 且无新产出，见失联判据）→ ①正方接手交付裁判结论：读全部辩论文件、基于现有材料写 `裁判结论.md`（注明「⚠️ 裁判失联，正方代交付」）→ 写到产出目录 → `node _deliver.js 裁判结论.md <任务目录>`（正反方已签则不需补签）。
 > **若公告牌任务描述另有接手方则以公告牌为准**；产出负责人写的是裁判时同样由正方代接（与无裁判场次规则一致）。**注意**：不要凭"等超时"就认定裁判掉线——先查裁判心跳+对讲目录近期文件（活着=还在写结论，等 monitor 判产出）；只有"心跳 stale 且无新文件"才代接。
 
-用 `node _deliver.js 裁判结论.md <任务目录>` 交付到 ../我的世界/output/{公告牌产出路径}/裁判结论.md
+用 `node _deliver.js 裁判结论.md <任务目录>` 交付到 ../world/output/{公告牌产出路径}/裁判结论.md
 
-裁判结论是文档类产出——先 writeFileSync 写到 `../我的世界/output/` 目录，再 `node _deliver.js 裁判结论.md <任务目录>` 发信号，**然后 `node _sign.js N` 签字**（裁判是活跃角色，monitor 逐角色核对签字，漏签收工审计标红）。
+裁判结论是文档类产出——先 writeFileSync 写到 `../world/output/` 目录，再 `node _deliver.js 裁判结论.md <任务目录>` 发信号，**然后 `node _sign.js N` 签字**（裁判是活跃角色，monitor 逐角色核对签字，漏签收工审计标红）。
 
 结论要求：
 - 双方核心论点摘要（正反各1句；缺一方则注明该方未提交）

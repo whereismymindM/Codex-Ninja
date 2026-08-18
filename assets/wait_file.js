@@ -329,7 +329,7 @@ while (Date.now() < deadline) {
         var _partnerName = path.basename(_pDir).replace("_talk", ""); // 2026-08-17 P2-17：共享区归属限定用（对方角色名）
         var _scanDirs = [_pDir];
         try {
-          if (fs.existsSync(_worldDir + "/产出")) _scanDirs.push(_worldDir + "/产出");
+          if (fs.existsSync(_worldDir + "/output")) _scanDirs.push(_worldDir + "/output");
           fs.readdirSync(_worldDir).forEach(function(_d2) {
             if (/^task\d+/.test(_d2) && fs.existsSync(_worldDir + "/" + _d2)) _scanDirs.push(_worldDir + "/" + _d2);
           });

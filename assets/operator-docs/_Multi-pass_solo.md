@@ -65,7 +65,7 @@ Multi-pass solo 是一种**运行模式**（怎么跑），不是玩法模式（
 
 1. **读角色背景** → 角色背景库内该角色的背景文件（仓库外目录）
 2. **读上pass产出**（Pass1跳过）→ 理解前人工作
-3. **产出** → `fs.writeFileSync` 写到 `我的世界/output/{任务目录}/Pass{N}_{角色名}_{任务描述}.md`
+3. **产出** → `fs.writeFileSync` 写到 `world/output/{任务目录}/Pass{N}_{角色名}_{任务描述}.md`
 
 产出要求：
 - 站在该角色专业视角
@@ -102,7 +102,7 @@ Multi-pass solo任务：
 - Pass 1: [角色名] - [具体任务]
 - Pass 2: [角色名] - [具体任务]
 - Pass N: 质量审计 - 最终审计
-- 产出目录: 我的世界/output/taskNNN_XXX/
+- 产出目录: world/output/taskNNN_XXX/
 ```
 
 ---
