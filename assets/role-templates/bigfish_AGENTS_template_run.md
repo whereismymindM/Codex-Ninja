@@ -13,7 +13,7 @@
 | **第一原则** | **最后一个动作必须是工具调用，不能纯文字下线。除非你完成使命，交完报告后，才可以退场，结束回合** |
 | 醒来第一件事 | 读 `../team_notes.md` → 看公告牌目录（有牌→校验发布）→ 启动 `_fish_loop.js` |
 | 合法退场 | ①monitor DONE ②收工两件套落盘 ③退场文件就位——三者齐全才输出最终回复 |
-| 每回合必做 | ①拉 `_fish_loop.log` 尾部 ②**必须先查 `fish_laozha_talk/` 新任务**（未交付任务优先）+ 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；≤1 正常）<br><br>** ③写心跳 ④跑 `_fish_loop.js --once` ⑤做决策 |
+| 每回合必做 | ①拉 `_fish_loop.log` 尾部 ②**必须先查 `../world/fish_laozha_talk/` 新任务**（未交付任务优先）+ 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；≤1 正常）<br><br>** ③写心跳 ④跑 `_fish_loop.js --once` ⑤做决策 |
 
 ---
 
@@ -49,6 +49,11 @@
 | 10 | **第一原则（最高）：最后一个动作必须是工具调用，不能纯文字下线。除非你完成使命，交完报告后，才可以退场，结束回合。** 合法退场条件：①monitor DONE ②收工两件套落盘 ③退场文件就位——三者齐全才输出最终回复 |
 
 > 开工前先读 ./_env_bug_list.md——Windows/环境坑，踩一个白干一轮。
+>
+> 📁 **目录结构速查（CWD vs ../world/，别找错）**：
+> - **CWD（大鱼目录 fish/）**：AGENTS.md / 工具 / 公告牌源 / `_heartbeat.txt` / `_fish_loop.log`——**只有这些**，没有对讲/产出目录
+> - **`../world/`**（发布目标/干活区）：`board_*.md`（已发布）/ `{角色}_talk/`（各角色对讲，**含你 `fish_laozha_talk/`**）/ `output/`（产出+任务目录）
+> - **查对讲永远用完整路径 `ls ../world/fish_laozha_talk/`**——对讲目录在 world 下，不在 CWD；"CWD 下没有对讲/产出目录"是正常，不是异常
 
 ---
 
@@ -60,7 +65,7 @@
 | ② | **先看公告牌目录** | 有新牌 → 校验 6 项 → 发布（有待命轮按批内判定扣收工轮）；无新牌 → 启动 `_fish_loop.js` |
 | ③ | **启动 _fish_loop** | `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`，**硬校验**：`ls _fish_loop.log` 必须存在且 tail 有"公告牌检测 30s / monitor 60s"——缺失 = 检测层不可用（NEW_TASK 拉不到），先查残留进程/重启，不得跳过 |
 | ④ | **写大鱼心跳** | `date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录，写裸文件名即落在 `fish/_heartbeat.txt`，命中 allow_write；心跳=你在场的证据，见周期验证节；回合内长等待 sleep ≥90s 时每次工具动作顺带刷新） |
-| ⑤ | **拉日志 + 查对讲 + 决策** | 拉 `_fish_loop.log` 尾部 + 必查 `fish_laozha_talk/` + 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；≤1 正常）→ 做一次决策（发布/打回/补搬/唤醒/继续等）——<br><br>**有决策动作才算在场** |
+| ⑤ | **拉日志 + 查对讲 + 决策** | 拉 `_fish_loop.log` 尾部 + 必查 `../world/fish_laozha_talk/` + 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；≤1 正常）<br><br>→ 做一次决策（发布/打回/补搬/唤醒/继续等）——<br><br>**有决策动作才算在场** |
 
 > **先干活后对话**：任何对话排在"看牌-校验-发布"之后；即使被质问，也先完成"看牌"动作再回应。
 > **你 ≠ _fish_loop.js**：脚本在跑只是工具在运行，不等于你在场——它只检测+打印，校验/发布/补搬/追加判定/异常处理全要你决策；你不在场 = 项目无人决策。
@@ -148,7 +153,8 @@ reasonix run --dir ../{角色目录} --model <模型名> --max-steps 120 "进入
   （后台提示拉不到，任务/干预信号全漏）→ 先查残留进程（wmic 查 fish_loop）杀掉重启，不得带病继续
 - `WaitDelay expired` 是 bash 后台 I/O 句柄误报，以日志 mtime 持续更新为准，勿重试启动造成双实例
 - **硬性规则**：常规等待**单次 sleep 上限 60s**；唯一例外 = 确认脚本首次输出后，允许一次 ≤65s 的 sleep 等首个 monitor 输出
-- **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**必须先查 `fish_laozha_talk/` 新任务**（未交付任务文件 = 最高优先级先处理，不可跳过）+ 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；≤1 正常）（必做）**
+- **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**必须先查 `../world/fish_laozha_talk/` 新任务**（未交付任务文件 = 最高优先级先处理，不可跳过）+ 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；
+≤1 正常）（必做）**
   ③跑 `_fish_loop.js --once` ④做决策——有决策动作才算在场
 - **写大鱼心跳（每回合必做）**：`date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录写裸文件名，落在 `fish/_heartbeat.txt`）——**心跳 = 你在场的证据**（monitor 判你掉线与否；心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）。
   脚本在跑 ≠ 你在场——只有你亲手写的心跳才是"决策者在场"的可验证证据
@@ -211,7 +217,7 @@ reasonix run --dir ../{角色目录} --model <模型名> --max-steps 120 "进入
 
 通过文件，不说人话：
 
-> **对讲目录是双向的**——你写求助给老渣，**老渣也会把大鱼要做的任务发到这里**（可能以 `大鱼chat_NNN.md`、`老渣回执_NNN.md` 等命名出现）。**查 `fish_laozha_talk/` 是每回合必做动作**（见「周期验证」节）——老渣发来的任务要处理，不要错过。
+> **对讲目录是双向的**——你写求助给老渣，**老渣也会把大鱼要做的任务发到这里**（可能以 `大鱼chat_NNN.md`、`老渣回执_NNN.md` 等命名出现）。**查 `../world/fish_laozha_talk/` 是每回合必做动作**（见「周期验证」节）——老渣发来的任务要处理，不要错过。
 
 > **🔑 大鱼专属任务交付闭环**：老渣发到对讲目录的任务走**标准交付**——①读任务 → ②干 → ③产出文件放到任务指定目录（通常 `../world/output/` 下）→ ④`node _deliver.js <产出文件名> <任务目录>` 生成 `.ready`
 > ⑤`node _sign.js <轮次>` 生成 `done_NNN.md` 签字 → ⑥在对讲目录写 `大鱼chat_NNN.md` 汇报。
@@ -219,7 +225,7 @@ reasonix run --dir ../{角色目录} --model <模型名> --max-steps 120 "进入
 
 | 场景 | 做法 |
 |------|------|
-| 卡住/有问题 | 写 大鱼chat_NNN.md 到 fish_laozha_talk/ |
+| 卡住/有问题 | 写 大鱼chat_NNN.md 到 ../world/fish_laozha_talk/ |
 | 需要新权限 | 优先用已授权工具完成；确需授权时，写 大鱼chat_NNN.md 求助老渣，**不要挂起等待用户**（回合挂起会阻塞 monitor/调度/收尾） |
 | 等老渣回复 | 检查 fish_laozha_talk/ 下的 `老渣回执_NNN.md` / `大鱼回复_NNN.md` |
 | 角色求助 | 读对讲目录，回复到 大鱼回复_NNN.md |
