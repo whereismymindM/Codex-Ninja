@@ -128,7 +128,7 @@ N 个角色各开独立窗口 `reasonix code`，角色窗口自动轮询公告�
 | assets/老渣文档/公告牌完全指南.md | 格式+状态机+范例+常见错误（完整参考，系统学习用） |
 | assets/老渣文档/README.md | 老渣文档索引（标准模板/完全指南/Multi-pass/goal/示例） |
 | assets/通用公告牌/ | 标准化公告牌模板集（调查轮×6/待命/收工/老渣对讲/流程体验/自检——复制改名 `公告牌_NNN.md` 即用） |
-| scripts/compose.js + scripts/templates/ | 编排自动化：JSON 声明式生成公告牌+状态矩阵+编译期流转校验（18 个现实团队流程模板，`node compose.js --list` 查看） |
+| scripts/compose.js + scripts/templates/ | 编排自动化：JSON 声明式生成公告牌+状态矩阵+编译期流转校验（19 个现实团队流程模板，`node compose.js --list` 查看） |
 | scripts/boardlint.js | 公告牌契约校验（发布前，协议合规工具族 P0 第一件）——编号连续/模式枚举/收工轮格式/角色枚举/状态流转/产出格式/铁律8/前置依赖/第一原则 9 项，🔴 阻断必改再发 🟡 警告建议规范化；判据与 compose/monitor/大鱼手册同源 |
 | assets/模板/大鱼_AGENTS模板.md | 大鱼模板·形态选择入口（选一生成） |
 | assets/模板/大鱼_AGENTS模板_窗口常驻.md | 大鱼模板（窗口常驻形态，reasonix code） |
