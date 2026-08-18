@@ -73,7 +73,8 @@ Copy-Item <skill路径>/team-notes/team_notes.md <项目根目录>/team_notes.md
 
 ### 4. 写公告牌
 
-读 assets/operator-docs/（格式标准/标准模板/完全指南，README 有索引）。一次性写完，收工轮标退场。**可选**：用 `scripts/compose.js` + `scripts/templates/` 声明式编排（JSON → 自动生成公告牌+状态矩阵，编译期校验流转，见完全指南「十」第 7 步）。
+读 assets/operator-docs/（格式标准/标准模板/完全指南，README 有索引）。**任务目录子名用英文/拼音**（如 `task001_req`，不要中文——千问拼路径中文易错）。
+一次性写完，收工轮标退场。**可选**：用 `scripts/compose.js` + `scripts/templates/` 声明式编排（JSON → 自动生成公告牌+状态矩阵，编译期校验流转，见完全指南「十」第 7 步）。
 **写完放大鱼目录前跑 `node <skill路径>/scripts/boardlint.js <公告牌目录>` 契约校验**——编号/模式/角色/流转/output/铁律8 等 9 项（🔴 阻断必改再发，🟡 警告建议规范化），发布前把格式违规拦在源头。
 
 ### 5. 开窗口，盯场
