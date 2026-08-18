@@ -154,7 +154,7 @@ done
 
 **先收口 lastN**（收工轮号 = 收工轮公告牌编号：BULLETIN 读牌发现收工轮 → `board_(lastN+1)` → `lastN=$((lastN+1))`；
 **退出码 2（RETIRED）→ poll 输出 `RETIRED N=X`，X 即收工轮号（poll 检测 `board_(lastN)`，未推进，无需 +1）** → 统一 `echo $lastN > temp-scripts/lastN.txt`，跨批续接靠它）
-→ 创建退场文件 `{{ROLE_NAME}}retired_NNN`（无 .md 后缀，创建到对讲目录）→ **追加流水账收工确认**（见 `_workflow.md`「收工轮」完整流程）→ **此时才输出最终回复**。
+→ 创建退场文件 `{{ROLE_NAME}}retired_NNN`（无 .md 后缀——**{{ROLE_NAME}}retired 连写无空格**，创建到对讲目录）→ **追加流水账收工确认**（见 `_workflow.md`「收工轮」完整流程）→ **此时才输出最终回复**。
 
 > **收工判定以退出码 2 为准**；手动读公告牌发现「模式: 收工」时——poll 的收工检测与读牌结果一致，**直接按收工轮流程创建退场文件**，无需再等（读到即建）。
 
