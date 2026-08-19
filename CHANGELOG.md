@@ -84,7 +84,7 @@ wait_file 退出码补"无目标参数=用法错误 exit 2" / 速查+BUG清单 p
 使用说明/审核指南同步；D1 自我污染修复（工具文档去日期标注）
 - **F 类漂移清零（34b7358）**：retire_round.md 任务栏顺序+00N / compose.js 头注释 7 模板+角色名通用化 / 启动指南 workspace_root 占位符 / 两处悬空节引用（休眠轮询→本节第 3 步、路径锚定铁律→_干活流程「路径与临时文件」）/ README 12→11 模板
 - **外部报告剩余修复（56f5ed3）**：🔴#2 玩法顶部 wait_file 优先 / #3 各自判据同步 producer 归属 / #4 run 追加例外 / #7 工具手册 24 种输出 / P1-9 尖括号警示 / P1-12 手册分级语义；
-P2 十项（_运行形态.mode 说明/DEAD 唤醒口径/骨架角色搭档提示/重启禁令措辞/半角冒号口径/待命先删唤醒后睡/休眠骨架 break 指引/wait_file 路径统一temp-scripts前缀/禁自造循环 vs while 区分/AGENTS 骂娘中性化）
+P2 十项（_run_shape.mode 说明/DEAD 唤醒口径/骨架角色搭档提示/重启禁令措辞/半角冒号口径/待命先删唤醒后睡/休眠骨架 break 指引/wait_file 路径统一temp-scripts前缀/禁自造循环 vs while 区分/AGENTS 骂娘中性化）
 - **验证**：doc-consistency 正向 0 漂移 exit 0（26 校验器）+ self-test 10/10 + smoke 7/7
 - **测试基线**：56f5ed3（feature-职位化角色），26 校验器零漂移
 

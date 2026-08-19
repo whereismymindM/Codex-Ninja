@@ -189,7 +189,7 @@ var _fishSrcDir = base + "/fish";
 var FISH_HB_FILE = _fishSrcDir + "/_heartbeat.txt";
 // 运行形态（自读，不依赖后面的 F_SCHEDULED——本段在 monitor 顶部执行）
 var _fishModeRun = false;
-try { _fishModeRun = fs.existsSync(_fishSrcDir + "/_运行形态.mode") && fs.readFileSync(_fishSrcDir + "/_运行形态.mode", "utf8").trim() === "run"; } catch(_fmr) {}
+try { _fishModeRun = fs.existsSync(_fishSrcDir + "/_run_shape.mode") && fs.readFileSync(_fishSrcDir + "/_run_shape.mode", "utf8").trim() === "run"; } catch(_fmr) {}
 var _fishDead = false;
 try {
     if (fs.existsSync(FISH_HB_FILE)) {
@@ -460,7 +460,7 @@ if (activeRoles.length === 0) {
         try {
           if (fs.existsSync(hbFile3)) {
             var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
-            var hbTimeout3 = (fs.existsSync(base + "/fish/_运行形态.mode") && fs.readFileSync(base + "/fish/_运行形态.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
+            var hbTimeout3 = (fs.existsSync(base + "/fish/_run_shape.mode") && fs.readFileSync(base + "/fish/_run_shape.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
             if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) {
               // A-1 判据同步（2026-08-11 修复 + 2026-08-12 范围统一）：心跳 stale 但窗口内有新文件
               // （正在写流水账/角色记忆/退场文件/补交产出而心跳没同步）→ 不算死，不强制退场——
@@ -710,11 +710,11 @@ if (fs.existsSync(worldDir)) {
 
 // 3.5 心跳检测：检查所有角色心跳文件，超时自动唤醒
 var HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000; // 2分钟无心跳 → 判定掉线
-// 运行形态判定：看 fish/_运行形态.mode（scaffold fish 命令写入）
+// 运行形态判定：看 fish/_run_shape.mode（scaffold fish 命令写入）
 //   = "run" → run拉起（角色干完即退，心跳停是正常态）；否则 → 窗口常驻（心跳停=掉线，自动唤醒）
 var F_SCHEDULED = false;
 try {
-    var modeFlag = worldDir.replace(/world$/, "fish") + "/_运行形态.mode";
+    var modeFlag = worldDir.replace(/world$/, "fish") + "/_run_shape.mode";
     F_SCHEDULED = fs.existsSync(modeFlag) && fs.readFileSync(modeFlag, "utf8").trim() === "run";
 } catch(e) {}
 if (fs.existsSync(worldDir)) {

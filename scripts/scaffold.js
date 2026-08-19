@@ -112,7 +112,7 @@ if (isFishMode) {
     console.log("OK: fish/AGENTS.md (" + fs.statSync(fishDir + "/AGENTS.md").size + " bytes)");
 
     // 形态标志文件：monitor 靠它区分窗口常驻/run拉起的心跳处理（run拉起=角色干完即退，心跳停是正常态）
-    var modeFlag = fishDir + "/_运行形态.mode";
+    var modeFlag = fishDir + "/_run_shape.mode";
     fs.writeFileSync(modeFlag, fishShape, "utf8");
     console.log("OK: 运行形态标志 " + fishShape);
 

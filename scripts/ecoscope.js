@@ -12,7 +12,7 @@
 // 只读工具: 不写任何文件（--html 输出走 shell 重定向，脚本本身零写入）
 // ⚠️ 同源声明（改判据必须多改）:
 //   心跳解析与 assets/monitor.js:21-29 同源（毫秒/秒/ISO 三态）；心跳阈值与 monitor.js:432 同源
-//   （_运行形态.mode = run → 10 分钟，否则 2 分钟）；公告牌解析与 scripts/check.js / scripts/boardlint.js
+//   （_run_shape.mode = run → 10 分钟，否则 2 分钟）；公告牌解析与 scripts/check.js / scripts/boardlint.js
 //   同源（三者又与 monitor.js:369-611 同源）。任何一处改判据，各处必须同步。
 // 退出码: 0=正常输出 2=参数错误（视图非校验——异常在输出里标 ⚠️，不用退出码表达）
 // 零依赖（Node 原生），ES5 风格，与 codex-ninja 一致
@@ -103,8 +103,8 @@ function collectData(root) {
   // 心跳阈值（monitor.js:432 同源）
   var hbTimeout = 2 * 60 * 1000;
   try {
-    if (fs.existsSync(path.join(fishDir, "_运行形态.mode")) &&
-        fs.readFileSync(path.join(fishDir, "_运行形态.mode"), "utf8").trim() === "run") hbTimeout = 10 * 60 * 1000;
+    if (fs.existsSync(path.join(fishDir, "_run_shape.mode")) &&
+        fs.readFileSync(path.join(fishDir, "_run_shape.mode"), "utf8").trim() === "run") hbTimeout = 10 * 60 * 1000;
   } catch (e) {}
 
   // 公告牌列表

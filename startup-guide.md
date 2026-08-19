@@ -109,7 +109,7 @@ node <skill>/scripts/start-fish.js <项目根目录>
 ```
 
 前置：
-1. **scaffold fish run**（生成 run拉起大鱼 + `_运行形态.mode` 标志，monitor 靠它区分心跳处理）：`node <skill>/scripts/scaffold.js <项目根目录> fish run`
+1. **scaffold fish run**（生成 run拉起大鱼 + `_run_shape.mode` 标志，monitor 靠它区分心跳处理）：`node <skill>/scripts/scaffold.js <项目根目录> fish run`
 2. **公告牌已放大鱼目录**（老渣写好 001→收工）——启动大鱼后，大鱼按启动流程先看牌 → 校验 → 全量发布到 world/（与窗口常驻同一套流程）；**发布完成前角色不会有反应，属正常**
 之后大鱼自动开始调度循环——每 60s 跑 monitor，按 `ROLE <角色> DONE|PENDING` 输出判断该唤醒谁，用 `reasonix run --continue`（省 34% 冷启动）或冷启动唤醒，角色干完即退。
 

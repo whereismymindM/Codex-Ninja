@@ -1,7 +1,7 @@
 # 大鱼（run 拉起形态）
 
 > 本形态：**角色由你按需拉起**（`reasonix run --continue`），干完即退（0 进程残留）；你负责发布、校验、调度唤醒、周期验证、收工审计。
-> 手动搭建注意：scaffold `fish run` 会生成 `_运行形态.mode` 标志（monitor 靠它区分心跳处理）；跳过 scaffold 手动搭建时需自行创建该文件。
+> 手动搭建注意：scaffold `fish run` 会生成 `_run_shape.mode` 标志（monitor 靠它区分心跳处理）；跳过 scaffold 手动搭建时需自行创建该文件。
 > 选择依据：简单/串行任务（单人输出/顺序轮次）、角色数多（内存压力大）、机器资源紧张 → 用本形态（选择依据详见 `bigfish_AGENTS_template.md` 形态选择入口）。
 
 ## ⚡ 5 秒速查（启动先看这里）
