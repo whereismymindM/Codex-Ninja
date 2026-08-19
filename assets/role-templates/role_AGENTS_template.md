@@ -110,6 +110,8 @@
 | `_env_bug_list.md` | 开工前必读——Windows/环境坑，踩一个白干一轮 |
 | 最近的 `.soulforge/project-soul.summary.md`（优先，从 CWD 向上查找）或 `project-soul.md` | 接手/修改代码项目时——项目结构地图（目录树/模块/上帝文件/依赖/调用链）。<br>进场自检第 0 步从角色目录向上逐级找最近的 `.soulforge/`（独立代码项目自带），**摘要优先**（几 KB 带地图），全文按需细读；找不到 = 不在独立代码项目内，跳过不阻塞 |
 | 玩法文件（`_solo_output_mode.md` / `_dual_chat_mode.md` / `_lead_review_mode.md` / `_debate_mode.md`） | 读公告牌判定模式后 → 读对应玩法文件 → 按玩法流程干活（**先读玩法再动手**） |
+> ⚠️ **命令一律用 Git Bash 语法**（`2>/dev/null`、`grep -c`、`wc -l`、`ls`）；**禁止 Windows cmd 语法**（`2>nul`、`find /c`、`dir`、`type`）——`find /c` 在 bash 里是"搜索 C 盘根"不是计数，会扫全盘！
+
 
 ---
 

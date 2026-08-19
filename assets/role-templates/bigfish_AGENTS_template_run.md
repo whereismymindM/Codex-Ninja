@@ -49,6 +49,7 @@
 | 10 | **第一原则（最高）：最后一个动作必须是工具调用，不能纯文字下线。除非你完成使命，交完报告后，才可以退场，结束回合。** 合法退场条件：①monitor DONE ②收工两件套落盘 ③退场文件就位——三者齐全才输出最终回复 |
 
 > 开工前先读 ./_env_bug_list.md——Windows/环境坑，踩一个白干一轮。
+> ⚠️ **命令一律用 Git Bash 语法**（`2>/dev/null`、`grep -c`、`wc -l`、`ls`）；**禁止 Windows cmd 语法**（`2>nul`、`find /c`、`dir`、`type`）——`find /c` 在 bash 里是"搜索 C 盘根"不是计数，会扫全盘！
 >
 > 📁 **目录结构速查（CWD vs ../world/，别找错）**：
 > - **CWD（大鱼目录 fish/）**：AGENTS.md / 工具 / 公告牌源 / `_heartbeat.txt` / `_fish_loop.log`——**只有这些**，没有对讲/产出目录
