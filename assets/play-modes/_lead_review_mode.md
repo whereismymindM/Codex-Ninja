@@ -92,10 +92,10 @@ while (true) {
 
 读公告牌里你的「本轮后」字段——死循环 poll，永不主动下线：
 
-- **本轮后：休眠** → 写流水账 → 创建休眠文件 → bash while + _reasonix_poll.js 轮询（每3s）：
+- **本轮后：休眠** → 写流水账 → 创建休眠文件 → poll 短命令轮询（每3s，回合接力）：
 ——循环骨架见 `_workflow.md`「休眠」节
 
-- **本轮后：待命** → bash while + _reasonix_poll.js --standby 轮询（每15s）：
+- **本轮后：待命** → poll 短命令 + --standby 轮询（每15s，回合接力）：
 ——循环骨架见 `_startup_steps.md`
 
 - **本轮后：活跃** → poll 下一轮公告牌，正常走

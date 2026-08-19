@@ -32,12 +32,12 @@
 
 ### 本轮后：休眠
 1. 写流水账 → 创建休眠文件
-2. bash while + _reasonix_poll.js 轮询（每3s）——循环骨架见 `_workflow.md`「休眠」节（此处不重复）：
+2. poll 短命令轮询（每3s，回合接力）——循环骨架见 `_workflow.md`「休眠」节（此处不重复）：
 
 > 🚨 循环不退出！这个 while(true) 永不主动退出——只有公告牌出现或被大鱼唤醒才 break。
 
 ### 本轮后：待命
-1. bash while + _reasonix_poll.js --standby 轮询（每15s）——循环骨架见 `_startup_steps.md`「待命」节（此处不重复）：
+1. poll 短命令 + --standby 轮询（每15s，回合接力）——循环骨架见 `_startup_steps.md`「待命」节（此处不重复）：
 
 > 🚨 待命不是下班！while(true) 循环到底，等下轮公告牌。
 
