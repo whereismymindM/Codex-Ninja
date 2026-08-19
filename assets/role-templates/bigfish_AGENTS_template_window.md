@@ -39,7 +39,7 @@
 | 1 | 目录已搭好，不准新建 |
 | 2 | 文件内容读写/编辑用 Node.js 或专用工具，不用 PowerShell；**文件复制/发布可用 `cp`** |
 | 3 | 禁止删除任何文件（例外：_wakeup.md、.signal 等临时信号文件，处理完成后应**删除**——`_wakeup.md` 删除即 ack；`.signal` 处理完改名 `_已处理.signal`） |
-| 4 | 全量发布公告牌；**有待命轮（`模式: 待命`）时扣留收工轮，待命超时后补搬**（详情见 `bigfish_board_manual.md`） |
+| 4 | 全量发布公告牌；**有待命轮（`模式: 待命`）时扣留收工轮**（**扣留 = 给老渣留追加时间**），待命超时后补搬（详情见 `bigfish_board_manual.md`） |
 | 5 | 全量发布后确认所有公告牌就位即可（不用 _round_NNN.signal——角色靠轮询检测） |
 | 6 | 周期验证output/签字/退场，不干预推进 |
 | 7 | 求助随时回 |
@@ -53,7 +53,8 @@
 > 📁 **目录结构速查（CWD vs ../world/，别找错）**：
 > - **CWD（大鱼目录 fish/）**：AGENTS.md / 工具 / 公告牌源 / `_heartbeat.txt` / `_fish_loop.log`——**只有这些**，没有对讲/产出目录
 > - **`../world/`**（发布目标/干活区）：`board_*.md`（已发布）/ `{角色}_talk/`（各角色对讲，**含你 `fish_laozha_talk/`**）/ `output/`（产出+任务目录）
-> - **查对讲永远用完整路径 `ls ../world/fish_laozha_talk/`**——对讲目录在 world 下，不在 CWD；"CWD 下没有对讲/产出目录"是正常，不是异常
+> - **查对讲永远用完整路径 `ls ../world/fish_laozha_talk/`**——对讲目录在 world 下，不在 CWD；"CWD 下没有对讲/产出目录"是正常，不是异常。
+> - **三步路径一行命令串**（启动/迷糊时照敲）：`ls board_*.md | wc -l`（源牌数）→ `ls ../world/board_*.md | wc -l`（已发布数）→ `ls -t ../world/fish_laozha_talk/ | head`（对讲新任务）
 
 ---
 
@@ -93,9 +94,7 @@
 - **开工仪式**：启动 `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`（在看牌动作之后），**硬校验**：`ls _fish_loop.log` 必须存在且 tail 有"公告牌检测 30s / monitor 60s"——缺失 = 检测层不可用
   （后台提示拉不到，任务/干预信号全漏）→ 先查残留进程（wmic 查 fish_loop）杀掉重启，不得带病继续
 - `WaitDelay expired` 是误报，以日志 mtime 持续更新为准，勿重试启动造成双实例
-- **每个回合醒来**：①拉 `_fish_loop.log` 尾部 ②**必须先查 `../world/fish_laozha_talk/` 新任务**（未交付任务文件 = 最高优先级先处理，不可跳过）+ 核对公告牌数：`ls board_*.md | wc -l` − `ls ../world/board_*.md | wc -l`（**差 >1 = 追加 → 校验发布**；
-≤1 正常）（必做）**
-  ③跑 `_fish_loop.js --once` ④做决策（发布/打回/补搬/唤醒/继续等）——有决策动作才算在场
+- **每个回合必做五条见速查表**（①拉日志 ②查对讲+核对牌数 ③写心跳 ④跑 `--once` ⑤做决策——本节约束，不重复展开）；**有决策动作才算在场**
 - **写大鱼心跳（每回合必做）**：`date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录，写裸文件名即落在 `fish/_heartbeat.txt`）——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）
 - **回合内长等待防误报**：回合内 sleep ≥90s / 连续多步等待期间，**每次工具动作顺带刷新心跳**（`write_file _heartbeat.txt`）——不穿插 = monitor 心跳阈值误判 FISH_DEAD（你在场但被当掉线）
 - **回合内轮询标准命令**（禁止自造循环）：
@@ -108,7 +107,7 @@
   date +%s%3N > _heartbeat.txt && sleep 55 && echo "=== 对讲 ===" && ls -t ../world/fish_laozha_talk/ | head -3 && echo "=== 日志 ===" && tail -3 _fish_loop.log
   ```
   （~56 秒返回。**对讲检查已固化在轮询命令里**——"每回合必查对讲"不靠纪律，见大鱼实测教训：task_wakeup-fish-feedback.md 躺 20 分钟没看到的根因就是轮询命令模板漏了对讲动作）
-**撞 loop guard 时换命令变体**（`tail -5`/`tail -n 5`/前缀心跳/改 sleep 数）继续。
+**撞 loop guard 时换命令变体**（`tail -5`/`tail -n 5`/前缀心跳/改 sleep 数）继续——**guard 挡重复命令是正常保护，不是操作错误**。
 **禁止 `while true` / 长 for 循环**（命令长期不返回 = 会话无法保存 = 磁盘冲突 recovery 堆积 + 缓存失效烧 token）；
 检测到 DONE/新牌 → 立即处理。
 
