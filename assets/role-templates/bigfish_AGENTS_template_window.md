@@ -103,7 +103,11 @@
   node _fish_loop.js --once
   sleep 30   # 常规等待 ≤60s（硬性规则）
   ```
-  **回合层面短命令轮询（推荐）**：一次工具调用 = 一轮检测 + 短 sleep（`date +%s%3N > _heartbeat.txt && sleep 55 && tail -3 _fish_loop.log`，~56 秒返回）——命令快速返回 = 会话正常保存、不触发磁盘冲突；模型下回合再发下一轮（整体无限、回合接力）。
+  **回合层面短命令轮询（推荐）**：一次工具调用 = 一轮检测 + 短 sleep——命令快速返回 = 会话正常保存、不触发磁盘冲突；模型下回合再发下一轮（整体无限、回合接力）：
+  ```bash
+  date +%s%3N > _heartbeat.txt && sleep 55 && echo "=== 对讲 ===" && ls -t ../world/fish_laozha_talk/ | head -3 && echo "=== 日志 ===" && tail -3 _fish_loop.log
+  ```
+  （~56 秒返回。**对讲检查已固化在轮询命令里**——"每回合必查对讲"不靠纪律，见大鱼实测教训：task_wakeup-fish-feedback.md 躺 20 分钟没看到的根因就是轮询命令模板漏了对讲动作）
 **撞 loop guard 时换命令变体**（`tail -5`/`tail -n 5`/前缀心跳/改 sleep 数）继续。
 **禁止 `while true` / 长 for 循环**（命令长期不返回 = 会话无法保存 = 磁盘冲突 recovery 堆积 + 缓存失效烧 token）；
 检测到 DONE/新牌 → 立即处理。
