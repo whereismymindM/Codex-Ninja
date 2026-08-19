@@ -65,7 +65,7 @@
 
 **兜底自检（状态文件缺失时用）**：
 **文件指涉定义**：
-- **签字文件** = `../world/{{ROLE_NAME}}_talk/done_NNN.md`（当前轮签字）
+- **签字文件** = `../world/{{ROLE_NAME}}_talk/done_NNN.md`（当前轮签字；**文件名永远不带角色名前缀**——角色名在对讲目录名上，`_sign.js` 生成 `done_{N}.md`，monitor 按 `^done_(\d+)\.md$` 匹配）
 - **对话文件** = 任务目录（`../world/taskNNN_XXX/`）下本轮产生的对话/交换文件（问/答.md、辩论文件等）
 
 | 自检结果 | 认知 |
@@ -124,7 +124,7 @@ node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # $lastN = 上一张已处理�
 
 ### ⚡ 退出码速查表（普通轮 vs 待命轮）
 
-> **两种 while 骨架的区别只在 `--standby` 参数和 sleep 间隔**——普通轮 `sleep 3`、待命轮 `--standby` + `sleep 15`。其余处理逻辑完全一样。
+> **while 仅为流程示意，实际执行用回合接力（每回合一条 poll，见「循环策略」）**。两种骨架的区别只在 `--standby` 参数和 sleep 间隔——普通轮 `sleep 3`、待命轮 `--standby` + `sleep 15`。其余处理逻辑完全一样。
 
 | 退出码 | 含义 | 普通轮（while 骨架） | 待命轮（--standby 骨架） |
 |---|---|---|---|

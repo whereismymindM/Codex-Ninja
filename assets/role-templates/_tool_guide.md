@@ -8,6 +8,8 @@
 
 ### 🔁 轮询类（轮次驱动 + 唤醒检测 + 心跳续写一体）
 
+> 🔑 **poll 自动续心跳**：每次 `_reasonix_poll.js` 调用自动刷新你角色对讲目录的 `_heartbeat.txt`（无需手动写）。**手动 `--hb` 的时机**：①等文件/长等待用 `wait_file.js --hb`（自动续）②外部工具长调用前后（工具是独立进程，不替你续心跳）——连续 ≥2 分钟无心跳 → monitor 判 STUCK。
+
 ```bash
 node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" [--standby] [--loop N]   # "$lastN" 必须加引号——写 <lastN> 会被 bash 当输入重定向（照抄必错）
 ```
