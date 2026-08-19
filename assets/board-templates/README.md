@@ -37,6 +37,7 @@
 | `tool_usage_survey.md` | 调查：工具调用体验/参数/报错/评分 | 同上 |
 | `collab_experience_survey.md` | 调查：协作体验（等搭档/信号协议/超时掉线/路径一致/流程理解） | 协作类项目优先 |
 | `time_checkpoint_survey.md` | 调查：时间卡点（启动耗时/读文档/等文件/干活/轮询占比） | 想优化节奏时用 |
+| `wakeup_confusion_survey.md` | 调查：唤醒疑惑（启动流程卡点/工具归档不明确/不确定时刻/其他建议） | 迭代 Skill 时用（实测反馈收集） |
 | `flow_experience_report.md` | 生产收尾收集反馈：角色各自写卡点/坑/优化建议 | 可选（想收集体验时用） |
 | `agents_selfcheck.md` | 改进角色模板前用：角色审自己 AGENTS.md 挑语义问题 | 可选（打磨模板时用） |
 

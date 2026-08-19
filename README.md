@@ -94,7 +94,7 @@ codex-ninja/
 │   │   ├── _debate_mode.md
 │   │   └── _solo_output_mode.md
 │   ├── 老渣文档/              # 老渣看的文档（格式标准/标准模板/完全指南/RSS/Multi-pass，README 索引）
-│   ├── 通用公告牌/            # 调查轮/待命/收工/老渣对讲 11 个模板（生产每轮带调查轮）
+│   ├── 通用公告牌/            # 调查轮/待命/收工/老渣对讲 12 个模板（生产每轮带调查轮）
 │   ├── _tool_cheatsheet.md
 │   ├── _risk_list.md
 │   ├── _env_bug_list.md
