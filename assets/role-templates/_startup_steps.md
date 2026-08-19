@@ -82,9 +82,9 @@
 ## 第 2 步：进入主循环（bash while 骨架）
 
 ```bash
-lastN=$(cat temp-scripts/lastN.txt 2>/dev/null || echo 0)   # 初始化：读状态文件（第 1 步推导结果；被告知起始编号（运行后追加）→ 手动改为 告知号−1，优先于状态文件；缺失回退 0 + 自检兜底）
-while true; do
-  node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # $lastN = 上一张已处理公告牌编号（初始 0；干完一轮后更新为该轮编号）
+lastN=$(cat temp-scripts/lastN.txt 2>/dev/null || echo 0)   # 初始化：读状态文件（第 1 步推导结果；告知号−1 优先于状态文件；0 仅兜底）
+# 轮询 = 单次 poll 短命令（回合接力实现循环，不要 while true 永久循环——见「循环策略」）：
+node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # $lastN = 上一张已处理公告牌编号（初始 0；干完一轮后更新为该轮编号）
   case $? in
     0)  # BULLETIN N=X — 新公告牌就位 → 读牌干活（见 _board_reading.md）
         # 示意：读牌 → 判定轮类型 → 干活/待命/休眠/收工（按 _board_reading.md 执行）
@@ -96,7 +96,6 @@ while true; do
     3)  # TIMEOUT — 无事发生 → sleep 3 后再 poll
         sleep 3 ;;
   esac
-done
 ```
 
 > **lastN 传参**：`<lastN>` = **上一张已处理公告牌编号**（如刚签完 002，传 2；初始 0）。**不是"下一张"！** poll 内部自动检测 `board_(lastN+1)`——传错会跳号（SIGN N=2 后传 3 → poll 检测 004 → 跳过 003）。
@@ -181,15 +180,14 @@ poll 到新牌 → 按正常流程干活/退场。**10 分钟超时后的行为*
 
 ```bash
 lastN=$(cat temp-scripts/lastN.txt 2>/dev/null || echo 0)   # 初始化：读状态文件（第 1 步推导结果；告知号−1 优先于状态文件；0 仅兜底）
-while true; do
-  node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" --standby   # $lastN = 上一张已处理公告牌编号
+# 待命轮询 = 单次 poll 短命令（回合接力实现循环，不要 while true——见「循环策略」）：
+node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" --standby   # $lastN = 上一张已处理公告牌编号
   case $? in
     0) break ;;  # 新公告牌就位（读牌见 _board_reading.md；break 后按读牌结果：干活轮→切主循环骨架且 lastN 更新；非活跃牌（我状态待命/休眠）→ lastN+1 写盘跳过；仍待命→重进本 --standby 骨架）
     1) [ -f "../world/{{ROLE_NAME}}_talk/_wakeup.md" ] && rm "../world/{{ROLE_NAME}}_talk/_wakeup.md"; sleep 15 ;;  # 被唤醒（待命循环内）：立即删唤醒文件（monitor 尽早看到 ack）再保持待命节拍，lastN 不变——下一轮 poll 自然检查公告牌，读到非活跃牌再 lastN+1 写盘推进（与主循环 WOKEN 的"按第 1 步推导"不同场景：此处仍在待命循环内，节拍保持即可；主循环 WOKEN 见全景图退出码 1）
     2) break ;;  # 收工
     3) sleep 15 ;; # TIMEOUT 继续循环
   esac
-done
 ```
 
 > **待命 = 持续轮询，直到看到收工/退场信号。** 四条铁律见 `_workflow.md`「待命」——待命可能持续较久（10 分钟是常见扣留值，不是上限）；必须真正发起 poll 循环（跑脚本即自动续心跳，裸 sleep 会断心跳）；禁止把"继续待命轮询"当最终回复输出；唯一合法退出 = 收工轮。

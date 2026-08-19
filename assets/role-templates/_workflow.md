@@ -54,20 +54,18 @@
 
 1. **待命可能持续较久（10 分钟是常见扣留值，不是上限）**：待命轮之后收工轮可能被大鱼扣留（可能追加任务），通常 10 分钟后补搬，**但扣留期可能更长**（无追加信号就继续等）——期间你一直 poll 是**预期行为**，不是卡死，不许自己下线。
 2. **必须真正发起 poll 循环**：bash 里跑 `node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" --standby`（**`$lastN` 必须加引号**——写成 `<N>` 会被 bash 当输入重定向），退出码 3（无事）就 `sleep 15` 后继续循环——待命就是循环本身（骨架见 `_startup_steps.md`）。
-   **整段照抄即用（待命轮唯一动作，复制粘贴就跑，不需要自己"想"）**：
+   **整段照抄即用（待命轮唯一动作，复制粘贴就跑，不需要自己"想"）**——单次 poll 短命令（**回合接力实现循环：一次工具调用 = 一次 poll，返回后再发下一次；不要 while true 永久循环**）：
    ```bash
-   while true; do
-     R=$(node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" --standby)
-     case "$R" in
-       0*) echo "$lastN" > temp-scripts/lastN.txt; lastN=$((lastN+1)); break;;  # 新牌：推进编号→退出待命→读牌判型
-       1*) rm -f ../world/{{ROLE_NAME}}_talk/_wakeup.md;;                       # 唤醒：删信号，继续待命轮询
-       2*) break;;                                                              # 收工：退出待命→走收工轮
-       *) sleep 15;;                                                            # 无事：待命节拍，继续 poll
-     esac
-   done
+   R=$(node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN" --standby); echo "poll=$R"
    ```
-   **待命轮输出任何文字 = 你已经下线（回合结束，monitor 救不了）。待命唯一动作是发上面这段循环命令，没有其他动作。**
-   **这段循环必须在前台回合内跑（命令占用回合 = 你在场）——禁止后台运行（`&`/后台 bash）：后台循环 = 角色回合已结束 = 无人处理新牌/收工轮，循环白跑，等于你自己下线。**
+   按退出码处理：
+   - 0（新牌）：`echo "$lastN" > temp-scripts/lastN.txt; lastN=$((lastN+1))` → 读牌判型
+   - 1（唤醒）：`rm -f ../world/{{ROLE_NAME}}_talk/_wakeup.md` → 再发一次 poll
+   - 2（收工）：走收工轮退场
+   - 3（无事）：`sleep 15` → 再发一次 poll（回合接力 = 持续待命）
+   **待命轮输出任何文字 = 你已经下线（回合结束，monitor 救不了）。待命唯一动作是发 poll 短命令（每轮返回后再发下一轮），没有其他动作。**
+   **禁止把 poll 循环放后台（`&`/后台 bash）：后台 = 角色回合已结束 = 无人处理新牌/收工轮，循环白跑。**
+   **禁止 while true 永久循环**（前台永久跑 = 会话无法保存 = 磁盘冲突；见「循环策略」）。
 3. **续心跳靠跑脚本**：`_reasonix_poll.js` **每次 poll 自动写心跳**（普通轮 15s / 待命 `--standby` 30s 间隔）——待命循环跑它 = 心跳持续在续，**不会断**。
    **离线期（会话间隙/进程不在）心跳必然断属正常**——monitor 会检测心跳超时写一次唤醒文件（`_wakeup.md`）；若唤醒未被确认且仍无新产出则升级为挂死（STUCK）提示人工干预，角色下次快路径 poll 才处理 WOKEN，不是异常。**唯一要防的是"该跑脚本却裸等"**（裸 `sleep 15` 循环不续心跳会真断）。
    **双杀认知**：**心跳停 ≠ 回合结束**——只要回合没结束、poll 还在跑，心跳断了也会被 monitor 唤醒；**真正该死的是"回合结束 + 心跳停"双杀**。保活的本质是保回合（下一动作=工具调用），不是保心跳。
@@ -106,13 +104,14 @@
 
 ```bash
 lastN=$(cat temp-scripts/lastN.txt 2>/dev/null || echo 0)   # 初始化：读状态文件（第 1 步推导结果；0 仅兜底）
-while true; do
-  node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # 注意 "$lastN" 必须加引号——写成 <lastN>（无引号）会被 bash 当输入重定向（照抄必错）
-  case $? in
-    0|1|2) break ;;
-    3) sleep 3 ;; # TIMEOUT 继续循环
-  esac
-done
+# 轮询 = 单次 poll 短命令（回合接力实现循环，不要 while true 永久循环——见「循环策略」）：
+node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # 注意 "$lastN" 必须加引号——写成 <lastN>（无引号）会被 bash 当输入重定向（照抄必错）
+case $? in
+  0) : ;;   # 新牌 → 读牌
+  1) : ;;   # 唤醒 → 处理
+  2) : ;;   # 收工 → 退场
+  3) sleep 3 ;;   # 无事 → 再发一次 poll（回合接力）
+esac
 # 退出码已在 case 判断时消费（bash break 会清空 $?，break 后不可再区分 0/1/2），统一重新 poll 判定：新牌就位→读牌（_board_reading.md）/ 被唤醒→回 poll 顶部重读 / 收工→按「收工轮」退场
 # ⚠️ 读牌后若新牌**非我活跃**（我状态=休眠/待命，其他角色干活轮）→ 跳过干活+签字，**lastN+1 写盘**（`lastN=$((lastN+1))` → `echo $lastN > temp-scripts/lastN.txt`）→ 继续 poll——不推进 = 每 3 秒重复 BULLETIN 同一张牌，永远等不到收工轮
 ```
