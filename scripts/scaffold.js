@@ -27,7 +27,7 @@ var assetDir = path.resolve(__dirname, "..", "assets");
 // 解析运行模式：第二个参数是 "fish" 则直接走鱼模式，否则第三个参数是 roles.json
 // F-14 修复：isFishMode 需同时满足 第4参为 window/run 或不存在，且当前目录无名为 fish 的文件——
 // 若用户 roles 文件恰好叫 fish（无论带不带第4参），按 roles 文件处理而非误入 fish 模式（文件存在优先）
-var isFishMode = process.argv[3] === "fish" && !fs.existsSync(process.argv[3]) && (process.argv[4] === undefined || process.argv[4] === "window" || process.argv[4] === "run");
+var isFishMode = process.argv[3] === "fish" && (!fs.existsSync(process.argv[3]) || (fs.statSync(process.argv[3]).isDirectory && fs.statSync(process.argv[3]).isDirectory())) && (process.argv[4] === undefined || process.argv[4] === "window" || process.argv[4] === "run"); // 2026-08-19: F-14 误伤修复——existsSync 对目录也返回 true（fish 目录已存在时 fish window 被误判为 roles 分支）；改"fish 是目录也允许 fish 模式"，仅"roles 文件恰好叫 fish"（文件）才走 roles 分支
 var mode, rolesFile, isAddMode, fishShape;
 if (isFishMode) {
     mode = "fish";
