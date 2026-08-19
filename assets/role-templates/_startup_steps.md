@@ -14,6 +14,7 @@
 [第 1 步 lastN 三级推导]（唤醒被告知起始编号 → 读 temp-scripts/lastN.txt → 0 + 兜底自检）
   ▼
 [第 2 步 进主循环 poll]（node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"）
+> ⚠️ **读牌原则**：poll 只检测 **lastN+1 那张牌**（$lastN = 上一张已处理编号）；**禁止手动 `ls ../world/` + 读"最新/最后一张"代替 poll**——读错牌 = 跳过任务轮直接收工。
   │
   ├─ 退出码 0（新牌）──▶ 读 _board_reading.md 判轮类型
   │       ├─ 干活轮 → 读玩法模式文件（_单人/双人/主笔/辩论）→ 干活 → deliver → sign → lastN+1 写盘 → 回 poll
