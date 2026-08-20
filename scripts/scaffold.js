@@ -166,6 +166,15 @@ if (isFishMode) {
     fs.copyFileSync(assetDir + "/role-templates/bigfish_tool_manual.md", fishToolManualPath);
     console.log("OK: fish/bigfish_tool_manual.md (" + fs.statSync(fishToolManualPath).size + " bytes)");
 
+    // 2026-08-20 修复：fish 模式也部署团队须知——原代码 fish 分支在部署逻辑（下方 !isAddMode）之前 exit，fish 模式重建的项目永远没有 team_notes.md（角色第 0 步读 ../team_notes.md 落空，实测两批角色都踩）
+    var teamNotice = path.resolve(assetDir, "..", "team-notes/team_notes.md");
+    if (!fs.existsSync(projectDir + "/team_notes.md")) {
+        fs.copyFileSync(teamNotice, projectDir + "/team_notes.md");
+        console.log("OK: team-notes/team_notes.md → " + projectDir);
+    } else {
+        console.log("SKIP: team-notes/team_notes.md → " + projectDir + "（已存在，不覆盖）");
+    }
+
     console.log("DONE: " + projectDir);
     process.exit(0);
 }
