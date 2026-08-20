@@ -249,7 +249,7 @@ if (_fishDead) {
 }
 
 // ── 8-2 扣留超时报警（STANDBY_OVERDUE，P0-1 状态可区分）──────────
-//   场景：待命轮后收工轮被扣留（大鱼目录仍有收工轮未发布）→ 正常 monitor 输出 WAIT N=收工轮编号（预期），
+//   场景：待命轮后收工轮被扣留（大鱼目录仍有收工轮未发布）→ 正常 monitor 输出 RETIRE-KEPT N=收工轮编号（2026-08-20 起替代裸 WAIT，见下方 _retireKept 分支），
 //   但"扣留等追加"与"大鱼掉线无人补搬"不可区分——加 OVERDUE 提示
 var _standbyOverdue = false;
 try {
