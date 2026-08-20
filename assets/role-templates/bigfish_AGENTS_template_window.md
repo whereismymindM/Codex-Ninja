@@ -91,8 +91,10 @@
 > 📖 **monitor 输出解读全表见 `bigfish_tool_manual.md`**（24 种输出 = 22 主输出 + WARN/MONLOG_WARN 变体 + 响应动作）——工具输出不理解时查它，**日常不翻 monitor.js 源码**（本模板下方只列高频输出）；**例外**：校验公告牌判据拿不准时允许读 monitor.js 确认（见 大鱼公告牌手册——
 文档写意图，代码是执行真相）。
 
-- **开工仪式**：启动 `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`（在看牌动作之后），**硬校验**：`ls _fish_loop.log` 必须存在且 tail 有"公告牌检测 30s / monitor 60s"——缺失 = 检测层不可用
-  （后台提示拉不到，任务/干预信号全漏）→ 先查残留进程（wmic 查 fish_loop）杀掉重启，不得带病继续
+- **开工仪式**：①启动前**无条件查残留进程**：`wmic process where "CommandLine like '%fish_loop%'" get ProcessId`——有残留 → kill 再启动（**无旧日志 ≠ 无残留进程**，多实例 monitor 重复输出/重复判定）
+  ②启动 `nohup node _fish_loop.js > _fish_loop.log 2>&1 &`（在看牌动作之后）③**硬校验**：`ls _fish_loop.log` 必须存在且 tail 有"公告牌检测 30s / monitor 60s"——缺失 = 检测层不可用
+  （后台提示拉不到，任务/干预信号全漏）→ 再查残留进程杀掉重启，不得带病继续
+  （后台提示拉不到，任务/干预信号全漏）→ 再查残留进程杀掉重启，不得带病继续
 - `WaitDelay expired` 是误报，以日志 mtime 持续更新为准，勿重试启动造成双实例
 - **每个回合必做五条见速查表**（①拉日志 ②查对讲+核对牌数 ③写心跳 ④跑 `--once` ⑤做决策——本节约束，不重复展开）；**有决策动作才算在场**
 - **写大鱼心跳（每回合必做）**：`date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录，写裸文件名即落在 `fish/_heartbeat.txt`）——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）
