@@ -180,7 +180,7 @@ function probeOnce() {
 
   var curMtime = 0;
   try { curMtime = Math.round(fs.statSync(worldDir).mtimeMs); }
-  catch(e) { console.log("TIMEOUT N=" + lastN); return 3; } // M3 修复：world/ 不可访问时按"无事发生"退出，避免崩溃退出码 1 被误判为 WOKEN
+  catch(e) { console.log("TIMEOUT N=" + lastN + "（world 不可访问——真异常，非正常等待 | exit=3）"); return 3; } // M3 修复：world/ 不可访问时按"无事发生"退出，避免崩溃退出码 1 被误判为 WOKEN
   var wakeFile = path.join(talkDir, "_wakeup.md");
 
   if (curMtime === lastMtime) {
@@ -210,7 +210,7 @@ function probeOnce() {
     // M-16 修复：快路径同样执行收工检查——断点续接/重启场景下，当前轮已是收工轮且目录 mtime 无变化时也能感知退场
     var r1 = checkRetire();
     if (r1 !== null) return r1;
-    console.log("TIMEOUT N=" + lastN);
+    console.log("EMPTY_BOARD N=" + lastN + "（暂无新公告牌，正常等待发布，继续 poll | exit=3）");
     return 3;
   }
 
@@ -253,7 +253,7 @@ function probeOnce() {
   writeHeartbeat();
 
   // 无事发生
-  console.log("TIMEOUT N=" + lastN);
+  console.log("EMPTY_BOARD N=" + lastN + "（暂无新公告牌，正常等待发布，继续 poll | exit=3）");
   return 3;
 }
 

@@ -13,7 +13,7 @@
   ③【不确定时刻】有没有"不知道怎么走/不确定对错"的时刻？具体是什么场景？建议文档怎么补能消掉这个不确定？
   ④【其他反馈】任何改进建议（文档表述张力、重复、缺失、可简化处）。
 - 产出负责人: 各自
-- 产出: world/output/task00N_wakeup-survey/
+- 产出: world/output/task00N_wakeup-survey/{角色名}_wakeup_confusion_survey.md（**产出行写全路径含文件名**——任务描述不点名文件名时，交付三查第一查有锚点；{角色名} 替换为你的角色名）
 - 任务目录: world/task00N_wakeup-survey/
 - 交付参数: task00N_wakeup-survey（deliver 第 2 参 = 纯目录名，不带 world/output 前缀——`产出:` 是 monitor 按字面查的完整路径，不是 deliver 参数）
 ```
