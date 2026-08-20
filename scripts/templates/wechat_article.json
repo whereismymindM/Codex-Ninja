@@ -17,7 +17,7 @@
     {
       "模式": "单人输出",
       "角色": { "{编辑}": "单人", "{写手}": "单人", "{审核}": "单人" },
-      "任务": "素材收集：读《选题定调.md》（读 world/output/task001_topic/选题定调.md），每人按自己视角收集素材写《素材_{角色名}.md》到 output/task002_materials/——事实/数据/案例/金句/引用。**用网络搜索工具查外部资讯**（`node ../../工具舱/网络搜索/search.js \"关键词\" --pool=all`——**必须带 --pool=all**：含 BingScrape 中文源，能搜到中文内容向结果；默认 fast 池只有 GitHub/StackExchange/HN/MDN 技术源，搜内容话题不对题。多搜几组关键词），arrow 仅补充查本地历史资料（`node ../../工具舱/arrow/arrow.js \"关键词\"`）。**搜到内容源链接后，用 `node ../../工具舱/网络搜索/fetch.js \"URL\"` 抓正文原文**（返回清洗后的正文文本），引用关键段落/数据——不要只靠搜索摘要。素材必须标来源：网络搜到的标 URL，本地查到的标文件路径，无来源的标「待核实」。",
+      "任务": "素材收集：读《选题定调.md》（读 world/output/task001_topic/选题定调.md），每人按自己视角收集素材写《素材_{角色名}.md》到 output/task002_materials/——事实/数据/案例/金句/引用。**用网络搜索工具查外部资讯**（`node ../../toolbay/web-search/search.js \"关键词\" --pool=all`——**必须带 --pool=all**：含 BingScrape 中文源，能搜到中文内容向结果；默认 fast 池只有 GitHub/StackExchange/HN/MDN 技术源，搜内容话题不对题。多搜几组关键词），arrow 仅补充查本地历史资料（`node ../../toolbay/arrow/arrow.js \"关键词\"`）。**搜到内容源链接后，用 `node ../../toolbay/web-search/fetch.js \"URL\"` 抓正文原文**（返回清洗后的正文文本），引用关键段落/数据——不要只靠搜索摘要。素材必须标来源：网络搜到的标 URL，本地查到的标文件路径，无来源的标「待核实」。",
       "产出负责人": "各自",
       "产出": "world/output/task002_materials/",
       "任务目录": "world/task002_materials/",
