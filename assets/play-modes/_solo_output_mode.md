@@ -9,6 +9,8 @@
 读公告牌 → 理解任务 → 动手干 → **用 `node _deliver.js <产出文件名> <任务目录>` 交付**（独立脚本优先；零Shell依赖，0.1秒）→ **用 `node _sign.js <轮次号>` 签字**（禁止手写签字文件——铁律 6）。
 > **代码类产出**（修改已有源文件）：源文件原地改完 → 直接 `node _deliver.js 文件名.js taskNNN 源文件路径`，只发 .ready 信号，不搬运文件。
 > **文档类产出**（新建报告、设计文档等）：先 fs.writeFileSync 写到 `../world/output/` 目录（别在角色目录下建 output/） → 再 `node _deliver.js 文件名 taskNNN` 发信号（**必须带任务目录参数**，与主笔审核一致——缺参会写成 `output/undefined/`）。
+> **完整示例**：公告牌写 `产出: world/output/task001_survey/`、`任务目录: world/task001_survey/` 时——`node _deliver.js wakeup-confusion_Reviewer.md task001_survey`。
+> **任务目录参数 = 纯目录名 `task001_survey`，不带 `world/output/` 前缀**（脚本自动拼 `output/`）——别把公告牌的 `产出:` 路径原样传进去（那是 monitor 按字面查的完整路径，不是 deliver 参数）。
 
 ### 🔑 终审 pass（产出后、deliver 前，必做）
 

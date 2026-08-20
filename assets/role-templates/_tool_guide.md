@@ -46,6 +46,7 @@ node temp-scripts/wait_file.js <目标> [目标2] [--hb <心跳文件>] [--timeo
 ```bash
 node _sign.js <轮次号> [消息]                        # 签字 → done_NNN.md
 node _deliver.js <产出文件名> <任务目录> [源文件路径]  # 交付 → output/taskNNN/ 下 .ready
+   # ⚠️ <任务目录> = 纯目录名 taskNNN_XXX，不带 world/output 前缀（脚本自动拼 output/）；例：node _deliver.js 报告.md task001_survey
 ```
 
 - 独立脚本优先（内联样板是共同最卡点，每轮手抄 15-40 行 = 出错面）
