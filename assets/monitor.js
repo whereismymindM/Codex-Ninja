@@ -385,7 +385,14 @@ if (!fs.existsSync(boardFile)) {
         console.log("STANDBY_OVERDUE N=" + N + "（待命轮基线已过 10 分钟无新动作且收工轮仍扣留——大鱼可能掉线，检查 needs-intervention_大鱼.md；若大鱼在场请立即补搬收工轮）");
         logMonitor("STANDBY_OVERDUE N=" + N);
     }
-    console.log("WAIT N=" + N); logMonitor("WAIT N=" + N); process.exit(0);
+    // 2026-08-20 扣留可读性：收工轮被扣留时（大鱼目录仍扣着收工轮）输出 RETIRE-KEPT 替代裸 WAIT N——原 WAIT N=收工轮编号（待命轮被自检跳过）对不读源码的大鱼是黑盒（大鱼全程疑惑整理 P1 反馈）
+    if (_retireKept) {
+        console.log("RETIRE-KEPT N=" + N + "（收工轮扣留中——待命轮已过、等老渣追加；基线到点无追加则补搬收工轮）");
+        logMonitor("RETIRE-KEPT N=" + N);
+    } else {
+        console.log("WAIT N=" + N); logMonitor("WAIT N=" + N);
+    }
+    process.exit(0);
 }
 
 var board;
