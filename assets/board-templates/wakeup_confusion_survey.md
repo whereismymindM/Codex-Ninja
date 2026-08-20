@@ -15,6 +15,7 @@
 - 产出负责人: 各自
 - 产出: world/output/task00N_wakeup-survey/
 - 任务目录: world/task00N_wakeup-survey/
+- 交付参数: task00N_wakeup-survey（deliver 第 2 参 = 纯目录名，不带 world/output 前缀——`产出:` 是 monitor 按字面查的完整路径，不是 deliver 参数）
 ```
 
 ---
