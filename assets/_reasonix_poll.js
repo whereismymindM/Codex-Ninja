@@ -159,7 +159,7 @@ function probeOnce() {
       lastN++;
       var sigMtime = new Date(sigStat.mtimeMs).toISOString().substring(11, 19);
       log("信号命中 N=" + lastN + " → board_" + String(lastN).padStart(3, "0") + " 就位（大鱼发布: " + sigMtime + "）");
-      console.log("BULLETIN N=" + lastN);
+      console.log("BULLETIN N=" + lastN + "（board_" + String(lastN).padStart(3, "0") + ".md 就位）");
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
     }
@@ -203,7 +203,7 @@ function probeOnce() {
     if (fs.existsSync(nextFileFast)) {
       lastN++;
       log("board_" + String(lastN).padStart(3, "0") + " 就位（快路径）");
-      console.log("BULLETIN N=" + lastN);
+      console.log("BULLETIN N=" + lastN + "（board_" + String(lastN).padStart(3, "0") + ".md 就位）");
       console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
       return 0;
     }
@@ -225,7 +225,7 @@ function probeOnce() {
   if (fs.existsSync(nextFile)) {
     lastN++;
     log("board_" + String(lastN).padStart(3, "0") + " 就位");
-    console.log("BULLETIN N=" + lastN);
+    console.log("BULLETIN N=" + lastN + "（board_" + String(lastN).padStart(3, "0") + ".md 就位）");
     console.log("【铁律】最终回复=回合结束——未到收工轮(退出码2)前禁止输出最终回复，持续 poll 保持在场！");
     return 0;
   }
