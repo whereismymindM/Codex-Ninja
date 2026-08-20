@@ -134,7 +134,7 @@ if (isFishMode) {
     var fishDeliverPath = fishDir + "/_deliver.js";
     fs.copyFileSync(assetDir + "/_deliver.js", fishDeliverPath);
     console.log("OK: fish/_deliver.js (" + fs.statSync(fishDeliverPath).size + " bytes)");
-    var fishSignContent = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "fish"; });
+    var fishSignContent = fs.readFileSync(assetDir + "/_sign.js", "utf8").replace(/\{\{ROLE_NAME\}\}/g, function() { return "fish_laozha"; }); // 2026-08-20 P0 修复：原焊死 "fish" → 签字写 world/fish_talk/，但 monitor 只认 fish_laozha_talk/（大鱼全程疑惑整理反馈）——改 fish_laozha 后签字落对讲目录，无需手动补拷
     fs.writeFileSync(fishDir + "/_sign.js", fishSignContent, "utf8");
     console.log("OK: fish/_sign.js (" + fs.statSync(fishDir + "/_sign.js").size + " bytes)");
 
