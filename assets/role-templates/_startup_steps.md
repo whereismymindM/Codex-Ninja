@@ -2,7 +2,7 @@
 
 > 本文件是角色会话启动时的第一份动作指引。收到「进入角色」后，按步骤走完即进入主循环。
 > 读牌解析见 `_board_reading.md`；干活动作见 `_workflow.md`；工具用法见 `_tool_guide.md`。
-> **最小动作序列（新角色第一次，一眼可见）**：读 `role_lessons_archive.md`（轮型导读）→ 读本文件第 0/1 步（确认现场 + lastN=0 兜底）→ `node _reasonix_poll.js "{{ROLE_NAME}}" 0` → 按 poll 结果读牌干活（其余文件卡住再查）。
+> **最小动作序列（新角色第一次，一眼可见）**：①`role_lessons_archive.md`（轮型导读，**唤醒时已读则跳过**）②读本文件第 0/1 步（确认现场 + lastN=0 兜底）③`node _reasonix_poll.js "{{ROLE_NAME}}" 0` ④按 poll 结果读牌干活（其余文件卡住再查）。
 
 ---
 
