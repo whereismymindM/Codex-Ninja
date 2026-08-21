@@ -89,8 +89,9 @@ function checkTalkDir() {
       if (f === "output-summary.md" || f === "audit-report.md" || f === "project-done.md") return;
       // 2026-08-21 修复：排除大鱼自产文件（chat/回复/签字/任务已处理）——大鱼自己写的不是"新任务"，否则每次被自己吵
       if (f.indexOf("fish-chat_") === 0 || f.indexOf("fish-reply_") === 0 ||
-          f.indexOf("done_") === 0 || f.indexOf("laozha-task_") === 0 || f.indexOf("laozha-receipt_") === 0 ||
+          f.indexOf("done_") === 0 || f.indexOf("laozha-receipt_") === 0 ||
           f.indexOf("_processed") !== -1 || f.indexOf("dispatch-log") !== -1) return;
+      // 注：laozha-task_（老渣→大鱼任务）不排除——那是真任务，必须报 NEW_TASK；_processed 排除（已处理形态）
       var full = path.join(talkDir, f);
       var mtime;
       try { mtime = fs.statSync(full).mtimeMs; } catch (_se) { return; }
@@ -149,8 +150,9 @@ try {
       if (f === "output-summary.md" || f === "audit-report.md" || f === "project-done.md") return;
       // 2026-08-21 修复：排除大鱼自产文件（chat/回复/签字/任务已处理）——大鱼自己写的不是"新任务"，否则每次被自己吵
       if (f.indexOf("fish-chat_") === 0 || f.indexOf("fish-reply_") === 0 ||
-          f.indexOf("done_") === 0 || f.indexOf("laozha-task_") === 0 || f.indexOf("laozha-receipt_") === 0 ||
+          f.indexOf("done_") === 0 || f.indexOf("laozha-receipt_") === 0 ||
           f.indexOf("_processed") !== -1 || f.indexOf("dispatch-log") !== -1) return;
+      // 注：laozha-task_（老渣→大鱼任务）不排除——那是真任务，必须报 NEW_TASK；_processed 排除（已处理形态）
       knownTasks[f] = fs.statSync(path.join(_talkInitDir, f)).mtimeMs;
     });
   }
