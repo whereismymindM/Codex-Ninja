@@ -93,12 +93,12 @@ echo "size: 24" > world/output/task001_测试/out.md.ready
 echo "架构师 第001轮完成" > world/架构师_talk/done_001.md
 touch world/架构师_talk/架构师retired_002
 mkdir -p world/fish_laozha_talk
-echo "# 产出总结" > world/fish_laozha_talk/产出总结.md
-echo "# 项目完成" > world/fish_laozha_talk/项目完成.md
+echo "# output-summary" > world/fish_laozha_talk/output-summary.md
+echo "# project-done" > world/fish_laozha_talk/project-done.md
 OUT=$(node "$SKILL/scripts/check.js" . 2>&1); RC=$?
 check "check 收工批次退出码 0" "退出码: 0" "退出码: $RC"
 check "check 全部合规" "全部合规" "$OUT"
-check "check 两件套在" "项目完成.md 在" "$OUT"
+check "check 两件套在" "project-done.md 在" "$OUT"
 
 # ── 4. check：缺签字/缺退场应检出 ──
 echo "===== 4. check 缺项检出（exit 1）====="

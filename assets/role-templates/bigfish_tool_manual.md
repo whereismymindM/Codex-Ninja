@@ -20,7 +20,7 @@ node ../monitor.js    # CWD=你的大鱼目录，world/ 在 monitor.js 同级
 
 | 输出 | 含义 | 你的响应 |
 |---|---|---|
-| `TRIAL N=x` | 试用轮（`模式: 试用`）等真人反馈：`试用反馈.md` 未就位 | **预期，不要当异常**；真人点程序需长时间，勿误判 DONE；反馈就位后 monitor 转 WAIT（角色处理中） |
+| `TRIAL N=x` | 试用轮（`模式: 试用`）等真人反馈：`trial-feedback.md` 未就位 | **预期，不要当异常**；真人点程序需长时间，勿误判 DONE；反馈就位后 monitor 转 WAIT（角色处理中） |
 | `WAIT N=x` | 第 x 轮未完成，继续等 | 正常，继续等；看括号里的原因（产出缺谁/退场缺谁）<br>**扣留期跳过待命轮**：DONE 后若下一张是待命轮（无签字/output，自检放行）→ 直接报 WAIT N=收工轮编号（如 DONE N=6 → WAIT N=8，N=7 待命轮被跳过）——**预期，不是跳号**，是收工轮扣留的招牌信号 |
 | `WAIT_OVERDUE N=x` | 第 x 轮产出卡轮超 30 分钟（试用轮等真人反馈阶段豁免） | 核查角色产出路径/deliver 参数，必要时 `_wakeup.js` 提示 |
 | `DONE N=x` | 第 x 轮完成（产出就位/全员退场） | 推进到下一轮；若 x=收工轮 → 进入收工 |
@@ -36,7 +36,7 @@ node ../monitor.js    # CWD=你的大鱼目录，world/ 在 monitor.js 同级
 | `WAKE 角色` | 已写 `_wakeup.md` 唤醒 | 等角色 ack（删 `_wakeup.md`） |
 | `STUCK 角色` | 唤醒未确认+无产出=挂死 | 写求助老渣（需人工干预） |
 | `DEADLOCK` | 角色等文件超时写死锁信号 | 读公告牌找搭档→唤醒搭档 |
-| `HELP 角色` | 角色写求助 | 回复到 `大鱼回复_NNN.md` |
+| `HELP 角色` | 角色写求助 | 回复到 `fish-reply_NNN.md` |
 | `FISH_DEAD` | 你（大鱼）心跳 stale+无产出（窗口常驻 5 分钟 / run 拉起 10 分钟判） | **你掉线了！** 恢复后按启动流程重来 |
 | `INTERVENE` | monitor 写了需人工干预文件 | 老渣查看处理 |
 | `OUTPUT ✓/✗` | 产出就位/缺失（含 `OUTPUT-FORMAT`/`OUTPUT-WARN` 变体：产出路径含 `{}` 占位符/空交付或无 metadata 告警） | ✗ 等角色交付；FORMAT/WARN 按报警核查公告牌产出行 |
@@ -83,7 +83,7 @@ node _wakeup.js <角色名> [原因]
 ## 四、_deliver.js / _sign.js（老渣专属任务交付）
 
 ```bash
-node _deliver.js <产出文件名> <任务目录>   # 老渣任务产出 → .ready
+node _deliver.js <产出文件名> <任务目录>   # laozha-task产出 → .ready
 node _sign.js <轮次>                      # 签字 → done_NNN.md
 ```
 
@@ -101,4 +101,4 @@ node _sign.js <轮次>                      # 签字 → done_NNN.md
 | 收工轮不见了 | 查 `追加任务.md` 是否存在 | 追加中（等）→ 否则求助老渣 |
 | 报 FISH_DEAD | 你心跳断了 | 写心跳 `_heartbeat.txt` 恢复 |
 | 报 STANDBY_OVERDUE | 扣留超时 | 立即补搬收工轮 |
-| 角色求助 | 读对讲目录 | 回复 `大鱼回复_NNN.md` |
+| 角色求助 | 读对讲目录 | 回复 `fish-reply_NNN.md` |

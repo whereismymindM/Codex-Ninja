@@ -410,7 +410,7 @@ reg('C1 仓库内文件引用', '文档中 assets/scripts/团队须知 引用必
       for (const r of refs) {
         // 排除含占位符的引用（<任务目录>/{{xxx}}/xxx.md 示例占位）
         if (r.includes('<') || r.includes('{{') || r.includes('${') || r.includes('xxx')) continue;
-        // 2026-08-17：temp-scripts/ 是运行时占位目录（scaffold 复制 wait_file 等工具到角色 CWD 的 临时脚本/），非仓库路径——不查
+        // 2026-08-17：temp-scripts/ 是运行时占位目录（scaffold 复制 wait_file 等工具到角色 CWD 的 temp-scripts/），非仓库路径——不查
         if (r.startsWith('temp-scripts/')) continue;
         const target = path.join(ROOT, r);
         if (!exists(target)) fail('C1', p, 0, '死引用: ' + r);
@@ -688,11 +688,11 @@ reg('E2 信号后缀声明', '辩论两态声明与 wait_file 白名单例外兼
   () => {
     const deb = read(path.join(ROOT, 'assets/play-modes/_debate_mode.md'));
     const wf = read(path.join(ROOT, 'assets/wait_file.js'));
-    if (!deb.includes('特许例外') && !deb.includes('chat-end_已处理')) {
+    if (!deb.includes('特许例外') && !deb.includes('chat-end_processed')) {
       fail('E2', path.join(ROOT, 'assets/play-modes/_debate_mode.md'), 0, '辩论两态声明缺特许例外括号');
     }
-    if (!wf.includes('signal_已处理')) {
-      fail('E2', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file 白名单缺 .signal_已处理');
+    if (!wf.includes('signal_processed')) {
+      fail('E2', path.join(ROOT, 'assets/wait_file.js'), 0, 'wait_file 白名单缺 .signal_processed');
     }
   });
 

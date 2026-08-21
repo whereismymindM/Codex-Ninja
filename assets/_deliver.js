@@ -74,7 +74,7 @@ if (taskDirHint) {
 
 var outputDir = projRoot + "/world/output/" + taskDir;
 
-// A-2 修复：行为日志——交付动作写一行到角色操作日志（实弹反馈 #2：干活过程对脚本不可见，只有 poll 事件）
+// A-2 修复：行为日志——交付动作写一行到角色action-log（实弹反馈 #2：干活过程对脚本不可见，只有 poll 事件）
 // 2026-08-12 修复：角色名=目录名（path.basename(__dirname)），与 _sign 焊死名一致——
 //   原读 AGENTS.md 首行，鱼形态首行是"# 大鱼（窗口常驻形态）"≠"fish" → 日志写进错误目录（脏目录+审计链断裂）
 function _logAction(actionMsg) {
@@ -84,7 +84,7 @@ function _logAction(actionMsg) {
         var _logDir = path.resolve(__dirname, "..", "world", _rn + "_talk");
         fs.mkdirSync(_logDir, { recursive: true });
         var _ts = new Date().toISOString().substring(11, 19);
-        fs.appendFileSync(_logDir + "/" + _rn + "_操作日志.md", "[" + _ts + "] " + actionMsg + "\n", "utf8");
+        fs.appendFileSync(_logDir + "/" + _rn + "_action-log.md", "[" + _ts + "] " + actionMsg + "\n", "utf8");
     } catch(_lg) {}
 }
 

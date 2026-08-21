@@ -102,7 +102,7 @@ cfg.轮次 && cfg.轮次.forEach(function(r, ri) {
   if (!r.模式) errors.push("第" + n + "轮缺 模式");
   else if (MODES.indexOf(r.模式) === -1) errors.push("第" + n + "轮 模式 非法（" + r.模式 + "），允许: " + MODES.join("/"));
   if (r.角色) Object.keys(r.角色).forEach(function(role) { if (roleSet.indexOf(role) === -1) errors.push("第" + n + "轮 角色 '" + role + "' 不在角色名单"); });
-  // 产出字段：任务轮必填，收工/待命不填（试用轮有试用报告产出，同样必填——2026-08-11 修复：原漏了试用轮，漏产出行编译期不报错 → monitor 活跃轮 WAIT 卡死）
+  // 产出字段：任务轮必填，收工/待命不填（试用轮有trial-report产出，同样必填——2026-08-11 修复：原漏了试用轮，漏产出行编译期不报错 → monitor 活跃轮 WAIT 卡死）
   var needOutput = r.模式 === "单人输出" || r.模式 === "辩论" || r.模式 === "主笔审核" || r.模式 === "双人对话" || r.模式 === "试用";
   if (needOutput) {
     if (!r.产出负责人) errors.push("第" + n + "轮 缺 产出负责人（" + r.模式 + "轮必填）");
@@ -185,7 +185,7 @@ if (errors.length > 0) {
 
 // ── 生成公告牌 ──
 var FIRST_LINE = "🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场";
-var RETIRE_TASK = "全员退场。①收工前确认你的职责已尽：盘点本项目/前几轮公告牌分配给你的任务是否已交付——未尽则先补交/求助/说明，不得直接退场 ②创建退场文件（对讲目录，无 .md 后缀，monitor 靠它确认你已安全退出）③写流水账（独立文件 {角色名}_ledger.md，回顾全程每轮一行）④【终局轮】写 {角色名}_memory.md 到对讲目录（传承给下一任的自己）⑤输出「项目完成」结束回合。";
+var RETIRE_TASK = "全员退场。①收工前确认你的职责已尽：盘点本项目/前几轮公告牌分配给你的任务是否已交付——未尽则先补交/求助/说明，不得直接退场 ②创建退场文件（对讲目录，无 .md 后缀，monitor 靠它确认你已安全退出）③写流水账（独立文件 {角色名}_ledger.md，回顾全程每轮一行）④【终局轮】写 {角色名}_memory.md 到对讲目录（传承给下一任的自己）⑤输出「project-done」结束回合。";
 
 function roleLine(role, round, r) {
   var info = round.roles[role];

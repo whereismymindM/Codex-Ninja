@@ -32,7 +32,7 @@ while (true) {
     _fs.default.mkdirSync(_dlDir, { recursive: true });
     _fs.default.writeFileSync(_dlDir + "/_deadlock.md", "timeout", "utf8");
     var _logName = _dlDir.split("/").pop().replace("_talk", "");
-    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_轮询日志.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时 已写_deadlock\n", "utf8");
+    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_poll-log.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时 已写_deadlock\n", "utf8");
     break;
   }
   await new Promise(function(r) { setTimeout(r, 500); });
@@ -75,7 +75,7 @@ while (true) {
 读 `review-result.md` 第一行判断（**多审核方场景读 `review-result_{审核方角色名}.md`**，逐份判断）：
 - 状态：通过 → 跳第 5 步（签字）
 - 状态：不通过 → 读具体意见、改产出，把旧的 `review-result.md` **改名归档**（`review-result_第N次.md`；**同名 `.signal` 一并处理**——wait_file 路径已自动 ack 改名，无需再动；手写路径后缀替换），重发 `please-review.md`，回到第 3 步
-> ⚠️ **打回 ≥3 次 → 写求助给大鱼**：同一轮**打回累计满 3 次**（`review-result_第3次.md` 归档后）→ 写 `../world/{{ROLE_NAME}}_talk/大鱼chat_NNN.md` 给大鱼说明分歧点（"第 N 轮打回 3 次：主笔观点 X vs 审核意见 Y，双方僵持"）。
+> ⚠️ **打回 ≥3 次 → 写求助给大鱼**：同一轮**打回累计满 3 次**（`review-result_第3次.md` 归档后）→ 写 `../world/{{ROLE_NAME}}_talk/fish-chat_NNN.md` 给大鱼说明分歧点（"第 N 轮打回 3 次：主笔观点 X vs 审核意见 Y，双方僵持"）。
 > **不停止打回循环**（继续改、继续发please-review，审核不同意就继续），但大鱼知情后可介入调解。打回次数不设硬上限（改到满意为止），求助只是让大鱼知道分歧在持续。
 > 🔑 **v1 通过即最终通过**：审核方在**状态：通过**上签字后，审核即完成——**主笔后续修订（v2+）为自审确认，不再发三方复审**（审核方已尽审查义务，通过签字即可退场；若确需重审，须在公告牌显式声明）。
 > **通过后主笔自审修订在首次 deliver 之前完成则一次 deliver 即可**（先修订再 deliver，不重发 please-review 等已退场审核方）。**禁止** v1 通过签字后再发 `please-review` 等已退场审核方——那是等一个永远不会来的文件。
@@ -116,9 +116,9 @@ while (true) {
 
 **2. 审产出**
 认真读，不是走过场。发现模糊、不完整、没数据支撑的地方必须打回。**判据参考：必改项 = 影响读者理解或执行的点；存疑项 = 不阻塞理解、可后续补充的点，标注「存疑」即可，不阻塞通过。**
-读完立刻把 `please-review.md` 重命名为 `please-review_已处理.md`，**同名 `.signal` 一并处理**（wait_file 路径已被自动 ack 改名，无需再动；手写路径按后缀替换改 `_已处理.md.signal_acked`）——清掉旧文件（不删除，保留审计线索），下次主笔重发新 `please-review.md` 
+读完立刻把 `please-review.md` 重命名为 `please-review_processed.md`，**同名 `.signal` 一并处理**（wait_file 路径已被自动 ack 改名，无需再动；手写路径按后缀替换改 `_processed.md.signal_acked`）——清掉旧文件（不删除，保留审计线索），下次主笔重发新 `please-review.md` 
 时 poll 才能等到真正的新内容，不会被旧文件秒返骗过去。
-（旧 signal 不归档的话，主笔重发前空窗期会秒返、随后读已改名的 .md → ENOENT）。**多审核方**：改为把 `please-review_{你的角色名}.md` 改名 `please-review_{你的角色名}_已处理.md`（同名 .signal 已自动 ack / 手写路径后缀替换）——同样只处理**自己那份**。
+（旧 signal 不归档的话，主笔重发前空窗期会秒返、随后读已改名的 .md → ENOENT）。**多审核方**：改为把 `please-review_{你的角色名}.md` 改名 `please-review_{你的角色名}_processed.md`（同名 .signal 已自动 ack / 手写路径后缀替换）——同样只处理**自己那份**。
 
 **3. 给结果**
 统一写 `review-result.md`（**多审核方：写 `review-result_{你的角色名}.md`**，见文末「多审核方协议」；单审核方才是不带角色名），第一行标注状态，

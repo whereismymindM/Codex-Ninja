@@ -43,7 +43,7 @@ reasonix 的 `/goal` 模式 = **平台保活**：回合不因模型输出最终�
 ① 写流水账（回顾全程 ≥2 行）
 ② 创建退场文件（对讲目录，无 .md 后缀，touch + ls 确认）
 ③ touch .reasonix-done（角色目录 CWD，touch + ls -la 确认）——必须先于④
-④ 输出「项目完成」
+④ 输出「project-done」
 ⑤ 【条件分支】宿主反馈：
    ├─ 报 "Goal signaled complete but issues remain" → 补 evidence + 标 [goal:complete] → 收口
    └─ 直接收口 → 无需补标
@@ -55,7 +55,7 @@ reasonix 的 `/goal` 模式 = **平台保活**：回合不因模型输出最终�
 ## 五、警告栏措辞（分轮次，模板内联逐字稿）
 
 > goal 模式轮次必写：**①干活轮/待命轮禁止在回复末尾标注 [goal:complete] / [goal:blocked]（标注 = 假完成 = 事故）
-> ②收工轮例外：执行完「流水账+退场文件+touch .reasonix-done+输出项目完成」后，若宿主报 issues remain（缺 evidence）→ 补 evidence 块并标注 [goal:complete] 配合收口——此标注仅限收工轮收口流程，干活轮/待命轮仍禁止**
+> ②收工轮例外：执行完「流水账+退场文件+touch .reasonix-done+输出project-done」后，若宿主报 issues remain（缺 evidence）→ 补 evidence 块并标注 [goal:complete] 配合收口——此标注仅限收工轮收口流程，干活轮/待命轮仍禁止**
 > **③干完活不要标完成标记，正常 deliver + sign 后继续 poll 公告牌等下一轮 ④收工流程由收工轮任务栏指示（届时放 .reasonix-done 信号文件）⑤标注 = 事故，拖慢团队进度，后果严重者踢出团队**
 
 **设计要点**（改措辞前必读）：

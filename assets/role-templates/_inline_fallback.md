@@ -19,7 +19,7 @@ var sign = async function(roundN) {
   var content = "# " + roleName + " 第" + Npad + "轮签字\n\n任务完成，产出已交付。";
   fs.default.writeFileSync(signFile, content, "utf8");
   try {
-    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_talk", roleName + "_操作日志.md"), "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + Npad + "\n", "utf8");
+    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_talk", roleName + "_action-log.md"), "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + Npad + "\n", "utf8");
   } catch(_ls) {}
   if(fs.default.statSync(signFile).size > 20) return "SIGNED";
   return "SIGN_FAIL";
@@ -52,7 +52,7 @@ var deliver = async function(filename, taskDirName, sourcePath) {
   fs.default.writeFileSync(readyPath + ".tmp", _dlContent, "utf8");
   fs.default.renameSync(readyPath + ".tmp", readyPath);
   try {
-    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_talk", roleName + "_操作日志.md"), "[" + new Date().toISOString().substring(11,19) + "] DELIVER " + filename + "\n", "utf8");
+    fs.default.appendFileSync(path.default.join(worldDir, roleName + "_talk", roleName + "_action-log.md"), "[" + new Date().toISOString().substring(11,19) + "] DELIVER " + filename + "\n", "utf8");
   } catch(_ld) {}
   return "DELIVERED to " + outPath;
 };

@@ -8,7 +8,7 @@
 //   2. 逐轮产出    每轮活跃角色的 .ready 是否就位（对应 monitor 的 WAIT 判据，格式A/B + producer 归属）
 //   3. 逐轮签字    每轮活跃角色 done_NNN.md 是否齐全（size>20 才算，monitor 同判据）
 //   4. 退场核对    收工轮全员 {角色名}retired_NNN 是否就位（含 .acked 兼容；休眠文件按 monitor 判据算合法终局）
-//   5. 收口证据链  monitor DONE 推断（收工轮全员退场齐）+ 收工两件套（产出总结.md / 项目完成.md）是否落盘
+//   5. 收口证据链  monitor DONE 推断（收工轮全员退场齐）+ 收工两件套（output-summary.md / project-done.md）是否落盘
 // ⚠️ 同源声明（改判据必须双改）:
 //   ②③④ 判据与 assets/monitor.js 同源——公告牌解析 monitor.js:369-382、产出校验 :516-611、
 //   签字 :504-506、退场 :422-425、.ready producer 归属 :595-611。monitor 改判据时本文件必须同步，
@@ -261,12 +261,12 @@ function checkClose(root, boards) {
   if (retireOk) detail.push("✅ monitor DONE 推断成立（收工轮全员退场文件齐）");
   else issues.push("monitor DONE 推断不成立（收工轮仍有角色未退场——检查是否被 hbForce 强制退场）");
   // 收工两件套
-  var sumFile = path.join(talkDir, "产出总结.md");
-  var doneFile = path.join(talkDir, "项目完成.md");
-  if (fs.existsSync(sumFile)) detail.push("✅ 产出总结.md 在（" + fs.statSync(sumFile).size + " B）");
-  else issues.push("❌ 缺 产出总结.md（收工两件套之一）");
-  if (fs.existsSync(doneFile)) detail.push("✅ 项目完成.md 在（" + fs.statSync(doneFile).size + " B）");
-  else issues.push("❌ 缺 项目完成.md（收工两件套之一，通知老渣的落盘）");
+  var sumFile = path.join(talkDir, "output-summary.md");
+  var doneFile = path.join(talkDir, "project-done.md");
+  if (fs.existsSync(sumFile)) detail.push("✅ output-summary.md 在（" + fs.statSync(sumFile).size + " B）");
+  else issues.push("❌ 缺 output-summary.md（收工两件套之一）");
+  if (fs.existsSync(doneFile)) detail.push("✅ project-done.md 在（" + fs.statSync(doneFile).size + " B）");
+  else issues.push("❌ 缺 project-done.md（收工两件套之一，通知老渣的落盘）");
   return { ok: issues.length === 0, issues: issues, detail: detail };
 }
 
@@ -333,7 +333,7 @@ function main() {
     console.log("结论: ✅ 全部合规（0 异常）——收工核对通过，可归档");
     process.exit(0);
   } else {
-    console.log("结论: ❌ 发现 " + allIssues.length + " 处异常——按上面对照产出总结.md 的逐轮矩阵核对");
+    console.log("结论: ❌ 发现 " + allIssues.length + " 处异常——按上面对照output-summary.md 的逐轮矩阵核对");
     console.log("> 提示: 若批次**尚未收工**（monitor 未 DONE / 两件套未落盘），output/签字/退场缺失属预期推进状态，非故障——收工后再跑才是全绿场景");
     process.exit(1);
   }

@@ -17,8 +17,9 @@
 - **写方**：写完每份 `.md` 的**下一条命令必须是发同名 `.signal`**（原子两步，不得插入其他动作）——漏发 = 搭档空等
 - **读方**：读完对方任何 `.md`，**必须处理同名 `.signal`**（wait_file 路径=脚本自动 ack 改名 `.signal_acked` 无需再动；手写轮询=rename 后缀替换）——**正方/反方/裁判都是读方，都有 ack 义务**；残留信号 = 下轮误判
 - **🔒 信号后缀白名单（协议唯一两态）**：信号文件**只有两种合法状态**——`.signal`（写方已发）/ `.signal_acked`（读方已读）。
-  **任何角色/脚本禁止创建其他后缀**（如 `.signal_ok`/`.signal_done`/`.signal_已读`），自定义后缀 = 协议违规；wait_file.js 已内置检测，发现非白名单后缀会输出 `NONSTANDARD_SIGNAL` 告警（**铁律 2 特许例外**：双人对话模式的 `chat-end_已处理.signal`，wait_file 白名单已兼容）
-- **用 `node temp-scripts/wait_file.js` 即可**：脚本就位时**默认自动 ack**（目标 .signal 直接 ack；目标 .md 自动 ack 同名 .signal）并**写入操作日志留痕**（`ACK xxx.signal -> xxx.signal_acked`），零手工——**不要再手写 rename，手动 rename 是留痕黑洞**
+  **任何角色/脚本禁止创建其他后缀**（如 `.signal_ok`/`.signal_done`/`.signal_read`），自定义后缀 = 协议违规；
+wait_file.js 已内置检测，发现非白名单后缀会输出 `NONSTANDARD_SIGNAL` 告警（**铁律 2 特许例外**：双人对话模式的 `chat-end_processed.signal`，wait_file 白名单已兼容）
+- **用 `node temp-scripts/wait_file.js` 即可**：脚本就位时**默认自动 ack**（目标 .signal 直接 ack；目标 .md 自动 ack 同名 .signal）并**写入action-log留痕**（`ACK xxx.signal -> xxx.signal_acked`），零手工——**不要再手写 rename，手动 rename 是留痕黑洞**
 - **🔒 禁止 bash mv 手动 ack**：读对方 .md 后**必须用 wait_file.js 等/ack**，**禁止 `bash mv xxx.signal xxx.signal_acked`** 手动改信号——手动 mv 绕过 ackLog 留痕，审计无法归因"谁在何时 ack"。
 - **收尾自检**：总结陈词/终结前 `ls` 任务目录，**对方 `.signal` 残留即补 ack**
 
@@ -46,12 +47,12 @@ while (true) {
     _fs.default.mkdirSync(_hbPath.substring(0, _hbPath.lastIndexOf("/")), { recursive: true });
     _fs.default.writeFileSync(_hbPath, String(Date.now()), "utf8");
   }
-  // 辩论模式超时不写 _deadlock.md（裁判是天然兜底，不需要 monitor 救场）——只记轮询日志，自己不卡等
+  // 辩论模式超时不写 _deadlock.md（裁判是天然兜底，不需要 monitor 救场）——只记poll-log，自己不卡等
   if (Date.now() > _deadline) {
     var _dlDir = "../world/{{ROLE_NAME}}_talk";
     _fs.default.mkdirSync(_dlDir, { recursive: true });
     var _logName = _dlDir.split("/").pop().replace("_talk", "");
-    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_轮询日志.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
+    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_poll-log.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
     break;
   }
   await new Promise(function(r) { setTimeout(r, 500); });
@@ -89,7 +90,7 @@ while (true) {
     var _dlDir = "../world/{{ROLE_NAME}}_talk";
     _fs.default.mkdirSync(_dlDir, { recursive: true });
     var _logName = _dlDir.split("/").pop().replace("_talk", "");
-    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_轮询日志.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
+    _fs.default.appendFileSync(_dlDir + "/" + _logName + "_poll-log.md", "[" + new Date().toISOString().substring(11,19) + "] 等文件超时（辩论模式：不写_deadlock，裁判兜底）\n", "utf8");
     break;
   }
   await new Promise(function(r) { setTimeout(r, 500); });

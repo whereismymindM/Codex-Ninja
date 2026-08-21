@@ -40,14 +40,14 @@ var watchHbDeadMin = 15;   // 12-8：失联阈值默认 15 分钟（原 2 分钟
 var timeoutMin = 20;
 var parentCheck = false;
 var anyMode = false;   // 9-4：--any = 任一目标就位即返回（辩论等"立论或终结谁先来"场景）
-var ackMode = true;   // 13-1/2026-08-10：自动 ack 默认开启（等 .signal/.md 就位自动 rename 为 _acked + 操作日志留痕）——角色漏带 --ack 导致手动 rename 跳过留痕（林纳斯 003 实测）；--no-ack 显式关闭
+var ackMode = true;   // 13-1/2026-08-10：自动 ack 默认开启（等 .signal/.md 就位自动 rename 为 _acked + action-log留痕）——角色漏带 --ack 导致手动 rename 跳过留痕（林纳斯 003 实测）；--no-ack 显式关闭
 
 for (var i = 0; i < args.length; i++) {
   var a = args[i];
   if (a === "--help" || a === "-h") {
     console.log("用法: node wait_file.js <目标路径> [目标路径2] [--hb <心跳文件>] [--timeout 分钟] [--parent-check] [--any] [--ack]");
     console.log("  --any: 任一目标就位即返回（默认=全部就位）");
-    console.log("  自动 ack 默认开启：目标 .signal 就位自动 rename 为 _acked；目标 .md 就位自动 ack 同名 .signal（含操作日志留痕）——无需带参数；--no-ack 显式关闭");
+    console.log("  自动 ack 默认开启：目标 .signal 就位自动 rename 为 _acked；目标 .md 就位自动 ack 同名 .signal（含action-log留痕）——无需带参数；--no-ack 显式关闭");
     console.log("  --parent-check: 等待前检查父目录存在（缺失=任务目录路径可能写错）");
     console.log("  --hb: 每 30s 写心跳到指定文件（不传则自动推导角色对讲目录续心跳，12-6）");
     console.log("  --watch-hb: 监控对方心跳（搭档失联检测，超阈值 exit 4）");
@@ -123,8 +123,8 @@ try {
   function _targetMds(t) {
     var base = path.basename(t);
     var names = [];
-    if (/\.signal(_acked|_已处理)?$/i.test(base)) {
-      var main = base.replace(/\.signal(_acked|_已处理)?$/i, "");
+    if (/\.signal(_acked|_processed)?$/i.test(base)) {
+      var main = base.replace(/\.signal(_acked|_processed)?$/i, "");
       if (/\.md$/.test(main)) names.push(main);
       else { names.push(main); names.push(main + ".md"); }
     } else if (/\.md$/.test(base)) {
@@ -142,16 +142,16 @@ try {
       // 13-7：只检查"等待目标同名"的 .md——无关文件（搭档写的/别人的产出）不检查
       var inScope = _targetMdsList.indexOf(f) !== -1;
       if (!inScope) return;
-      // 13-4 修复（稻盛和夫 001 实测）：归档文件（_第N次.md / _已处理.md / _已处理_N.md）
+      // 13-4 修复（稻盛和夫 001 实测）：归档文件（_第N次.md / _processed.md / _processed_N.md）
       // 是旧文件改名留痕，不是写方新产出——跳过错报 MISSING_SIGNAL_ABORT。
-      if (/_第\d+次\.md$/.test(f) || /_已处理(?:\d+)?\.md$/.test(f)) return;
+      if (/_第\d+次\.md$/.test(f) || /_processed(?:\d+)?\.md$/.test(f)) return;
       var base = f.replace(/\.md$/, "");
       // 13-3 修复（稻盛和夫 001 实测）：协议信号命名是 xxx.md.signal（带 .md），
       // 原检测只查 base+".signal"（去掉 .md）→ 把已发信号的产出误报 MISSING_SIGNAL_ABORT。
       // 兼容两种命名：xxx.signal（无 .md）与 xxx.md.signal（协议标准）。
       var hasSignal = entries.some(function(e) {
-        return e === base + ".signal" || e === base + ".signal_acked" || e === base + ".signal_已处理" || e === base + ".signal_acked.md"
-            || e === f + ".signal" || e === f + ".signal_acked" || e === f + ".signal_已处理" || e === f + ".signal_acked.md";
+        return e === base + ".signal" || e === base + ".signal_acked" || e === base + ".signal_processed" || e === base + ".signal_acked.md"
+            || e === f + ".signal" || e === f + ".signal_acked" || e === f + ".signal_processed" || e === f + ".signal_acked.md";
       });
       if (hasSignal) return;
       try {
@@ -179,8 +179,8 @@ try {
     try { entriesNS = fs.readdirSync(d); } catch(_e) { return; }
     entriesNS.forEach(function(f) {
       if (!/\.signal/.test(f)) return;
-      // 白名单：.signal / .signal_acked / .signal_已处理（兼容历史协议）——其他后缀 = 违规
-      if (/\.signal(_acked|_已处理)?$/.test(f)) return;
+      // 白名单：.signal / .signal_acked / .signal_processed（兼容历史协议）——其他后缀 = 违规
+      if (/\.signal(_acked|_processed)?$/.test(f)) return;
       try {
         if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
           console.error("NONSTANDARD_SIGNAL: " + f + " 是非协议信号后缀——协议只认 .signal（写方已发）与 .signal_acked（读方已读），禁止自定义后缀（如 .signal_ok）！请勿手工创建，若已存在请移入 _acked 或删除。");
@@ -188,13 +188,13 @@ try {
       } catch(_e) {}
     });
     // ---- 2026-08-10 手动 rename 检测（马斯克 3 处 bash mv 留痕黑洞实证）----
-    // .signal_acked 存在但角色操作日志近 5 分钟无对应 "ACK" 行 = 可能手动 rename 绕过 ackLog（bash mv），
+    // .signal_acked 存在但角色action-log近 5 分钟无对应 "ACK" 行 = 可能手动 rename 绕过 ackLog（bash mv），
     // 审计无法归因"谁在何时 ack"。检测到 → 告警（不阻塞，把静默手动 rename 变可见）。
     // 2026-08-13 收窄（对齐 13-7，机制审查 MANUAL_ACK 跨角色误报）：只检查"等待目标同名"的 .signal_acked——
     // 搭档 wait_file ack 的无关信号（快节奏对话/打回同目录交换）不在检查范围，杜绝跨角色误报；手动 rename 必落在等待目标上，检测不失效。
     var _targetAckedList = [];
     targets.forEach(function(t) {
-      var _tb = path.basename(t).replace(/\.signal(_acked|_已处理)?$/i, "");
+      var _tb = path.basename(t).replace(/\.signal(_acked|_processed)?$/i, "");
       if (_targetAckedList.indexOf(_tb) === -1) _targetAckedList.push(_tb);
     });
     entriesNS.forEach(function(f) {
@@ -203,7 +203,7 @@ try {
       try {
         if (fs.statSync(path.join(d, f)).mtimeMs > _cutNS) {
           var _mBase = f.replace(/\.signal_acked$/, "");
-          var _log = path.resolve(roleDir, "..", "world", path.basename(roleDir) + "_talk", path.basename(roleDir) + "_操作日志.md");
+          var _log = path.resolve(roleDir, "..", "world", path.basename(roleDir) + "_talk", path.basename(roleDir) + "_action-log.md");
           var _hasAck = false;
           try {
             if (fs.existsSync(_log)) {
@@ -212,7 +212,7 @@ try {
             }
           } catch(_e) {}
           if (!_hasAck) {
-            console.error("MANUAL_ACK_DETECTED: " + f + " 是 .signal_acked 但操作日志无对应 ACK 记录——疑似手动 rename（bash mv）绕过 ackLog！必须用 wait_file.js 等/ack（自动 ack + 留痕），手动 rename 是留痕黑洞（2026-08-10 马斯克实证）。");
+            console.error("MANUAL_ACK_DETECTED: " + f + " 是 .signal_acked 但action-log无对应 ACK 记录——疑似手动 rename（bash mv）绕过 ackLog！必须用 wait_file.js 等/ack（自动 ack + 留痕），手动 rename 是留痕黑洞（2026-08-10 马斯克实证）。");
           }
         }
       } catch(_e) {}
@@ -289,12 +289,12 @@ function ackSignals() {
   });
 }
 
-// 2026-08-09：ACK 动作留痕——追加一行到角色操作日志（world/{角色}_talk/{角色}_操作日志.md）
+// 2026-08-09：ACK 动作留痕——追加一行到角色action-log（world/{角色}_talk/{角色}_action-log.md）
 //   解决"文件出现"与"角色动作"的归因歧义（本次 .signal_ok 质询因缺留痕导致归因困难，马斯克建议③）
 function ackLog(src, dst) {
   try {
     var _role = path.basename(roleDir);
-    var _log = path.resolve(roleDir, "..", "world", _role + "_talk", _role + "_操作日志.md");
+    var _log = path.resolve(roleDir, "..", "world", _role + "_talk", _role + "_action-log.md");
     fs.mkdirSync(path.dirname(_log), { recursive: true });
     var _ts = new Date().toISOString().substring(11, 19);
     fs.appendFileSync(_log, "[" + _ts + "] ACK " + path.basename(src) + " -> " + path.basename(dst) + "\n", "utf8");
@@ -336,7 +336,7 @@ while (Date.now() < deadline) {
         } catch(_psd) {}
         var _working = false;
         var _isMonitorFile = function(_f) {
-          return _f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("needs-intervention") === 0 ||
+          return _f.indexOf("_wakeup") === 0 || _f.indexOf("fish-reply") === 0 || _f.indexOf("needs-intervention") === 0 ||
             _f === "_heartbeat.txt" || _f === "_hb_state.json" || _f === "_mtime.txt"; // 心跳文件内容 stale 但文件 mtime 最近写入——不算活动证据（monitor 同款防自指）
         };
         try {

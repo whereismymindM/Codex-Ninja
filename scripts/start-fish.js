@@ -67,7 +67,7 @@ function start() {
     });
     child.on("exit", function(code) {
         console.log("大鱼进程退出，退出码=" + code);
-        // 复核修复：正常收工（exit 0，项目完成）不重启——重启会让已完成的项目空转；
+        // 复核修复：正常收工（exit 0，project-done）不重启——重启会让已完成的项目空转；
         // 仅非 0 退出码（崩溃/--max-steps 超限/模型报错）才自动重启，带上限防无限循环
         if (code === 0) {
             console.log("正常退出（exit 0），不重启。");

@@ -1,7 +1,7 @@
 // === 大鱼监控脚本（轮询版）===
 // 用法：在项目根目录下 node monitor.js
 // 每次运行检查一轮状态后退出，stdout 即时可见
-// 大鱼每 60 秒跑一次（大鱼模板规定）：WAIT → 等 → DONE → 项目完成（只验证，不翻篇）
+// 大鱼每 60 秒跑一次（大鱼模板规定）：WAIT → 等 → DONE → project-done（只验证，不翻篇）
 var fs = require("fs");
 // 用 __dirname 而不是 process.cwd()——大鱼号架构下大鱼的 CWD 是子目录，world/ 在 monitor.js 同级
 var base = __dirname;
@@ -428,7 +428,7 @@ if (activeRoles.length === 0) {
     var isRetireRound = /模式[：:]\s*收工/.test(board) || /(?:^|\n)\s*·\s*收工/.test(board); // 第四轮修复：·收工 锚定行首
     // ★ 新增 A1：试用轮识别（放 isRetireRound 判定旁，296 行块内）——变量已由改动点 B（275 行前）统一声明，此处纯赋值
     isTrialRound = /模式[：:]\s*试用/.test(board);
-    // ★ 新增 A2：试用反馈文件探测（任务目录来自公告牌「任务目录」字段，与 .ready 检查同级）
+    // ★ 新增 A2：trial-feedback文件探测（任务目录来自公告牌「任务目录」字段，与 .ready 检查同级）
     _trialFbPath = null;
     if (isTrialRound) {
         var _tdM = board.match(/\n- 任务目录[:：]\s*world\/([^\r\n]+)/);
@@ -437,13 +437,13 @@ if (activeRoles.length === 0) {
               console.log("OUTPUT-FORMAT ⚠️ 试用轮任务目录含 ..（拒绝）: " + _tdM[1]); // 2026-08-13 security review：与产出路径同款净化（防拼路径逃出 world/）
             } else {
               var _tdP = base + "/world/" + _tdM[1].trim().replace(/\/+$/, "");
-              if (fs.existsSync(_tdP + "/试用反馈.md") || fs.existsSync(_tdP + "/试用反馈.md.signal")) _trialFbPath = _tdP + "/试用反馈.md";
+              if (fs.existsSync(_tdP + "/trial-feedback.md") || fs.existsSync(_tdP + "/trial-feedback.md.signal")) _trialFbPath = _tdP + "/trial-feedback.md";
             }
         }
     }
     if (isTrialRound && !_trialFbPath) {
         // ★ 试用轮等真人反馈：输出 TRIAL（语义与待命轮 STANDBY 区分，D组#10），阻止误判 DONE
-        console.log("TRIAL N=" + N + " (等真人反馈: 试用反馈.md 未就位)");
+        console.log("TRIAL N=" + N + " (等真人反馈: trial-feedback.md 未就位)");
         logMonitor("TRIAL N=" + N);
         allRetired = false;
     } else if (isTrialRound) {
@@ -489,7 +489,7 @@ if (activeRoles.length === 0) {
                   return entries.some(function(_f) {
                     // 排除 monitor 自写文件（仅对讲目录内存在）——它们是 monitor 写的不是角色新产出，
                     // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长
-                    if (dir.indexOf("_talk") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("大鱼回复") === 0 || _f.indexOf("needs-intervention") === 0)) return false;
+                    if (dir.indexOf("_talk") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("fish-reply") === 0 || _f.indexOf("needs-intervention") === 0)) return false;
                     try {
                       var _st = fs.statSync(dir + "/" + _f);
                       if (_st.isDirectory()) return _hbfRecent(dir + "/" + _f);
@@ -695,11 +695,11 @@ if (fs.existsSync(worldDir)) {
     fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_talk"); }).forEach(function(dir) {
         var fullDir = worldDir + "/" + dir;
         if (!fs.statSync(fullDir).isDirectory()) return;
-        fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("大鱼chat_") && !f.endsWith("_已处理"); }).forEach(function(f) {
+        fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("fish-chat_") && !f.endsWith("_processed"); }).forEach(function(f) {
             var help = fs.readFileSync(fullDir + "/" + f, "utf8");
             console.log("HELP " + dir + ": " + help.substring(0, 150));
             // P1-3: 原子写入——先写.tmp再rename
-        var replyPath = fullDir + "/" + f.replace("大鱼对话", "大鱼回复");
+        var replyPath = fullDir + "/" + f.replace("fish-chat", "fish-reply");
         // H3 修复：大鱼已写具体回复则不覆盖（自动回复仅作兜底，避免覆盖/抢占大鱼的具体回复）
         if (!fs.existsSync(replyPath)) {
             // 第四轮修复：包 try——writeFileSync/renameSync 并发失败不 CRASH（Windows rename 目标已存在抛 EPERM）
@@ -709,7 +709,7 @@ if (fs.existsSync(worldDir)) {
             } catch(_hr) {}
         }
             // 处理完改名，下次不重复读（第四轮修复：并发双跑 renameSync ENOENT 不 CRASH）
-            try { fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_已处理"); } catch(_hr2) {}
+            try { fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_processed"); } catch(_hr2) {}
         });
     });
 }
@@ -788,7 +788,7 @@ if (fs.existsSync(worldDir)) {
                         // 2026-08-17 P1 修复：共享区归属限定（对齐收工轮 hbForce :462-467 只认 producer 归属）——
                         // 任意 mtime 新文件算"该角色活着"会把真死角色掩盖（角色 B 在共享区干活 = A 永不 DEAD）。
                         // 该角色相关证据 = ①文件名含角色名（output/对话文件带名）②.ready 内容 producer 归属该角色；
-                        // "正在写未交付"由下方对讲目录活动文件检查兜底（角色干活必写操作日志/轮询日志/流水账）。
+                        // "正在写未交付"由下方对讲目录活动文件检查兜底（角色干活必写action-log/poll-log/流水账）。
                         var entries;
                         try { entries = fs.readdirSync(dir); } catch(e) { return; }
                         for (var i = 0; i < entries.length; i++) {
@@ -816,8 +816,8 @@ if (fs.existsSync(worldDir)) {
                     if (!_skipDeepScan || hbAge > timeoutMs) _scanDirs.forEach(function(d) { if (fs.existsSync(d)) _scanRecent(d); });
                 } catch(_sc) {}
                 // 隐患#19 修复②：深扫无产出时叠加"对讲目录近期活动文件"检查（双保险）——
-                // 角色干活必写 操作日志/轮询日志/流水账（对讲目录自有文件），有新文件 = 活着（心跳只是没同步）。
-                // 排除 monitor 自写文件（_wakeup/needs-intervention/大鱼回复——非角色活动）。
+                // 角色干活必写 action-log/poll-log/流水账（对讲目录自有文件），有新文件 = 活着（心跳只是没同步）。
+                // 排除 monitor 自写文件（_wakeup/needs-intervention/fish-reply——非角色活动）。
                 if (!hasRecentOutput) {
                     try {
                         var _talkDir = worldDir + "/" + dir;
@@ -825,9 +825,9 @@ if (fs.existsSync(worldDir)) {
                         var _talkEntries = fs.readdirSync(_talkDir);
                         for (var _ti = 0; _ti < _talkEntries.length; _ti++) {
                             var _tf = _talkEntries[_ti];
-                            // 排除 monitor 自写文件（_wakeup/needs-intervention/大鱼回复）与心跳/轮询状态文件
+                            // 排除 monitor 自写文件（_wakeup/needs-intervention/fish-reply）与心跳/轮询状态文件
                             // （_heartbeat.txt 内容 stale 正是判据来源，其文件 mtime 却是最近写入——算活动证据会永远 SKIP 导致真死检测失效）
-                            if (_tf.indexOf("_wakeup") === 0 || _tf.indexOf("needs-intervention") === 0 || _tf.indexOf("大鱼回复") === 0 ||
+                            if (_tf.indexOf("_wakeup") === 0 || _tf.indexOf("needs-intervention") === 0 || _tf.indexOf("fish-reply") === 0 ||
                                 _tf === "_heartbeat.txt" || _tf === "_hb_state.json" || _tf === "_mtime.txt") continue;
                             try {
                                 if (fs.statSync(_talkDir + "/" + _tf).mtimeMs > _talkCut) { hasRecentOutput = true; break; }
@@ -1059,7 +1059,7 @@ if (outputReady && allRetired) {
 } else {
     // 12-24 判定摘要：WAIT 带等待原因（大鱼 002 自检最卡②——"WAIT N=3 得读源码才懂"）
     var _why = [];
-    if (isTrialRound && _trialFbPath && !outputReady) _why.push("试用反馈已到，角色处理中"); // ★ 试用轮反馈已到未完成原因（v2：push 移至产出原因之前，与 §2.2 表顺序一致）
+    if (isTrialRound && _trialFbPath && !outputReady) _why.push("trial-feedback已到，角色处理中"); // ★ 试用轮反馈已到未完成原因（v2：push 移至产出原因之前，与 §2.2 表顺序一致）
     if (!outputReady && outputProgress.length > 0) {
         var _totNeed = 0, _totHave = 0;
         outputProgress.forEach(function(_p) { _totNeed += _p.need; _totHave += _p.have; });
@@ -1098,7 +1098,7 @@ if (outputReady && allRetired) {
                 var _woContent = "# needs-intervention: 第" + String(N).padStart(3,"0") + "轮产出卡轮\n\n" +
                     "- 时间: " + new Date().toISOString() + "\n" +
                     "- 现象: 当前轮 WAIT 超 30 分钟（产出 " + (_why.length ? _why.join("; ") : "未就位") + "）——角色可能在干活但产出路径错/deliver 参数错\n" +
-                    "- 建议动作: ①读公告牌产出行核对路径 ②查角色对讲目录/操作日志看其交付动作 ③确认前置依赖是否就位 ④必要时 _wakeup.js 提示角色核查产出路径\n";
+                    "- 建议动作: ①读公告牌产出行核对路径 ②查角色对讲目录/action-log看其交付动作 ③确认前置依赖是否就位 ④必要时 _wakeup.js 提示角色核查产出路径\n";
                 fs.writeFileSync(_woIv, _woContent, "utf8");
                 console.log("INTERVENE 产出卡轮 -> fish_laozha_talk/needs-intervention_产出卡轮_" + String(N).padStart(3,"0") + ".md");
             }

@@ -104,7 +104,7 @@ while IFS= read -r sdir; do
     # 简化判定：收集所有 please-review*.md 和 review-result*.md（排除 signal/已处理），
     # 按 mtime 排序后，检查"结果文件"是否都晚于"至少一个早于它的please-review文件"
     ask_files=$(find "$sdir" -maxdepth 1 -name "please-review*.md" ! -name "*.signal*" 2>/dev/null | sort)
-    result_files=$(find "$sdir" -maxdepth 1 -name "review-result*.md" ! -name "*.signal*" ! -name "*_已处理*" 2>/dev/null | sort)
+    result_files=$(find "$sdir" -maxdepth 1 -name "review-result*.md" ! -name "*.signal*" ! -name "*_processed*" 2>/dev/null | sort)
     if [ -z "$result_files" ]; then continue; fi
     # 每个结果文件：找 mtime 早于它的最近的please-review文件（视为对应这次打回循环的请审）
     for rf in $result_files; do
@@ -135,18 +135,18 @@ echo "[信号卫生] 任务目录无残留 .signal、无追加式 .signal.signal
 FOUND=0
 while IFS= read -r sdir; do
     FOUND=1
-    # 1) 残留未处理信号（排除合法的 _已处理.signal——chat-end信号改名形态）
+    # 1) 残留未处理信号（排除合法的 _processed.signal——chat-end信号改名形态）
     while IFS= read -r sig; do
         VIOLATIONS=$((VIOLATIONS+1))
         LOG "⚠️ $(basename "$sdir"): $(basename "$sig") 残留未处理（应 rename 后缀替换为 .signal_acked，或等文件用 wait_file.js --ack 自动处理）"
-    done < <(find "$sdir" -maxdepth 1 -name "*.signal" ! -name "*_已处理.signal" 2>/dev/null)
+    done < <(find "$sdir" -maxdepth 1 -name "*.signal" ! -name "*_processed.signal" 2>/dev/null)
     # 2) 追加式改名错误（xxx.md.signal.signal_acked）
     while IFS= read -r bad; do
         VIOLATIONS=$((VIOLATIONS+1))
         LOG "⚠️ $(basename "$sdir"): $(basename "$bad") 追加式改名（应为 xxx.md.signal_acked，原 .signal 应消失）"
     done < <(find "$sdir" -maxdepth 1 -name "*.signal.signal_acked" 2>/dev/null)
 done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
-    cnt=$(find "$d" -maxdepth 1 \( -name "*.signal" -o -name "*.signal.signal_acked" \) ! -name "*_已处理.signal" 2>/dev/null | grep -c .)
+    cnt=$(find "$d" -maxdepth 1 \( -name "*.signal" -o -name "*.signal.signal_acked" \) ! -name "*_processed.signal" 2>/dev/null | grep -c .)
     [ "$cnt" -gt 0 ] && echo "$d"
 done)
 [ "$FOUND" = "0" ] && LOG "  （无任务目录或信号卫生干净）"

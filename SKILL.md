@@ -95,7 +95,7 @@ Copy-Item <skill路径>/team-notes/team_notes.md <项目根目录>/team_notes.md
 |---|------|--------|--------|
 | 1 | 查推进节奏 | 看 `fish/_fish_loop.log`（大鱼循环日志）+ `world/monitor-log.md`（monitor 周期记录），确认全程无卡死/异常 | 日志自动记录，不用大鱼复述 |
 | 2 | 核对产出 | 跑 `node <skill路径>/scripts/check.js <项目根目录>`（收工核对工具，判据与 monitor 同源）——全链路校验发布一致性/output .ready/签字/退场/两件套，对照 `world/fish_laozha_talk/产出总结.md` 的逐轮矩阵核实 | 文件系统 + check.js |
-| 3 | 时序校验 | 跑 `bash <skill路径>/scripts/sequence_check.sh <项目根目录>`（`<skill路径>` = 本仓库路径）——自动查三种模式顺序违规（双人抢答/辩论跳步/审核打回异常），mtime 判定零成本 | 文件 mtime + 操作日志 |
+| 3 | 时序校验 | 跑 `bash <skill路径>/scripts/sequence_check.sh <项目根目录>`（`<skill路径>` = 本仓库路径）——自动查三种模式顺序违规（双人抢答/辩论跳步/审核打回异常），mtime 判定零成本 | 文件 mtime + action-log |
 | 4 | 发大鱼侧调查 | 把 `assets/operator-docs/bigfish_survey.md` 的任务发到 `world/fish_laozha_talk/`（收工配套，问大鱼主观体验） | 对讲目录 |
 | 5 | 归档产出 | 产出移到 `重构交接/测试结果/场景N_*/`（供用户查看）——场景编号从 1 起按次递增（场景1_/场景2_/…），归档范围 = `world/` 下全套（output/公告牌/大鱼报告/对话记录/签字与退场） | — |
 | 6 | 迭代 Skill | 分析调查反馈（协作/时间/大鱼调查）→ 改模板 → **改完跑 `node <skill路径>/scripts/doc-consistency.js` 自查漂移（用前读 <skill路径>/scripts/doc-consistency_guide.md）** → 重建角色跑下一轮 | — |

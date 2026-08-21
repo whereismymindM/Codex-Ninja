@@ -43,32 +43,32 @@ cat > "$S/world/board_001.md" << 'EOF'
 🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场
 - 产出类型: 文档
 - 模式: 试用
-- 测试甲（状态：待命）
-- 产出负责人: 测试甲
-- 产出: world/output/task001_trial/试用报告.md
+- testA（状态：待命）
+- 产出负责人: testA
+- 产出: world/output/task001_trial/trial-report.md
 - 任务目录: world/task001_trial/
 EOF
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T1 等真人反馈（TRIAL）──"
 check "TRIAL 输出出现" "$OUT" "TRIAL N=1" "STANDBY"
 
-# ── T2：T1 + 写入 试用反馈.md → WAIT 含原因，无 TRIAL/STANDBY ──
+# ── T2：T1 + 写入 trial-feedback.md → WAIT 含原因，无 TRIAL/STANDBY ──
 S="$TMPROOT/t2"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
 mkdir -p "$S/world/task001_trial"
-echo "反馈：请验证 TRIAL 输出" > "$S/world/task001_trial/试用反馈.md"
+echo "反馈：请验证 TRIAL 输出" > "$S/world/task001_trial/trial-feedback.md"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T2 反馈已到（WAIT+原因）──"
 check "WAIT N=1 且含原因" "$OUT" "WAIT N=1" ""
-check "含 试用反馈已到" "$OUT" "试用反馈已到" "TRIAL"
+check "含 trial-feedback已到" "$OUT" "trial-feedback已到" "TRIAL"
 
 # ── T3：T2 + 产出 .ready + 签字 → 推进 WAIT N=2（既有机制，非 DONE）──
 S="$TMPROOT/t3"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
-mkdir -p "$S/world/task001_trial" "$S/world/output/task001_trial" "$S/world/测试甲_talk"
-echo "反馈" > "$S/world/task001_trial/试用反馈.md"
-echo "OK" > "$S/world/output/task001_trial/试用报告.md.ready"
-echo "sign" > "$S/world/测试甲_talk/done_001.md"
+mkdir -p "$S/world/task001_trial" "$S/world/output/task001_trial" "$S/world/testA_talk"
+echo "反馈" > "$S/world/task001_trial/trial-feedback.md"
+echo "OK" > "$S/world/output/task001_trial/trial-report.md.ready"
+echo "sign" > "$S/world/testA_talk/done_001.md"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T3 产出就位（推进 WAIT N=2）──"
 check "推进到 N=2" "$OUT" "WAIT N=2" ""
@@ -87,7 +87,7 @@ check "无 WAIT_OVERDUE" "$OUT" "TRIAL N=1" "WAIT_OVERDUE"
 S="$TMPROOT/t5"; setup "$S"
 cp "$TMPROOT/t1/world/board_001.md" "$S/world/"
 mkdir -p "$S/world/task001_trial"
-echo "反馈" > "$S/world/task001_trial/试用反馈.md"
+echo "反馈" > "$S/world/task001_trial/trial-feedback.md"
 echo "{\"N\":1,\"waitSinceN\":1,\"waitSince\":$PAST_MS}" > "$S/world/.monitor_state.json"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T5 反馈后熔断恢复 ──"
@@ -99,7 +99,7 @@ cat > "$S/world/board_001.md" << 'EOF'
 # 公告牌 第001轮
 🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场
 - 模式: 待命
-- 测试甲（状态：待命，本轮后：待命，等通知）
+- testA（状态：待命，本轮后：待命，等通知）
 - 任务: 全员待命等通知
 - 产出: world/output/task001_待命/x.md
 EOF
@@ -113,11 +113,11 @@ cat > "$S/world/board_001.md" << 'EOF'
 # 公告牌 第001轮
 🔒 第一原则：最后一个动作必须是工具调用，不能纯文字下线；poll 到收工轮才合法退场
 - 模式: 收工
-- 测试甲（状态：退场）
+- testA（状态：退场）
 - 任务: 全员退场
 EOF
-mkdir -p "$S/world/测试甲_talk"
-touch "$S/world/测试甲_talk/测试甲retired_001"
+mkdir -p "$S/world/testA_talk"
+touch "$S/world/testA_talk/testAretired_001"
 OUT=$(cd "$S" && node monitor.js 2>&1)
 echo "── T7 收工轮回归 ──"
 check "DONE 输出" "$OUT" "DONE N=1" ""

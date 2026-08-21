@@ -32,7 +32,7 @@ function _signOk(f) {
 // 快速路径保留 >20（兼容不同消息内容的旧签字无法比对内容；精确对比仅用于本次写入的自检）
 if (fs.existsSync(signFile) && fs.statSync(signFile).size > 20) {
     console.log("SIGNED (已存在): " + signFile + " (" + fs.statSync(signFile).size + " 字节)");
-    try { fs.appendFileSync(signDir + "/" + roleName + "_操作日志.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + " (already signed)\n", "utf8"); } catch(_lg2) {} // A-2 行为日志
+    try { fs.appendFileSync(signDir + "/" + roleName + "_action-log.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + " (already signed)\n", "utf8"); } catch(_lg2) {} // A-2 行为日志
     process.exit(0);
 }
 var content = "# " + roleName + " · 第" + N + "轮签字\n\n" + (msg || "已完成。") + "\n";
@@ -47,7 +47,7 @@ for (var attempt = 1; attempt <= maxRetries; attempt++) {
         // 自检验证：确认文件真的写入了（精确对比写入内容长度，2026-08-12）
         if (_signOk(signFile)) {
             console.log("SIGNED: " + signFile + " (" + content.length + " 字节)");
-            try { fs.appendFileSync(signDir + "/" + roleName + "_操作日志.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + "\n", "utf8"); } catch(_lg) {} // A-2 行为日志
+            try { fs.appendFileSync(signDir + "/" + roleName + "_action-log.md", "[" + new Date().toISOString().substring(11,19) + "] SIGN N=" + N + "\n", "utf8"); } catch(_lg) {} // A-2 行为日志
             process.exit(0);
         }
         console.log("WARN: 签字文件存在但可能不完整，重试 " + attempt + "/" + maxRetries);
