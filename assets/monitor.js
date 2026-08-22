@@ -691,11 +691,20 @@ if (activeRoles.length > 0) {
 }
 // 3. 求助
 var worldDir = base + "/world";
+// 2026-08-22 审核修复：已转达求助的内存集合（防重复 HELP 打印，但不改名文件——保住完整求助可见性）
+var _helpedSeen = {};
 if (fs.existsSync(worldDir)) {
-    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_talk"); }).forEach(function(dir) {
+    fs.readdirSync(worldDir).filter(function(d) { return d.endsWith("_talk") && d !== "fish_laozha_talk"; }).forEach(function(dir) {
+        // 2026-08-22 审核修复 P1-3：排除 fish_laozha_talk——那是鱼↔老渣通道（大鱼写给老渣的 fish-chat 不是角色求助），
+        // 否则大鱼自己的求助被当角色求助标掉、老渣收不到（模板 run.md:227/235 明说鱼写 fish-chat 到 fish_laozha_talk）
         var fullDir = worldDir + "/" + dir;
         if (!fs.statSync(fullDir).isDirectory()) return;
         fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("fish-chat_") && !f.endsWith("_processed"); }).forEach(function(f) {
+            // 2026-08-22 审核修复 P1-2：已转达的不重复打印（内存集合），但【不立即改名】——
+            //   原代码读后立即 renameSync _processed + 150 字截断 → 大鱼按模板"未 _processed 才是新求助"找不到完整求助，
+            //   决策型求助答复权闭环断。现在文件保留原名，大鱼/老渣能读完整内容；改名留给大鱼处理完后（或老渣收口）。
+            if (_helpedSeen[fullDir + "/" + f]) return;
+            _helpedSeen[fullDir + "/" + f] = true;
             var help = fs.readFileSync(fullDir + "/" + f, "utf8");
             console.log("HELP " + dir + ": " + help.substring(0, 150));
             // 2026-08-22 修复：删除兜底自动回复（原写 fish-reply 固定文案"大鱼收到，继续按公告牌行动"）——
@@ -703,8 +712,6 @@ if (fs.existsSync(worldDir)) {
             //   ②兜底占位后大鱼晚到的具体回复被角色"读一次归档"机制错过——决策型求助的决策环节永远缺席
             //   ③角色求助已不阻塞（模板：3 轮无回复继续干活不卡等），兜底防卡死的目的失效，反而制造假闭环
             //   现在 monitor 只转达（HELP 打印进 _fish_loop.log，由 _fish_loop.js 记录），答复权全归大鱼
-            // 处理完改名，下次不重复读（第四轮修复：并发双跑 renameSync ENOENT 不 CRASH）
-            try { fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_processed"); } catch(_hr2) {}
         });
     });
 }

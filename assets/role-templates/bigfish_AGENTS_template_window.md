@@ -97,7 +97,7 @@
   （后台提示拉不到，任务/干预信号全漏）→ 再查残留进程杀掉重启，不得带病继续
 - `WaitDelay expired` 是误报，以日志 mtime 持续更新为准，勿重试启动造成双实例
 - **每个回合必做五条见速查表**（①拉日志 ②查对讲+核对牌数 ③写心跳 ④跑 `--once` ⑤做决策——本节约束，不重复展开）；**有决策动作才算在场**
-- **写大鱼心跳（每回合必做）**：`date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录，写裸文件名即落在 `fish/_heartbeat.txt`）——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `需人工干预_大鱼.md`）
+- **写大鱼心跳（每回合必做）**：`date +%s%3N > _heartbeat.txt`（bash 写毫秒时间戳——write_file 写字面不执行）（CWD=大鱼目录，写裸文件名即落在 `fish/_heartbeat.txt`）——**心跳 = 你在场的证据**（心跳 stale 且无产出 → FISH_DEAD + 写 `needs-intervention_大鱼.md`）
 - **回合内长等待防误报**：回合内 sleep ≥90s / 连续多步等待期间，**每次工具动作顺带刷新心跳**（`write_file _heartbeat.txt`）——不穿插 = monitor 心跳阈值误判 FISH_DEAD（你在场但被当掉线）
 - **回合内轮询标准命令**（禁止自造循环）：
   ```bash
@@ -160,15 +160,15 @@ output-summary.md 用英文写；project-done.md 用中文。最后写 project-d
 ## 唤醒休眠角色
 
 有休眠角色时：逐个 `node _wakeup.js 角色名 原因`。在对讲目录创建 `_wakeup.md`，角色检测到后切活跃。**闭环**：角色 ack = **删除 `_wakeup.md`**（以文件消失为判据）；**窗口形态心跳超时的唤醒由 monitor 自动写**（auto-wakeup，见上「DEAD 先复核再唤醒」）。
-`_wakeup.md` 存在超时未 ack **且仍无产出** → monitor 报 STUCK + 写 `需人工干预`（按工具手册响应写求助老渣）；收口后清理残留 `_wakeup.md`。
+`_wakeup.md` 存在超时未 ack **且仍无产出** → monitor 报 STUCK + 写 `needs-intervention`（按工具手册响应写求助老渣）；收口后清理残留 `_wakeup.md`。
 
-> 🚫 **唤醒边界（2026-08-22 补充）**：唤醒信号 `_wakeup.md` **只对正在轮询的角色有效**——
+> 🚫 **唤醒边界（补充）**：唤醒信号 `_wakeup.md` **只对正在轮询的角色有效**——
 > - **休眠态**（角色写了 slept 文件、低功耗轮询中）→ 你 / monitor 可唤醒 ✅
 > - **待命态** → 不用唤醒（poll 到新牌自动活跃）
 > - **回合结束**（角色输出完回合，会话还挂着但不再轮询）→ **你写 `_wakeup.md` 无效**（没有进程在轮询读它）→ 只能**用户**在角色窗口输入对话唤醒
 > - **窗口崩溃/关闭**（reasonix 会话没了）→ 同上，只能**用户**重开窗口
 > - **老渣也是 agent**——他和你一样只能写文件信号，不能替用户往窗口输入——这两态下你俩都唤醒不了，唯一路径 = **写求助给老渣**（`../world/fish_laozha_talk/fish-chat_NNN.md`），由老渣转告用户（**你不能以纯文字结束回合去"提醒"用户**；且用户盯的是老渣窗口）
-> **判断方法**：查角色 poll-log 是否还在更新（`ls -la ../world/{角色名}_talk/{角色名}_poll-log.md`）——**在更新 = 在轮询（可唤醒）；停了 = 不在轮询（只能用户）**。注意：回合结束与窗口崩溃的文件证据相同（心跳和 poll-log 都停），**判不了也不需判**——结果都是只能用户唤醒。**STUCK 时先按此判断再决定求助谁**：进程在轮询 → 求助老渣（真挂死，需人工）；进程不在 → 也写求助老渣（转告用户去唤醒），不要自己写文字下线。
+> **判断方法**：查角色 poll-log（`ls -la ../world/{角色名}_talk/{角色名}_poll-log.md`）——在更新 = 在轮询（可唤醒）；停了 = 不在轮询（只能用户）。回合结束与窗口崩溃证据相同，判不了也不需判。
 
 ---
 
@@ -187,6 +187,6 @@ output-summary.md 用英文写；project-done.md 用中文。最后写 project-d
 | 卡住/有问题 | 写 fish-chat_NNN.md 到 fish_laozha_talk/ |
 | 需要新权限 | 优先用已授权工具完成；确需授权时，写 fish-chat_NNN.md 求助老渣，**不要挂起等待用户**（回合挂起会阻塞 monitor/调度/收尾） |
 | 等老渣回复 | 检查 fish_laozha_talk/ 下的 `laozha-receipt_NNN.md` / `fish-reply_NNN.md` |
-| 角色求助 | 拉日志见 `[HELP] 角色: …`（monitor 转达，不自动回复）→ 读 `../world/{角色名}_talk/fish-chat_NNN.md`（**NNN=轮号**，未 `_processed` 的才是新求助）→ **决策型**（任务歧义/产出路径错/需打回/需协调）写 `fish-reply_NNN.md`（**NNN=轮号**）具体回复；**报备型**（搭档待唤醒/等待确认类）可不回复——角色不阻塞，3 轮无回复继续干活。**答复权全归你，monitor 只转达**（2026-08-22 机制修订） |
+| 角色求助 | 拉日志见 `[HELP]`（monitor 转达不自动回复）→ 读 fish-chat_NNN.md → 决策型写 fish-reply_NNN.md 回复；报备型可不回（3 轮无回复角色继续干活）。答复权全归你 |
 | 老渣专属任务 | 按上方交付闭环（deliver + sign + 汇报三件套） |
 | 完成 | 写 project-done.md |

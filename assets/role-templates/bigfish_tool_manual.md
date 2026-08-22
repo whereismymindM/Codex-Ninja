@@ -26,6 +26,7 @@ node ../monitor.js    # CWD=你的大鱼目录，world/ 在 monitor.js 同级
 | `DONE N=x` | 第 x 轮完成（产出就位/全员退场） | 推进到下一轮；若 x=收工轮 → 进入收工 |
 | `STANDBY N=x` | 无活跃角色的轮（待命轮等）先输出 STANDBY，最终判定区随后输出 WAIT N=x | **预期，不要当异常**；按扣留基线补搬 |
 | `STANDBY_OVERDUE N=x` | 待命基线过 10 分钟仍无新动作且收工轮扣留 | 检查自己是否掉线；在场则立即补搬收工轮 |
+| `HELP <dir>: <前150字>` | 角色求助转达（monitor 只打印不自动回复，由 _fish_loop.js 记入日志） | 读对应角色 fish-chat_NNN.md 完整内容 → 决策型写 fish-reply_NNN.md 回复 / 报备型可不回 |
 | `RETIRE-KEPT N=x` | 收工轮扣留中（待命轮已过、等老渣追加；N = 被扣留的收工轮编号） | **预期，不要当异常**；基线到点无追加则补搬收工轮（新增，替代扣留期裸 WAIT N） |
 | `SIGN 角色 ✓/⚠️` | 签字存在/缺失；收工轮特有 `SIGN [收工]`（全员签字核对） | ⚠️ 记录审计，不阻塞（产出兜底） |
 | `ROLE 角色 DONE/PENDING` | 该角色本轮完成/未完成 | run 形态调度依据：PENDING → 唤醒 |
@@ -34,11 +35,11 @@ node ../monitor.js    # CWD=你的大鱼目录，world/ 在 monitor.js 同级
 | `DEAD 角色` | 心跳超时+无产出=掉线 | 先复核（窗口常驻 2 分钟内 / run 拉起 10 分钟内新产出→SKIP），确死→`_wakeup.md`（窗口常驻 monitor 自动写 / run 形态手动 `_wakeup.js`） |
 | `SKIP 角色` | 心跳超时但有新产出=干活中 | 不干预 |
 | `WAKE 角色` | 已写 `_wakeup.md` 唤醒 | 等角色 ack（删 `_wakeup.md`） |
-| `STUCK 角色` | 唤醒未确认+无产出=挂死（2026-08-22 分类） | **先查 poll-log 判进程**（`ls -la ../world/{角色名}_talk/{角色名}_poll-log.md`）：仍在更新=在轮询真挂死 → 写求助老渣（人工干预）；**已停=不在轮询（回合结束/窗口没了——证据相同判不了也不需判）→ 只能用户唤醒：写求助老渣转告用户**（大鱼不能以纯文字结束回合去提醒；写 `_wakeup.md` 无效——老渣也是 agent，同样不能替用户唤醒） |
+| `STUCK 角色` | 唤醒未确认+无产出=挂死 | 查 poll-log 判进程：在更新=在轮询真挂死 → 求助老渣；已停=不在轮询 → 只能用户唤醒（写求助老渣转告用户，写 _wakeup.md 无效） |
 | `DEADLOCK` | 角色等文件超时写死锁信号 | 读公告牌找搭档→唤醒搭档 |
-| `[HELP] 角色` | 角色写求助（monitor 转达进日志，**不再自动回复**——2026-08-22 修订） | 读 `../world/{角色名}_talk/fish-chat_NNN.md`（NNN=轮号，未 `_processed`）→ 决策型写 `fish-reply_NNN.md`（NNN=轮号）具体回复；报备型可不回（角色 3 轮无回复继续干活不阻塞） |
+| `HELP 角色` | 角色写求助（monitor 转达进日志，**不再自动回复**——机制修订） | 读 `../world/{角色名}_talk/fish-chat_NNN.md`（NNN=轮号，未 `_processed`）→ 决策型写 `fish-reply_NNN.md`（NNN=轮号）具体回复；报备型可不回（角色 3 轮无回复继续干活不阻塞） |
 | `FISH_DEAD` | 你（大鱼）心跳 stale+无产出（窗口常驻 5 分钟 / run 拉起 10 分钟判） | **你掉线了！** 恢复后按启动流程重来 |
-| `INTERVENE` | monitor 写了需人工干预文件 | 老渣查看处理 |
+| `INTERVENE` | monitor 写了 needs-intervention 文件 | 老渣查看处理 |
 | `OUTPUT ✓/✗` | 产出就位/缺失（含 `OUTPUT-FORMAT`/`OUTPUT-WARN` 变体：产出路径含 `{}` 占位符/空交付或无 metadata 告警） | ✗ 等角色交付；FORMAT/WARN 按报警核查公告牌产出行 |
 | `RETRY` | 产出目录近期有变化，快速复检 | 正常，等复检结果 |
 | `READ_ERR` | 公告牌读取失败 | 重试/等文件写完 |

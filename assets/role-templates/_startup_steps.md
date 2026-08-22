@@ -93,6 +93,8 @@
 
 ```bash
 lastN=$(cat temp-scripts/lastN.txt 2>/dev/null || echo 0)   # 初始化：读状态文件（第 1 步推导结果；告知号−1 优先于状态文件；0 仅兜底）
+# 每轮 poll 前顺带探测大鱼回复（_workflow.md 求助节要求）——决策型求助等回复时不阻塞，逐轮查：
+[ -f "../world/{{ROLE_NAME}}_talk/fish-reply_$(printf %03d "$lastN").md" ] && echo "REPLY: 大鱼回复到（读 fish-reply_$(printf %03d "$lastN").md → 读完改名 _read 归档）"
 # 轮询 = 单次 poll 短命令（回合接力实现循环，不要 while true 永久循环——见「循环策略」）：
 node _reasonix_poll.js "{{ROLE_NAME}}" "$lastN"   # $lastN = 上一张已处理公告牌编号（初始 0；干完一轮后更新为该轮编号）
   case $? in

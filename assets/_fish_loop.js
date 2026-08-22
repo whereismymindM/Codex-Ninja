@@ -88,9 +88,10 @@ function checkTalkDir() {
       // 排除大鱼自产报告（收工三件套）——那些是大鱼自己写的，不算"新任务"
       if (f === "output-summary.md" || f === "audit-report.md" || f === "project-done.md") return;
       // 2026-08-21 修复：排除大鱼自产文件（chat/回复/签字/任务已处理）——大鱼自己写的不是"新任务"，否则每次被自己吵
-      if (f.indexOf("fish-chat_") === 0 || f.indexOf("fish-reply_") === 0 ||
-          f.indexOf("done_") === 0 ||
+      if (f.indexOf("fish-reply_") === 0 || f.indexOf("done_") === 0 ||
           f.indexOf("_processed") !== -1 || f.indexOf("dispatch-log") !== -1) return;
+      // 2026-08-22 审核修复 P1-5：fish-chat_ 不再排除——模板 run.md:227 明说"老渣任务可能以 fish-chat_NNN.md 命名出现"，
+      //   排除会把老渣真任务静默漏报（角色侧求助也在 _talk 目录但那是角色自己的，不影响这里检测老渣→大鱼方向）
       // 注：laozha-task_/laozha-receipt_（老渣→大鱼方向）不排除——那是真任务/回执，必须报 NEW_TASK；_processed 排除（已处理形态）
       var full = path.join(talkDir, f);
       var mtime;
@@ -157,9 +158,10 @@ try {
     fs.readdirSync(_talkInitDir).forEach(function(f) {
       if (f === "output-summary.md" || f === "audit-report.md" || f === "project-done.md") return;
       // 2026-08-21 修复：排除大鱼自产文件（chat/回复/签字/任务已处理）——大鱼自己写的不是"新任务"，否则每次被自己吵
-      if (f.indexOf("fish-chat_") === 0 || f.indexOf("fish-reply_") === 0 ||
-          f.indexOf("done_") === 0 ||
+      if (f.indexOf("fish-reply_") === 0 || f.indexOf("done_") === 0 ||
           f.indexOf("_processed") !== -1 || f.indexOf("dispatch-log") !== -1) return;
+      // 2026-08-22 审核修复 P1-5：fish-chat_ 不再排除——模板 run.md:227 明说"老渣任务可能以 fish-chat_NNN.md 命名出现"，
+      //   排除会把老渣真任务静默漏报（角色侧求助也在 _talk 目录但那是角色自己的，不影响这里检测老渣→大鱼方向）
       // 注：laozha-task_/laozha-receipt_（老渣→大鱼方向）不排除——那是真任务/回执，必须报 NEW_TASK；_processed 排除（已处理形态）
       knownTasks[f] = fs.statSync(path.join(_talkInitDir, f)).mtimeMs;
     });
