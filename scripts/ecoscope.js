@@ -122,7 +122,9 @@ function collectData(root) {
   var curN = boards.length ? boards[boards.length - 1].n : 0;
   try {
     var st = JSON.parse(fs.readFileSync(path.join(worldDir, ".monitor_state.json"), "utf8"));
-    if (st.N && st.N >= 1) curN = st.N;
+    // 2026-08-22 修复: monitor 等待中只写 waitSinceN（=当前等待轮次），N 仅在 DONE 时写（=下一轮）——读错字段导致 curN 回退到最后一张公告牌（收工轮），整页角色误判"退场"
+    if (st.waitSinceN && st.waitSinceN >= 1) curN = st.waitSinceN;
+    else if (st.N && st.N >= 1) curN = st.N;
   } catch (e) {}
   var curBoard = null;
   for (var i = 0; i < boards.length; i++) if (boards[i].n === curN) curBoard = boards[i];
@@ -179,7 +181,7 @@ function collectData(root) {
         var signFile = path.join(worldDir, role + "_talk", "done_" + pad3(b.n) + ".md");
         var has = fs.existsSync(signFile) && fs.statSync(signFile).size > 20;
         signStr.push({ role: role, ok: has });
-        if (!has) alerts.push("第" + pad3(b.n) + "轮 " + role + " 缺签字（done_" + pad3(b.n) + ".md）");
+        if (!has && b.n !== curN) alerts.push("第" + pad3(b.n) + "轮 " + role + " 缺签字（done_" + pad3(b.n) + ".md）"); // 当前轮未完成=正常推进不告警（monitor WAIT 同口径）
       });
       b.outputs.forEach(function(o) {
         var ok = false;
@@ -198,7 +200,7 @@ function collectData(root) {
             });
             var missA = b.activeRoles.filter(function(arA) { return !producersA[arA]; });
             ok = missA.length === 0 || unknownA >= missA.length;
-            if (!ok) alerts.push("第" + pad3(b.n) + "轮 格式A 各自场景 producer 未覆盖: 缺 " + (missA.join(",") || "?"));
+            if (!ok && b.n !== curN) alerts.push("第" + pad3(b.n) + "轮 格式A 各自场景 producer 未覆盖: 缺 " + (missA.join(",") || "?"));
           }
         } else {
           try {
@@ -215,14 +217,14 @@ function collectData(root) {
               });
               var missingOwner = b.activeRoles.filter(function(ar) { return !producers[ar]; });
               ok = missingOwner.length === 0 || unknownReady >= missingOwner.length;
-              if (!ok) alerts.push("第" + pad3(b.n) + "轮 产出各自场景 producer 未覆盖: 缺 " + (missingOwner.join(",") || "?") + "（.ready 无对应 producer，疑似未交付或一人重复交付）");
+              if (!ok && b.n !== curN) alerts.push("第" + pad3(b.n) + "轮 产出各自场景 producer 未覆盖: 缺 " + (missingOwner.join(",") || "?") + "（.ready 无对应 producer，疑似未交付或一人重复交付）");
             } else {
               ok = readyFiles.length > 0;
             }
           } catch (e2) { ok = false; }
         }
         prodStr.push({ name: o.dir.replace(/^产出\//, ""), ok: ok });
-        if (!ok) alerts.push("第" + pad3(b.n) + "轮 产出未就位: " + o.dir);
+        if (!ok && b.n !== curN) alerts.push("第" + pad3(b.n) + "轮 产出未就位: " + o.dir); // 当前轮未完成=正常推进不告警
       });
     }
     var activeStr = b.mode === "收工" ? "全员退场" : b.mode === "待命" ? "全员待命" : (active.join("、") || "—");
