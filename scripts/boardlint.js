@@ -187,8 +187,10 @@ function checkStateFlow(boards) {
   var issues = [];
   var warns = [];
   var prevAfter = {}; // 上轮本轮后
-  boards.forEach(function(b) {
+  boards.forEach(function(b, bi) {
     var n = b.n;
+    // 2026-08-22 运行后追加豁免: 上一张是收工轮 = 新批次开始（操作卡 [2]），角色复出活跃合法——否则 收工退场→追加活跃 误报"退场不可复出"
+    var prevIsRetire = bi > 0 && boards[bi - 1].mode === "收工";
     b.roles.forEach(function(r) {
       var st = r.fields["状态"];
       var after = r.fields["本轮后"];
@@ -198,7 +200,7 @@ function checkStateFlow(boards) {
         if (st === "休眠" || st === "退场") issues.push("第" + pad3(n) + "轮 角色 '" + r.name + "' 首轮状态 '" + st + "' 非法（首轮只应 活跃/待命——初始全员待命，无人可休眠/退场）");
       } else {
         var pa = prevAfter[r.name];
-        if (pa !== undefined) {
+        if (pa !== undefined && !prevIsRetire) {
           if ((pa === "休眠" || pa === "退场") && st === "活跃") {
             issues.push("第" + pad3(n) + "轮 角色 '" + r.name + "' 状态流转冲突: 上轮本轮后=" + pa + " 但本轮状态=活跃（休眠/退场需唤醒或不可能——compose.js 同款判据）");
           }
