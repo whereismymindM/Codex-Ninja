@@ -157,7 +157,7 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 
 ### 第4步：pro-attack
 
-正方读con-stmt，写 `../world/<任务目录>/debate_04_pro-attack.md`
+正方读**con-attack**（反方对你的立论的找茬），写 `../world/<任务目录>/debate_04_pro-attack.md`——逐条回应反方找茬（事实/逻辑/盲区/前提），反驳或承认并修正
 
 规则同上——对着con-stmt逐条找。
 
