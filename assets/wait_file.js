@@ -116,6 +116,7 @@ if (parentCheck) {
 // 修正：只检查"与等待目标同名"的 .md（等 review-result_角色X.md.signal → 只查 review-result_角色X.md 是否有信号），
 // 其他 review-result_别人.md 等无关文件不检查——精确同名，杜绝误伤。
 var _missingSignal = false;
+var _suspectedMissing = null; // 2026-08-22：疑似漏发清单（短等复查用），非立即判死
 try {
   var _waitDirs = targets.map(function(t) { return path.dirname(t); });
   var _cut13 = Date.now() - 5 * 60 * 1000;
@@ -160,14 +161,43 @@ try {
       try {
         var full = path.join(d, f);
         if (fs.statSync(full).mtimeMs > _cut13) {
-          console.error("MISSING_SIGNAL_ABORT: " + f + " 是最近 5 分钟内的新产出但缺 .signal——写方漏发（隐患 #17）！立即补发再等待：echo 时间戳 > 同名.signal（写 .md 与发信号是原子两步，不得分开）");
-          _missingSignal = true;
+          // 2026-08-22 修复（审核 AGENTS 指出的边缘情况）：写方写完 .md 后被中断（停顿>5s）才发 .signal →
+          //   立即 exit 5 会误报"漏发"。改为先记录"疑似漏发"，短等合拢窗口（10s）复查：.signal 到了 = 两步窗口合拢（正常继续等）；
+          //   一直不来 = 真漏发（保留原检测意图，exit 5）。
+          if (!_suspectedMissing) _suspectedMissing = [];
+          _suspectedMissing.push({ dir: d, file: f, base: base, full: full });
         }
       } catch(_e) {}
     });
   });
 } catch(_e) {}
-if (_missingSignal) {
+// 2026-08-22：疑似漏发短等复查（最多 10s，0.5s 轮询）——.signal 合拢则清除，真漏发才 exit 5
+if (_suspectedMissing && _suspectedMissing.length > 0) {
+  var _msDeadline = Date.now() + 10 * 1000;
+  var _stillMissing;
+  do {
+    _stillMissing = [];
+    _suspectedMissing.forEach(function(sm) {
+      var hasSig = false;
+      try {
+        var entries = fs.readdirSync(sm.dir);
+        hasSig = entries.some(function(e) {
+          return e === sm.base + ".signal" || e === sm.base + ".signal_acked" || e === sm.base + ".signal_processed" || e === sm.base + ".signal_acked.md"
+              || e === sm.file + ".signal" || e === sm.file + ".signal_acked" || e === sm.file + ".signal_processed" || e === sm.file + ".signal_acked.md";
+        });
+      } catch(_e) {}
+      if (!hasSig) _stillMissing.push(sm);
+    });
+    if (_stillMissing.length > 0 && Date.now() < _msDeadline) {
+      require("child_process").execSync("sleep 0.5", { stdio: "ignore" });
+    }
+  } while (_stillMissing.length > 0 && Date.now() < _msDeadline);
+  _suspectedMissing = _stillMissing;
+}
+if (_suspectedMissing && _suspectedMissing.length > 0) {
+  _suspectedMissing.forEach(function(sm) {
+    console.error("MISSING_SIGNAL_ABORT: " + sm.file + " 是最近 5 分钟内的新产出但缺 .signal（等待 10s 未补发）——写方漏发（隐患 #17）！立即补发再等待：echo 时间戳 > 同名.signal（写 .md 与发信号是原子两步，不得分开）");
+  });
   process.exit(5);
 }
 
