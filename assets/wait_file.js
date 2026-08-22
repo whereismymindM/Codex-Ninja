@@ -145,6 +145,9 @@ try {
       // 13-4 修复（稻盛和夫 001 实测）：归档文件（_第N次.md / _processed.md / _processed_N.md）
       // 是旧文件改名留痕，不是写方新产出——跳过错报 MISSING_SIGNAL_ABORT。
       if (/_第\d+次\.md$/.test(f) || /_processed(?:\d+)?\.md$/.test(f)) return;
+      // 2026-08-21 修复（辩论场景实测）：debate-end.md 是"终结检测目标"，协议故意不带 .signal
+      //   （见 _debate_mode.md「辩论终结」）——不报缺信号，否则 wait_file --any 等它时每次误报。
+      if (f === "debate-end.md") return;
       var base = f.replace(/\.md$/, "");
       // 13-3 修复（稻盛和夫 001 实测）：协议信号命名是 xxx.md.signal（带 .md），
       // 原检测只查 base+".signal"（去掉 .md）→ 把已发信号的产出误报 MISSING_SIGNAL_ABORT。
@@ -303,6 +306,34 @@ function ackLog(src, dst) {
 
 // 先检查是否已就位（防"旧文件秒返"——调用方需自行确认目标当前不存在才该等）
 if (allReady()) {
+  // 2026-08-21 修复（Writer 005 实锤）：等 .md 目标时，写方两步窗口（.md 先落、.signal 后落）导致
+  //    .signal 还没出现就 ack → ack 扑空 → 信号残留。.md 就位后短等 .signal 合拢（最多 5 秒轮询）。
+  //    若 .signal 一直不来（如 debate-end.md 故意不带信号）→ 短等结束照常返回（不 ack、不卡死）。
+  if (ackMode && !anyMode && targets.some(function(t) { return /\.md$/i.test(t); })) {
+    var _mdWaitDeadline = Date.now() + 5000;
+    var _needSignal = targets.some(function(t) {
+      if (!/\.md$/i.test(t)) return false;
+      try {
+        if (!fs.existsSync(t)) return false;
+        var base = t.replace(/\.md$/i, "");
+        return ![t + ".signal", base + ".signal"].some(function(s) { return fs.existsSync(s); });
+      } catch(_e) { return false; }
+    });
+    while (_needSignal && Date.now() < _mdWaitDeadline) {
+      var _stillMissing = false;
+      targets.forEach(function(t) {
+        if (!/\.md$/i.test(t)) return;
+        try {
+          if (!fs.existsSync(t)) return;
+          var base = t.replace(/\.md$/i, "");
+          var hasSig = [t + ".signal", base + ".signal"].some(function(s) { return fs.existsSync(s); });
+          if (!hasSig) _stillMissing = true;
+        } catch(_e) {}
+      });
+      if (!_stillMissing) break;
+      require("child_process").execSync("sleep 0.5", { stdio: "ignore" });
+    }
+  }
   ackSignals(); // 13-1：就位即 ack（残留旧信号一并清理防秒返）
   console.log("WAIT_DONE: 目标已就位（" + readySummary() + "）");
   process.exit(0);
