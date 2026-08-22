@@ -89,7 +89,7 @@ while IFS= read -r bdir; do
         fi
         prev_t=$t; prev_name="$name"; [ -n "$stage" ] && prev_stage="$stage"
     done
-done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*task*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 -name "debate_01_*.md" 2>/dev/null | grep -q . && echo "$d"
 done)
 [ "$FOUND" = "0" ] && LOG "  （无辩论文件）"
@@ -122,7 +122,7 @@ while IFS= read -r sdir; do
             LOG "⚠️ $(basename "$sdir")/$rname 之前没有please-review记录——结果先于请审，打回循环异常！"
         fi
     done
-done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*task*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     find "$d" -maxdepth 1 \( -name "please-review*.md" -o -name "review-result*.md" \) ! -name "*.signal*" 2>/dev/null | grep -q . && echo "$d"
 done)
 [ "$FOUND" = "0" ] && LOG "  （无主笔审核文件）"
@@ -145,7 +145,7 @@ while IFS= read -r sdir; do
         VIOLATIONS=$((VIOLATIONS+1))
         LOG "⚠️ $(basename "$sdir"): $(basename "$bad") 追加式改名（应为 xxx.md.signal_acked，原 .signal 应消失）"
     done < <(find "$sdir" -maxdepth 1 -name "*.signal.signal_acked" 2>/dev/null)
-done < <(find "$WORLD" -type d -path "*任务*" ! -path "*_回收站*" 2>/dev/null | while read d; do
+done < <(find "$WORLD" -type d -path "*task*" ! -path "*_回收站*" 2>/dev/null | while read d; do
     cnt=$(find "$d" -maxdepth 1 \( -name "*.signal" -o -name "*.signal.signal_acked" \) ! -name "*_processed.signal" 2>/dev/null | grep -c .)
     [ "$cnt" -gt 0 ] && echo "$d"
 done)

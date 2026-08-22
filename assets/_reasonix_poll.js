@@ -63,11 +63,11 @@ function log(msg) {
 //     读当前轮公告牌，若是收工轮（模式: 收工）→ 返回 2（RETIRED）
 //     M-1：readFileSync 包 try——文件在 existsSync 与读取之间被移走/锁定时，未捕获异常会以 exit 1 退出被误判为"被唤醒"；读失败视为无收工信号继续
 // 10-1 终极方案：非收工轮结束标记检测（fail-loud）
-// 角色在【非收工轮】想结束回合必须先创建 {角色}_结束回合_{N}.md（对讲目录）——
+// 角色在【非收工轮】想结束回合必须先创建 {角色}_end-round_{N}.md（对讲目录）——
 // poll 检测到 = 违规结束回合，报警提示；收工轮正常退场不创建此标记，不会误报
 function checkEndMarker() {
   try {
-    var endMarker = path.join(talkDir, roleName + "_结束回合_" + String(lastN).padStart(3, "0") + ".md");
+    var endMarker = path.join(talkDir, roleName + "_end-round_" + String(lastN).padStart(3, "0") + ".md");
     if (fs.existsSync(endMarker)) {
       var curBoard = path.join(worldDir, "board_" + String(lastN).padStart(3, "0") + ".md");
       var isRetireBoard = false;
