@@ -16,6 +16,7 @@
 对话子回合之间不需要等公告牌，只需要等搭档的下一份文件。**优先用 `wait_file.js`**：`node temp-scripts/wait_file.js <任务目录>/chat_{轮次}_T{N}_answer.md.signal --hb <心跳> --timeout 20`（**`<任务目录>`/`<心跳>` 为占位符，复制后必须替换为实际路径**）
 （自动续心跳 + 自动 ack；需失联检测时加 `--watch-hb <对方心跳>`，见下）。**手写内联循环仅 fallback**（wait_file 不满足需求时）。
 > ⚠️ **目标一律写 `.signal`，不要写 `.md`**——等 `.signal` 才会自动 ack（改名 `.signal_acked` 防残留）；等 `.md` 不 ack，残留信号污染时序校验（见 role_lessons_archive 教训 #2/#3）。
+> 🔴 **read_file 直读 .md = 违规**：读问/答 .md 必须用 `wait_file.js`（自动 ack 零手工）；若已用 read_file 直读，**读完下一条命令必须手动 ack**（`rename xxx.md.signal xxx.md.signal_acked`）——漏 ack = 残留 = 下轮秒返误判。
 
 > 🔑 **别手写等文件脚本**：等单文件/多文件优先 wait_file.js（多目标 AND / --any），内联轮询仅当 wait_file 不满足需求时手写。
 

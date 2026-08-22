@@ -197,7 +197,10 @@ con-stmt和找茬是连续步骤——直接进入第3步写con-attack，不需�
 <心跳>` 为占位符，复制后必须替换**）
 ——默认自动 ack 同名 .signal（零手工）。
 
-> 🔴 **读方必 ack（全角色通用，裁判也是读方）**：等 `.md` 就位后，**必须把对应 `.md.signal` rename 成 `.md.signal_acked`**（`debate_06_pro-summary.md.signal` → `.signal_acked`，反方同理）——你读了对方的 `.md`，就有 ack 其 `.signal` 的义务，防止残留信号下轮误判。
+> 🔴 **读方必 ack（全角色通用，裁判也是读方）**：等 `.md` 就位后，**必须把对应 `.md.signal` rename 成 `.md.signal_acked`**（或走 wait_file 自动 ack）
+> 🔴 **read_file 直读 .md = 违规**：读对方 .md 必须用 `wait_file.js`（自动 ack 零手工）；
+> 若已用 read_file 直读，**读完下一条命令必须手动 ack**（`rename xxx.md.signal xxx.md.signal_acked`）——
+> 漏 ack = 残留 = 下轮误判（005 T1_pro 实锤）（`debate_06_pro-summary.md.signal` → `.signal_acked`，反方同理）——你读了对方的 `.md`，就有 ack 其 `.signal` 的义务，防止残留信号下轮误判。
 > **用 `node temp-scripts/wait_file.js`（默认自动 ack，目标为 .md 时自动 ack 同名 .signal，零手工）**；内联轮询仅 fallback（手写时 break 后手动 rename）。
 
 > 🔑 **别手写等文件脚本**：双目标 AND 用 wait_file.js 多目标即可，内联轮询仅当 wait_file 不满足需求时手写。
