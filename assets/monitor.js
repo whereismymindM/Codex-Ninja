@@ -377,7 +377,7 @@ if (!fs.existsSync(boardFile)) {
                 if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked")) { allRetired = false; break; } // 4 修复：兼容 .acked
                 _retireOk++;
             }
-            if (allRetired) { console.log("DONE N=" + prevN + " (回看确认: 收工轮 全员退场 " + _retireOk + "/" + _retireTotal + ")"); logMonitor("DONE N=" + prevN); process.exit(0); } // 12-24 摘要
+            if (allRetired) { console.log("DONE N=" + prevN + " (回看确认: 收工轮 全员退场 " + _retireOk + "/" + _retireTotal + ")"); logMonitor("DONE N=" + prevN); writeState({ N: prevN + 1, waitSinceN: undefined, waitSince: undefined }); process.exit(0); } // 12-24 摘要；2026-08-22 修复: exit 前持久化状态——原收工轮回看分支不写状态，.monitor_state.json 冻结在首次 WAIT（ecoscope 读 waitSinceN 误判当前轮 + 角色误报心跳超时）
         }
     }
     // 8-2 扣留超时报警：扣留期（收工轮被扣、下一张牌不存在）真实输出点——WAIT 前先判 OVERDUE

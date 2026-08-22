@@ -118,13 +118,13 @@ function collectData(root) {
     });
   } catch (e) { return { error: "读取 world/ 失败: " + e.message }; }
 
-  // 当前轮 N
+  // 当前轮 N（状态文件优先，但仅当该轮有公告牌；项目完成态 st.N 指向无牌轮 → 回退到有牌的最后一张，角色表按收工轮显示）
   var curN = boards.length ? boards[boards.length - 1].n : 0;
   try {
     var st = JSON.parse(fs.readFileSync(path.join(worldDir, ".monitor_state.json"), "utf8"));
     // 2026-08-22 修复: monitor 等待中只写 waitSinceN（=当前等待轮次），N 仅在 DONE 时写（=下一轮）——读错字段导致 curN 回退到最后一张公告牌（收工轮），整页角色误判"退场"
-    if (st.waitSinceN && st.waitSinceN >= 1) curN = st.waitSinceN;
-    else if (st.N && st.N >= 1) curN = st.N;
+    var wantN = (st.waitSinceN && st.waitSinceN >= 1) ? st.waitSinceN : (st.N && st.N >= 1 ? st.N : 0);
+    if (wantN >= 1 && boards.some(function(b) { return b.n === wantN; })) curN = wantN;
   } catch (e) {}
   var curBoard = null;
   for (var i = 0; i < boards.length; i++) if (boards[i].n === curN) curBoard = boards[i];
