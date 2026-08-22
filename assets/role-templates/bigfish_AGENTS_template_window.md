@@ -108,7 +108,7 @@
   ```bash
   date +%s%3N > _heartbeat.txt && sleep 55 && echo "=== 对讲 ===" && ls -t ../world/fish_laozha_talk/ | head -3 && echo "=== 日志 ===" && tail -3 _fish_loop.log
   ```
-  （~56 秒返回。**对讲检查已固化在轮询命令里**——"每回合必查对讲"不靠纪律，见大鱼实测教训：task_wakeup-fish-feedback.md 躺 20 分钟没看到的根因就是轮询命令模板漏了对讲动作）
+  （~56 秒返回。**对讲检查已固化在轮询命令里**——"每回合必查对讲"不靠纪律，见大鱼实测教训归档（轮询命令模板曾漏对讲动作导致任务躺 20 分钟））
 **撞 loop guard 时换命令变体**（`tail -5`/`tail -n 5`/前缀心跳/改 sleep 数）继续——**guard 挡重复命令是正常保护，不是操作错误**。
 **禁止 `while true` / 长 for 循环**（命令长期不返回 = 会话无法保存 = 磁盘冲突 recovery 堆积 + 缓存失效烧 token）；
 检测到 DONE/新牌 → 立即处理。
