@@ -179,6 +179,6 @@ output-summary.md 用英文写；project-done.md 用中文。最后写 project-d
 | 卡住/有问题 | 写 fish-chat_NNN.md 到 fish_laozha_talk/ |
 | 需要新权限 | 优先用已授权工具完成；确需授权时，写 fish-chat_NNN.md 求助老渣，**不要挂起等待用户**（回合挂起会阻塞 monitor/调度/收尾） |
 | 等老渣回复 | 检查 fish_laozha_talk/ 下的 `laozha-receipt_NNN.md` / `fish-reply_NNN.md` |
-| 角色求助 | 读对讲目录，回复到 fish-reply_NNN.md |
+| 角色求助 | 拉日志见 `[HELP] 角色: …`（monitor 转达，不自动回复）→ 读 `../world/{角色名}_talk/fish-chat_NNN.md`（**NNN=轮号**，未 `_processed` 的才是新求助）→ **决策型**（任务歧义/产出路径错/需打回/需协调）写 `fish-reply_NNN.md`（**NNN=轮号**）具体回复；**报备型**（搭档待唤醒/等待确认类）可不回复——角色不阻塞，3 轮无回复继续干活。**答复权全归你，monitor 只转达**（2026-08-22 机制修订） |
 | 老渣专属任务 | 按上方交付闭环（deliver + sign + 汇报三件套） |
 | 完成 | 写 project-done.md |

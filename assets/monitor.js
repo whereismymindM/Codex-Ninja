@@ -698,16 +698,11 @@ if (fs.existsSync(worldDir)) {
         fs.readdirSync(fullDir).filter(function(f) { return f.startsWith("fish-chat_") && !f.endsWith("_processed"); }).forEach(function(f) {
             var help = fs.readFileSync(fullDir + "/" + f, "utf8");
             console.log("HELP " + dir + ": " + help.substring(0, 150));
-            // P1-3: 原子写入——先写.tmp再rename
-        var replyPath = fullDir + "/" + f.replace("fish-chat", "fish-reply");
-        // H3 修复：大鱼已写具体回复则不覆盖（自动回复仅作兜底，避免覆盖/抢占大鱼的具体回复）
-        if (!fs.existsSync(replyPath)) {
-            // 第四轮修复：包 try——writeFileSync/renameSync 并发失败不 CRASH（Windows rename 目标已存在抛 EPERM）
-            try {
-                fs.writeFileSync(replyPath + ".tmp", "大鱼收到，继续按公告牌行动", "utf8");
-                fs.renameSync(replyPath + ".tmp", replyPath);
-            } catch(_hr) {}
-        }
+            // 2026-08-22 修复：删除兜底自动回复（原写 fish-reply 固定文案"大鱼收到，继续按公告牌行动"）——
+            //   ①回复编号沿用 chat 序号而角色按轮号探测 fish-reply_NNN.md，永远 miss（earthling 求助实测：reply 写了没人读）
+            //   ②兜底占位后大鱼晚到的具体回复被角色"读一次归档"机制错过——决策型求助的决策环节永远缺席
+            //   ③角色求助已不阻塞（模板：3 轮无回复继续干活不卡等），兜底防卡死的目的失效，反而制造假闭环
+            //   现在 monitor 只转达（HELP 打印进 _fish_loop.log，由 _fish_loop.js 记录），答复权全归大鱼
             // 处理完改名，下次不重复读（第四轮修复：并发双跑 renameSync ENOENT 不 CRASH）
             try { fs.renameSync(fullDir + "/" + f, fullDir + "/" + f + "_processed"); } catch(_hr2) {}
         });

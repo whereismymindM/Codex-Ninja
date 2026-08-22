@@ -117,7 +117,15 @@ function checkTalkDir() {
 function runMonitor() {
   try {
     var out = execSync('node "' + monitorPath + '"', { encoding: "utf8", timeout: 60000, cwd: path.dirname(monitorPath) || boardDir }).trim();
-    var line = out.split("\n").pop().trim();
+    // 2026-08-22 修复：不再只取最后一行——monitor 的 HELP 行（角色求助转达）会被丢弃，大鱼拉日志看不到求助
+    //   现在逐行记录：HELP 行原样记录（带 [HELP] 前缀便于 grep），其余行只记最后一行（DONE/WAIT 摘要）
+    var lines = out.split("\n");
+    lines.forEach(function(_l) {
+      var _t = _l.trim();
+      if (!_t) return;
+      if (_t.indexOf("HELP ") === 0) console.log("[" + ts() + "] [HELP] " + _t);
+    });
+    var line = lines.pop().trim();
     console.log("[" + ts() + "] MONITOR: " + line);
   } catch (e) {
     var err = (e.stdout || "").toString().trim() || e.message;

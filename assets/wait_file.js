@@ -375,6 +375,21 @@ while (Date.now() < deadline) {
     try { fs.writeFileSync(hbFile, String(Date.now()), "utf8"); } catch(_e) {}
     lastHbTs = Date.now();
   }
+  // 2026-08-22：长等待期间顺带探测大鱼回复（fish-reply_* 未读）——
+  //   否则角色长等待（等搭档/等依赖）时求助回复到了也看不到（earthling 求助实测：reply 落盘无人读）
+  //   探测到 → REPLY_DETECTED + exit 6，角色先读回复再决定：决策型按回复行动 / 报备型重新 wait_file 继续等
+  if (hbFile) {
+    try {
+      var _myTalk = path.dirname(hbFile);
+      var _replies = fs.readdirSync(_myTalk).filter(function(_rf) {
+        return _rf.indexOf("fish-reply") === 0 && _rf.indexOf("_read") === -1;
+      });
+      if (_replies.length > 0) {
+        console.log("REPLY_DETECTED: " + _replies[0] + "（大鱼回复已到，先读再决定继续等/改道）");
+        process.exit(6);
+      }
+    } catch(_re2) {}
+  }
   // 12-6 搭档失联检测（--watch-hb）：对方心跳超过阈值未更新 → PARTNER_DEAD + exit 4
   if (watchHbFile) {
     try {

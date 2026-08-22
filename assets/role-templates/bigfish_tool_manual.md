@@ -36,7 +36,7 @@ node ../monitor.js    # CWD=你的大鱼目录，world/ 在 monitor.js 同级
 | `WAKE 角色` | 已写 `_wakeup.md` 唤醒 | 等角色 ack（删 `_wakeup.md`） |
 | `STUCK 角色` | 唤醒未确认+无产出=挂死 | 写求助老渣（需人工干预） |
 | `DEADLOCK` | 角色等文件超时写死锁信号 | 读公告牌找搭档→唤醒搭档 |
-| `HELP 角色` | 角色写求助 | 回复到 `fish-reply_NNN.md` |
+| `[HELP] 角色` | 角色写求助（monitor 转达进日志，**不再自动回复**——2026-08-22 修订） | 读 `../world/{角色名}_talk/fish-chat_NNN.md`（NNN=轮号，未 `_processed`）→ 决策型写 `fish-reply_NNN.md`（NNN=轮号）具体回复；报备型可不回（角色 3 轮无回复继续干活不阻塞） |
 | `FISH_DEAD` | 你（大鱼）心跳 stale+无产出（窗口常驻 5 分钟 / run 拉起 10 分钟判） | **你掉线了！** 恢复后按启动流程重来 |
 | `INTERVENE` | monitor 写了需人工干预文件 | 老渣查看处理 |
 | `OUTPUT ✓/✗` | 产出就位/缺失（含 `OUTPUT-FORMAT`/`OUTPUT-WARN` 变体：产出路径含 `{}` 占位符/空交付或无 metadata 告警） | ✗ 等角色交付；FORMAT/WARN 按报警核查公告牌产出行 |
