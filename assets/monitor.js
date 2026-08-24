@@ -790,10 +790,12 @@ if (fs.existsSync(worldDir)) {
                         else { _stScan.lastScanKey = _mtimeKey; writeState(_stScan); }
                     } catch(_sc2) {}
                     var _cutoff = Date.now() - timeoutMs;
-                    function _scanRecent(dir) {
+                    function _scanRecent(dir, ownedByRole) {
                         // 2026-08-17 P1 修复：共享区归属限定（对齐收工轮 hbForce :462-467 只认 producer 归属）——
                         // 任意 mtime 新文件算"该角色活着"会把真死角色掩盖（角色 B 在共享区干活 = A 永不 DEAD）。
                         // 该角色相关证据 = ①文件名含角色名（output/对话文件带名）②.ready 内容 producer 归属该角色；
+                        // 2026-08-25 B1 修复：目录名归属——src/{角色名}/ 子目录内文件全算该角色（代码项目源码分角色子目录，
+                        //   文件本身不含角色名也命中；目录归属唯一，不掩盖他人——P1 保护保留）
                         // "正在写未交付"由下方对讲目录活动文件检查兜底（角色干活必写action-log/poll-log/流水账）。
                         var entries;
                         try { entries = fs.readdirSync(dir); } catch(e) { return; }
@@ -801,9 +803,9 @@ if (fs.existsSync(worldDir)) {
                             var full = dir + "/" + entries[i];
                             try {
                                 var st = fs.statSync(full);
-                                if (st.isDirectory()) { _scanRecent(full); }
+                                if (st.isDirectory()) { _scanRecent(full, ownedByRole || entries[i].indexOf(roleName) !== -1); }
                                 else if (st.mtimeMs > _cutoff) {
-                                    if (entries[i].indexOf(roleName) !== -1) { hasRecentOutput = true; return; } // ① 文件名归属
+                                    if (ownedByRole || entries[i].indexOf(roleName) !== -1) { hasRecentOutput = true; return; } // ① 文件名/目录名归属
                                     if (/\.ready$/.test(entries[i])) {
                                         try {
                                             var _pc = fs.readFileSync(full, "utf8");
