@@ -753,6 +753,10 @@ if (fs.existsSync(worldDir)) {
                     // 扫 world/output 与 world/任务* 下最近 timeoutMs 内修改的文件
                     var _scanDirs = [worldDir + "/output"];
                     try {
+                        // 2026-08-25 修复：代码项目源码目录（world/src/）加入深扫——"写源码"型角色长回合写 src/
+                        //   不写 output/task，心跳静默被误判 STUCK/DEAD（todo 项目 dev-a 写 src/ + integrator 构建 /tmp 均实测误报）
+                        var _srcDir = worldDir + "/src";
+                        if (fs.existsSync(_srcDir)) _scanDirs.push(_srcDir);
                         var _taskDirs = fs.readdirSync(worldDir).filter(function(td) { return /^task\d+/.test(td); });
                         _taskDirs.forEach(function(td) { _scanDirs.push(worldDir + "/" + td); });
                     } catch(_ts) {}
