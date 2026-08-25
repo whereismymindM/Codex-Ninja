@@ -16,18 +16,20 @@
 
 # 二、正方 · 主干流程
 
-**1. 立论**：写 `debate_01_pro-stmt.md`
+**0. 读对方上一篇（如有）**：辩论是对话——写每篇前先读对方上一篇，针对性地回，不自说自话（铁律 1）。
+
+**1. 立论**：写 `debate_01_pro-stmt.md`（写完**立即**发同名 `.signal`）
 - 清晰陈述立场 + 核心论点（≥3 条）+ 每条附支撑论据（事实/逻辑/数据）
 
 **2. 等反方立论 + 找茬**：双文件轮询等 `debate_02_con-stmt.md.signal` + `debate_03_con-attack.md.signal`（同时检测 `debate-end.md`，任一就位即返回）
 
-**3. 回应找茬**：读 con-attack，写 `debate_04_pro-attack.md`——逐条回应反方找茬（事实/逻辑/盲区/前提），反驳或承认并修正
+**3. 回应找茬**：读 con-attack（读完 ack 其 .signal），写 `debate_04_pro-attack.md`（写完**立即**发同名 `.signal`）——逐条回应反方找茬（事实/逻辑/盲区/前提），反驳或承认并修正
 
 **4. 自由辩论（先手）**：**正方直接独立写 T1，勿等任何人**（先手 = 独立动作）
-- 写 `debate_05_T1_pro.md` → 双文件轮询等 `debate_05_T1_con.md.signal` + `debate-end.md` → 读后写 T2 → 交替
+- 写 `debate_05_T1_pro.md`（写完**立即**发同名 `.signal`）→ 双文件轮询等 `debate_05_T1_con.md.signal` + `debate-end.md` → 读后写 T2（写完**立即**发信号）→ 交替
 - 每轮必须：回应对方上一轮论点（不能自说自话）+ 推进深度 + 新证据不重复旧话
 
-**5. 总结陈词**：写 `debate_06_pro-summary.md`（重申立场 1 句 + 最有力论点 1-2 条 + 认可/反对对方哪条）
+**5. 总结陈词**：写 `debate_06_pro-summary.md`（写完**立即**发同名 `.signal`；重申立场 1 句 + 最有力论点 1-2 条 + 认可/反对对方哪条）
 - 写完总结 → **直接 `node _sign.js N` 签字**——签字 = 确认你在这轮的参与完成，**独立于裁判结论交付**（产出归裁判，裁判独立 deliver）。**不要等裁判结论 .ready**（多余等待）。
 
 **6. 看「本轮后」**：休眠/待命/活跃（同主笔审核模式）
@@ -36,18 +38,18 @@
 
 # 三、反方 · 主干流程
 
-**1. 读正方立论**：等 `debate_01_pro-stmt.md.signal`（双文件轮询，同时检测 `debate-end.md`）→ 读完整内容
+**1. 读正方立论**：等 `debate_01_pro-stmt.md.signal`（双文件轮询，同时检测 `debate-end.md`）→ 读完整内容（读完 ack 其 .signal）
 
 **2. 立论 + 找茬（连续步骤，不等任何人）**：
-- 写 `debate_02_con-stmt.md`——独立立论（站在对立立场，不反驳正方）
-- 写 `debate_03_con-attack.md`——逐条检视 pro-stmt，找错误/逻辑漏洞/盲区/前提存疑（引用正方原文逐字准确）
+- 写 `debate_02_con-stmt.md`（写完**立即**发同名 `.signal`）——独立立论（站在对立立场，不反驳正方）
+- 写 `debate_03_con-attack.md`（写完**立即**发同名 `.signal`）——逐条检视 pro-stmt，找错误/逻辑漏洞/盲区/前提存疑（引用正方原文逐字准确）
 
 找茬不是找碴：没错误就说"逐条核验后未发现错误"，不硬编。
 > 🔑 引用纪律：引用公告牌/AGENTS/对方原文**必须逐字准确**，不得用括号在引用内改写原文。
 
-**3. 回应正方**：双文件轮询等 `debate_04_pro-attack.md.signal` + `debate-end.md` → 读后写 `debate_05_T1_con.md`，进入自由辩论（回合交替，规则同正方第 4 步）
+**3. 回应正方**：双文件轮询等 `debate_04_pro-attack.md.signal` + `debate-end.md` → 读后写 `debate_05_T1_con.md`（写完**立即**发同名 `.signal`），进入自由辩论（回合交替，规则同正方第 4 步）
 
-**4. 总结陈词**：写 `debate_06_con-summary.md`（要求同正方）→ **`node _sign.js N` 签字**（不等待裁判结论）
+**4. 总结陈词**：写 `debate_06_con-summary.md`（写完**立即**发同名 `.signal`；要求同正方）→ **`node _sign.js N` 签字**（不等待裁判结论）
 
 **5. 看「本轮后」**
 
@@ -55,7 +57,7 @@
 
 # 四、裁判 · 主干流程
 
-**1. 读全程**：wait_file 多目标 AND 等双方总结（`debate_06_pro-summary.md` + `debate_06_con-summary.md`）就位 → 读全程辩论记录（立论→找茬→自由辩论→总结）
+**1. 读全程**：wait_file 多目标 AND 等双方总结（`debate_06_pro-summary.md` + `debate_06_con-summary.md`）就位 → 读全程辩论记录（立论→找茬→自由辩论→总结）→ **注意材料完整性：结论须标注缺了哪些材料（缺哪方总结/仅哪方立论），见「分支·裁判结论要求」**
 
 **2. 写裁判结论**：写 `裁判结论.md`（要求见「分支·裁判结论要求」）
 - 写完：writeFileSync 到 `../world/output/` → `node _deliver.js 裁判结论.md <任务目录>` → **`node _sign.js N` 签字**（裁判是活跃角色，monitor 逐角色核对签字，漏签收工审计标红）
