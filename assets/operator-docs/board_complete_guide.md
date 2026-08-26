@@ -161,6 +161,12 @@ monitor 在产出目录下逐项检查 `server.js.ready` 和 `search-engines.js.
 ```
 monitor 在产出目录下扫描，存在任意 .ready 文件即通过。
 
+> **代码/源码类产出（约定）**：源码（.js/.py 等）写 `world/src/{角色名}/`——不是 output！
+> monitor 深扫已支持 src（按目录归属追踪角色活跃，防长回合写码误判 DEAD）。
+> **每轮交付物仍是 output 的 .md（验证证据/自测记录/验收报告）+ .ready**（.ready 判定轮次完成）。
+> 任务写法：`源码 → world/src/{角色名}/，交付物 → 产出: world/output/taskNNN_xxx/验证记录.md`。
+> 代码走 src 的原因：代码是持续演进的（同一文件多轮改），output 的"一次交付"语义与代码演进冲突；src 目录归属唯一（防共享区活动掩盖真死）。
+
 > **产出路径必须指向 deliver() 写入的产出目录（即 `world/output/taskNNN_XXX/`）。**
 > 指向源文件所在目录（如 `world/源代码/`）会导致 monitor 先去错误位置找 .ready，找不到再走兜底扫描 `output/` 子目录（⚠️ 仅格式 A 场景；格式 B 无兜底）。能跑通，但多一次扫描——正确路径直接命中，判定更快。
 
