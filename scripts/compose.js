@@ -1,7 +1,7 @@
 // compose.js —— 公告牌编排器 v1.0（2026-08-10）
 // 把"老渣手画状态矩阵 + 手填公告牌"变成"声明式 JSON + 自动生成 + 编译期校验"
 // 用法: node compose.js <编排.json> [输出目录]   |   node compose.js --list 看模板
-// 模板: scripts/templates/ 下有 19 个现实团队流程模板（full_software_lifecycle/four_phase/postmortem/tech_selection/knowledge_mining/code_review/quality_audit/cross_review/consensus_building/wechat_article/light_dev_flow/iteration_retrospective/tech_debt_inventory/roundtable_discussion/bid_review/tiered_review/red_blue_duel/red_blue_siege/socratic_coaching）
+// 模板: scripts/templates/ 下有 20 个现实团队流程模板（full_software_lifecycle/four_phase/postmortem/tech_selection/knowledge_mining/code_review/quality_audit/cross_review/consensus_building/wechat_article/light_dev_flow/iteration_retrospective/tech_debt_inventory/roundtable_discussion/bid_review/tiered_review/red_blue_duel/red_blue_siege/socratic_coaching）
 //       ——复制模板 → 替换 {角色X} 占位符 → 喂 compose.js 生成（谁先谁后已按现实流程排好）
 // 输出: board_001.md ~ board_NNN.md + 状态矩阵 + 校验报告（流转冲突/格式违规 → 报错不生成）
 // 零依赖（Node 原生），与 codex-ninja 风格一致
@@ -12,7 +12,9 @@
 //   "角色": ["架构师-张三", "技术VP-李四", "AI研究员-王五"],
 //   "轮次": [
 //     { "模式": "单人输出|辩论|主笔审核|双人对话|试用|待命|收工",
-//       "角色": { "架构师-张三": "正方", "技术VP-李四": "反方", "AI研究员-王五": "裁判" },  // 模式角色字段（辩论等）
+//       "角色": { "架构师-张三": "正方", "技术VP-李四": "反方", "AI研究员-王五": "裁判" },  // 本轮"参与角色"：写谁谁活跃（辩论=正方/反方/裁判位；单人=只写该轮产出负责人）
+//       //   ⚠️ 每轮只写"该轮干活的人"！未提及角色自动沿用上轮"本轮后"（默认待命）——
+//       //      全角色都写上 = 全部"提及即活跃" → 公告牌全员活跃（实测坑：fin-tool 批次 001-009 全活跃）
 //       "任务": "任务描述",
 //       "产出负责人": "AI研究员-王五",   // 单人/主笔/辩论/双人/试用必填；待命/收工不填
 //       "产出": "world/output/task001_XX/文件名.md",
@@ -113,6 +115,12 @@ cfg.轮次 && cfg.轮次.forEach(function(r, ri) {
   if (r.任务目录 && (r.任务目录.indexOf("world/") !== 0 || r.任务目录.indexOf("\\") !== -1 || r.任务目录.indexOf("..") !== -1)) errors.push("第" + n + "轮 任务目录 必须以 'world/' 开头且不含 \\ 或 ..（防路径逃逸）"); // 2026-08-12 修复：任务目录字段补前缀/逃逸校验（原无校验）
   if (r.产出 && r.产出.indexOf("{}") !== -1) errors.push("第" + n + "轮 产出 含占位符 {}");
   if (r.产出 && !/\.md$/.test(r.产出) && !/\/$/.test(r.产出)) errors.push("第" + n + "轮 产出 应为 .md 文件名或以 / 结尾目录（格式 A/B）");
+  // 2026-08-26 修复：产出负责人/活跃角色 匹配校验——防"活跃但任务错配"（fin-tool 批次 001-009 全员活跃实测坑：全写角色=提及即活跃；此校验确保单人/任务轮 产出负责人 ∈ 该轮活跃名单）
+  if (needOutput) {
+    var activeRoles = r.角色 ? Object.keys(r.角色) : [];
+    if (activeRoles.length === 0) errors.push("第" + n + "轮（" + r.模式 + "）无活跃角色——任务轮至少 1 个活跃角色，写 角色: {\"角色名\": \"活跃\"}");
+    if (r.产出负责人 && r.产出负责人 !== "各自" && activeRoles.indexOf(r.产出负责人) === -1) errors.push("第" + n + "轮 产出负责人 '" + r.产出负责人 + "' 不在本轮活跃角色" + (activeRoles.length ? "（" + activeRoles.join("/") + "）" : "——本轮没有活跃角色（或应为 \"各自\"）"));
+  }
   if ((r.模式 === "收工" || r.模式 === "待命") && (r.产出负责人 || r.产出 || r.任务目录)) errors.push("第" + n + "轮（" + r.模式 + "）不该有 产出负责人/output/task目录");
   // 收工轮必须最后
   if (r.模式 === "收工" && ri !== cfg.轮次.length - 1) errors.push("收工轮必须是最后一轮（第" + n + "轮）");

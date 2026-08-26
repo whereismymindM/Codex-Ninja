@@ -323,10 +323,11 @@ node <skill路径>/scripts/compose.js <编排.json> [输出目录]
   ] }
 ```
 - **原则**：compose.js 生成的牌 = 手写的牌（同格式同标准）；手工编排仍可用，compose 是"防矩阵画错"的辅助，不是替代——复杂/非常规轮次仍建议手写 + 过一遍「十、任务编排」第 6 步核对清单。
-- **流程模板库**：`scripts/templates/` 下有 19 个**现实团队流程模板**——`full_software_lifecycle`（需求定义→评审→架构→契约→开发→测试→发布决策→复盘，接力型）、
+- **流程模板库**：`scripts/templates/` 下有 20 个**现实团队流程模板**——`full_software_lifecycle`（需求定义→评审→架构→契约→开发→测试→发布决策→复盘，接力型）、
   `four_phase`（拆缝→测试基线先行→做肉→拼缝→试用→收工，Solo×Skill 组合规范 v1.0）、`postmortem`（事故简报→时间线与影响重建→根因多视角分析→根因收敛与改进项→复盘报告→收工，Postmortem 实践）、
   `tech_selection`（约束挖掘→对抗辩论→收工）、`knowledge_mining`（专家深挖→整理→收工）、`code_review`（开发→审查打回→收工）、`quality_audit`（多角色独立审→终审→收工）、
   `cross_review`（各自草稿→互看补充→共识汇总→收工，多角色平等协作）、`consensus_building`（各自方案→共识草案→主笔审核三方把关→收工，决策意见汇聚）、
+- `design_studio`（设计舱：三视角独立设计→交叉评审→共识定稿——软件/内容/KM 项目设计）
   `wechat_article`（选题定调→素材收集→写稿审核→定稿排版→发布清单→收工，内容生产流程）、`light_dev_flow`（需求精简→架构定调→开发实现→代码审查→发布，中小项目快速迭代——轻量开发流程（需求精简→架构定调→开发实现→代码审查→发布，中小项目快速迭代——全流程 9 轮裁剪版）。
   `iteration_retrospective`（数据收集→分析→洞察→收工，借鉴 retrospective）、`tech_debt_inventory`（扫描→分类→报告→收工，借鉴 tech-debt）、`roundtable_discussion`（轮流发言→互看回应→汇总纪要→收工，3 人以上讨论——零协议改动）、`bid_review`（各自方案→评标择优→中标定稿→
 收工，方案选优打回修订）、
