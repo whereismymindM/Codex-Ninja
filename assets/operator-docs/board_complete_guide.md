@@ -45,7 +45,7 @@ NNN=3位补零（如001、002）。
 - 交付参数: taskNNN_XXX（**deliver 第 2 参 = 纯目录名，不带 world/output 前缀**——`产出:` 是 monitor 按字面查的完整路径，不是 deliver 参数；写牌时务必三行都填，角色靠它省一步换算）
 ```
 
-> 📌 **taskNNN_XXX 子名建议 ASCII**：XXX（任务名）建议用英文/拼音（如 `task001_req`、`task002_review`），不要用中文——千问等模型拼路径时中文易出错（本分支已英文化全部运行时路径，任务目录子名是最后的中文面）。用中文子名也能跑（monitor 按字面匹配），但千问写牌/拼路径时可能踩坑。
+> 📌 **taskNNN_XXX 子名建议 ASCII**：XXX（任务名）建议用英文/拼音（如 `task001_req`、`task002_review`），不要用中文——千问等模型拼路径时中文易出错。用中文子名也能跑（monitor 按字面匹配），但千问写牌/拼路径时可能踩坑。
 
 > 说明（不进公告牌，仅老渣看）：
 > - **玩法文件** = `assets/play-modes/` 下按模式分发的 4 个模式文件（_dual_chat_mode.md/_lead_review_mode.md/_debate_mode.md/_solo_output_mode.md）——scaffold 复制到每个角色目录；角色按「模式」字段读对应玩法文件执行流程，公告牌任务文字不需要重复玩法细节

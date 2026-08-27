@@ -175,7 +175,7 @@ while (true) {
 // 出了循环后，用 fs.existsSync 判断触发原因：debate-end.md 存在 = 对方喊停 → 直接跳总结；否则读搭档文件继续
 ```
 
-> ⚠️ **手写骨架纪律**：写完 .md 立即发同名 .signal（原子两步）；读完对方 .md 必须手动 ack（rename `_acked`，wait_file 路径已自动 ack 无需再动）。**禁止 bash 长等**（heredoc 挂死教训）。
+> ⚠️ **手写骨架纪律**：写完 .md 立即发同名 .signal（原子两步）；读完对方 .md 必须手动 ack（rename `_acked`，wait_file 路径已自动 ack 无需再动）。**禁止 bash 长等**。
 
 ---
 

@@ -167,7 +167,7 @@ while (true) {
 }
 ```
 
-> ⚠️ **手写骨架纪律**：等 `.signal` 就位后**必须手动 ack**（rename 后缀 `_acked`/`_processed`）；写方写完 `.md` 的下一动作必发同名 `.signal`（漏发 = 读方 wait_file exit 5 中断）。**禁止 bash 长等**（heredoc 挂死教训）。
+> ⚠️ **手写骨架纪律**：等 `.signal` 就位后**必须手动 ack**（rename 后缀 `_acked`/`_processed`）；写方写完 `.md` 的下一动作必发同名 `.signal`（漏发 = 读方 wait_file exit 5 中断）。**禁止 bash 长等**。
 
 ---
 

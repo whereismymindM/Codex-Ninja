@@ -140,7 +140,7 @@ while (true) {
 // 出了循环后：复查目标是否其实已就位 → 查搭档心跳（死了 → 写求助大鱼）→ 自己不停，缺失标注，最终签字
 ```
 
-> ⚠️ **目标一律写 `.signal`，不要写 `.md`**——等 `.signal` 才自动 ack（改名 `.signal_acked` 防残留）；等 `.md` 不 ack，残留信号污染时序校验（role_lessons_archive 教训 #2/#3）。
+> ⚠️ **目标一律写 `.signal`，不要写 `.md`**——等 `.signal` 才自动 ack（改名 `.signal_acked` 防残留）；等 `.md` 不 ack，残留信号污染时序校验。
 > 🔴 **read_file 直读 .md = 违规**：读问/答 .md 必须用 wait_file.js（自动 ack）；若已用 read_file 直读，**读完下一条命令必须手动 ack**（`rename xxx.md.signal xxx.md.signal_acked`）——漏 ack = 残留 = 下轮秒返误判。
 > ⚠️ **进入轮询前先 existsSync 检查文件是否已存在**：公告牌重写/搭档变更场景旧文件可能已在——已存在直接读判断可复用性，不要盲目进轮询等 mtime 变化。
 
