@@ -553,6 +553,7 @@ var outputReady = activeRoles.length === 0;
 // 格式B（仅目录）: 产出: world/output/task001/ → 回退到目录非空检查
 var outputRe = /(?:^|\n)- 产出[:：]\s*world\/([^\r\n]+)/g; // H1 修复：兼容全角冒号；H3 修复：行首锚定（自检/主流程/复检三处已同步）
 var outputMatch, allOutputReady = true, outputCount = 0;
+var _curOutDirs = []; // 12-26 已签未交扫描：当前轮所有产出行目录（WAIT 时定位"签了字但没交产出"的角色）
 while ((outputMatch = outputRe.exec(board)) !== null) {
     outputCount++;
     var fullPath = outputMatch[1];
@@ -575,6 +576,7 @@ while ((outputMatch = outputRe.exec(board)) !== null) {
     
     var ready = false;
     var outDirPath = base + "/world/" + outDir;
+    _curOutDirs.push(outDirPath); // 12-26 已签未交扫描：记录当前轮产出行目录
     if (fileNames && fileNames.length > 0) {
         var allExist = true;
         var missing = [];
@@ -1072,6 +1074,33 @@ if (outputReady && allRetired) {
         var _totNeed = 0, _totHave = 0;
         outputProgress.forEach(function(_p) { _totNeed += _p.need; _totHave += _p.have; });
         _why.push("产出 " + _totHave + "/" + _totNeed + " .ready 未就位");
+    }
+    // 12-26 已签未交扫描（2026-09-01 flow-test 002/003 漏交复盘改进）：产出未就位时，列出"已签 done_N 但当前轮产出目录无自己 producer .ready"的活跃角色
+    //   大鱼看到名字直接 fish-reply 点名，把"签字≠交付"发现从人工对照（实测 23:44 才定位）提前到 monitor 首个 WAIT 周期；纯提示不改推进判定
+    if (!outputReady && !isRetireRound && _curOutDirs.length > 0) {
+        // 先扫当前轮所有产出行目录：收集已交付 producer 集合 + 未知归属计数（无 producer 行的旧版 .ready = 归属未知，主判断"未知可顶缺"宽容处理）
+        var _deliveredProducers = {}, _unknownDelivered = 0;
+        _curOutDirs.forEach(function(_od) {
+            try {
+                fs.readdirSync(_od).forEach(function(_ff) {
+                    if (!_ff.endsWith(".ready")) return;
+                    try {
+                        var _rc = fs.readFileSync(_od + "/" + _ff, "utf8");
+                        var _pm = _rc.match(/^producer:\s*(.+)$/m);
+                        if (_pm && _pm[1]) _deliveredProducers[_pm[1].trim()] = true;
+                        else _unknownDelivered++;
+                    } catch(_re2) {}
+                });
+            } catch(_re3) {}
+        });
+        var _signedNoReady = [];
+        activeRoles.forEach(function(_sr) {
+            var _sf = base + "/world/" + _sr + "_talk/done_" + String(N).padStart(3, "0") + ".md";
+            if (!(fs.existsSync(_sf) && fs.statSync(_sf).size > 20)) return; // 未签不算"已签未交"（判据与签字检查同源）
+            if (_unknownDelivered > 0) return; // 有旧版无 producer 交付（归属未知可顶缺）→ 无法确定谁没交，宁缺毋滥不误报
+            if (!_deliveredProducers[_sr]) _signedNoReady.push(_sr);
+        });
+        if (_signedNoReady.length) _why.push("已签未交: " + _signedNoReady.join(","));
     }
     if (isRetireRound && !allRetired) _why.push("收工轮 退场 " + (allRoles.length - missingRetireNames.length) + "/" + allRoles.length + " 缺 " + (missingRetireNames.join(",") || "?"));
     // 8-3 产出卡轮熔断（WAIT_OVERDUE，P0 窗口常驻版）：当前轮产出不齐持续 WAIT 超 30 分钟 → 机器自动报警
