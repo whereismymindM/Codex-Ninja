@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # ============================================================
 # codex-ninja e2e monitor 机制测试
-# 覆盖（2026-09-01 两次改动回归）:
+# 覆盖（2026-09-01 monitor 改动 + 09-02 复核修复回归）:
 #   1. 「已签未交」点名（WAIT 分支列出"签了但没交产出"的角色）
-#   2. DONE 文案修复（"产出就位 x/y"用 outputProgress 聚合——各自+目录产出行显示真实数，不再 0/1）
+#   2. DONE 文案真实数（复检路径：产出未齐 → 复检窗口内补齐 → DONE 显示全量 3/3，断言非空转）
+#   3. 推进正确性（复检放行 → state 持久化 → 下一轮 WAIT N=2；单人轮回归）
 # 用法: bash run_e2e_monitor.sh [skill路径]
 # ============================================================
 set -u
@@ -67,11 +68,16 @@ check "WAIT N=1 且点名已签未交 testB" "已签未交: testB" "$OUT"
 check "WAIT 产出计数为真实数 2/3" "产出 2/3" "$OUT"
 
 echo ""
-echo "===== 3. testB 补交 → 产出齐 → 推进（自检跳过已完成轮，不重复 DONE——WAIT N=2 即推进成功）====="
-printf 'OK t\nproducer: testB\n' > world/output/task001_test/report_testB.md.ready
+echo "===== 3. 复检路径 DONE 文案：产出未齐+目录近期变化 → 复检窗口内补齐 → DONE 显示全量 3/3（实时完成瞬间）====="
+touch world/output/task001_test   # 更新目录 mtime → monitor 首检未齐必触发 10s 快速复检（DONE 打印的唯一可达路径）
+(sleep 3 && printf 'OK t\nproducer: testB\n' > world/output/task001_test/report_testB.md.ready) &
 OUT=$(node monitor.js)
-check "001 完成后推进到 N=2" "WAIT N=2" "$OUT"
-if printf '%s' "$OUT" | grep -q "产出就位 0/1"; then echo "  ✗ 仍显示 0/1（回归）"; FAIL=$((FAIL+1)); else echo "  ✓ 无 0/1 残留"; PASS=$((PASS+1)); fi
+check "复检放行推进：DONE N=1" "DONE N=1" "$OUT"
+check "DONE 文案显示全量 3/3（修复目标：各自轮真实交付数）" "产出就位 3/3" "$OUT"
+if printf '%s' "$OUT" | grep -qE "产出就位 0/"; then echo "  ✗ DONE 仍显示 0/x（回归）"; FAIL=$((FAIL+1)); else echo "  ✓ DONE 无 0/x 残留（旧版 0/1、12-27 版 0/3 均被抓）"; PASS=$((PASS+1)); fi
+# state 已推进持久化 → 再跑一次应落在 002 轮
+OUT2=$(node monitor.js)
+check "推进持久化：002 轮 WAIT N=2" "WAIT N=2" "$OUT2"
 
 echo ""
 echo "===== 4. 单人产出轮回归：产出负责人单角色 + 文件产出行 → 推进正常 ====="

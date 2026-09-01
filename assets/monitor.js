@@ -1062,12 +1062,15 @@ if (!outputReady && activeRoles.length > 0) {
 if (outputReady && allRetired) {
     // 12-24 判定摘要：DONE 带完成原因（大鱼不用读源码就懂）
     // 12-27 修复：DONE 文案计数改用 outputProgress 聚合——原 outputReadyCount 在"产出负责人:各自 + 目录产出行"
-    //   场景下未正确累加（判定正确、显示错：flow-test-2/3 实弹 DONE N=1/3/5 显示"产出就位 0/1"），
-    //   改为按实际交付数聚合（与 WAIT 的"产出 x/y"同源），"各自"轮显示真实数（如 3/3）
+    //   场景下未正确累加（判定正确、显示错：flow-test-2/3 实弹 DONE N=1/3/5 显示"产出就位 0/1"）
+    // 12-28 复核修复：聚合改 Σneed（忽略 ok）——DONE 打印唯一可达路径是 mtime 快速复检放行
+    //   （产出未齐 → output/ 目录 30s 内有变化 → 复检窗口内补齐 → outputReady=true），此时 outputProgress
+    //   仍是主流程首检的旧快照（ok=false），`_p.ok ? _p.need : 0` 会显示"产出就位 0/3"（实测复核抓出）；
+    //   DONE 触发时产出必然全就位（复检 _allOk 全产出行校验），直接显示全量 Σneed/Σneed（如 3/3）
     var _doneWhy = isRetireRound ? ("全员退场 " + allRoles.length + "/" + allRoles.length) : (function () {
-        var _th = 0, _tn = 0;
-        outputProgress.forEach(function (_p) { _th += _p.ok ? _p.need : 0; _tn += _p.need; });
-        return "产出就位 " + _th + "/" + _tn;
+        var _tot = 0;
+        outputProgress.forEach(function (_p) { _tot += _p.need; });
+        return "产出就位 " + _tot + "/" + _tot;
     })();
     console.log("DONE N=" + N + " (" + _doneWhy + ")"); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
