@@ -11,10 +11,11 @@ bash run_e2e_multi.sh                # 多角色协作链路（3 角色 × 4 轮
 bash run_e2e_sys.sh                  # 系统机制链路（心跳/锁/唤醒/死锁/断点/待命/扣留/追加）
 bash run_e2e_trial.sh                # 试用轮链路（T1-T7，9 断言）
 bash run_e2e_tools.sh                # 工具链路（boardlint/check/ecoscope——Skill 侧 3 个；工具舱其余由发布门禁 run-all-checks.sh 覆盖）
+bash run_e2e_monitor.sh              # monitor 机制（已签未交点名 / 产出计数真实 / 推进）
 bash run_e2e.sh <skill路径>          # 指定 skill 路径（含空格请加引号）
 ```
 
-> 总断言：14 + 19 + 19 + 9 + 17 = **78**（2026-08-16 新增 run_e2e_tools.sh 17 断言）
+> 总断言：14 + 19 + 19 + 9 + 17 + 5 = **83**（2026-09-01 新增 run_e2e_monitor.sh 5 断言）
 
 ## 覆盖链路
 
