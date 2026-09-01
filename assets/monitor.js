@@ -28,6 +28,55 @@ function parseHeartbeat(raw) {
     return isNaN(iso) ? NaN : iso;
 }
 
+// 12-30 审计修复（P1-1）：收工轮"心跳强制退场"判定抽为共用函数——原逻辑仅主判断有（:464-516），
+//   自检/回看缺失 → 主判断 hbForce 放行 DONE 后，回看/自检缺退场文件 → 收口轮次 DONE→WAIT 抖动（实测复现）。
+//   三处统一判据：角色心跳 stale（窗口 2min/run 10min）且超时窗口内无本角色近期文件 → 视为已退场。
+function _hbForceRetired(role) {
+    try {
+        var hbFile3 = base + "/world/" + role + "_talk/_heartbeat.txt";
+        if (!fs.existsSync(hbFile3)) return false;
+        var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
+        var hbTimeout3 = (fs.existsSync(base + "/fish/_run_shape.mode") && fs.readFileSync(base + "/fish/_run_shape.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
+        if (isNaN(hbT3) || Date.now() - hbT3 <= hbTimeout3) return false;
+        var _hbForceRecent = false;
+        try {
+            var _hbfCut = Date.now() - hbTimeout3;
+            var _hbfDirs = [base + "/world/" + role + "_talk"];
+            try {
+                var _hbfTaskDirs = fs.readdirSync(base + "/world").filter(function(td) { return /^task\d+/.test(td); });
+                _hbfTaskDirs.forEach(function(td) { _hbfDirs.push(base + "/world/" + td); });
+            } catch(_htd) {}
+            if (fs.existsSync(base + "/world/output")) _hbfDirs.push(base + "/world/output");
+            function _hbfRecent(dir) {
+                var entries;
+                try { entries = fs.readdirSync(dir); } catch(e) { return false; }
+                return entries.some(function(_f) {
+                    // 12-30 审计修复（P1-3）：排除列表与主心跳区（:838-841）对齐——心跳/轮询状态文件
+                    //   mtime 新≠角色活动（_heartbeat.txt 内容 stale 正是判据来源，其 mtime 却可能最近写入；
+                    //   算活动证据会永远 SKIP → 真死角色 hbForce 永不触发 → 收工轮卡死）
+                    if (dir.indexOf("_talk") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("fish-reply") === 0 || _f.indexOf("needs-intervention") === 0 ||
+                        _f === "_heartbeat.txt" || _f === "_hb_state.json" || _f === "_mtime.txt")) return false;
+                    try {
+                        var _st = fs.statSync(dir + "/" + _f);
+                        if (_st.isDirectory()) return _hbfRecent(dir + "/" + _f);
+                        if (_st.mtimeMs <= _hbfCut) return false;
+                        if (dir.indexOf("_talk") === -1) {
+                            if (!_f.endsWith(".ready")) return false;
+                            try {
+                                var _rc = fs.readFileSync(dir + "/" + _f, "utf8");
+                                return _rc.indexOf("producer: " + role) !== -1;
+                            } catch(_e9b) { return false; }
+                        }
+                        return true;
+                    } catch(_e9) { return false; }
+                });
+            }
+            _hbfDirs.forEach(function(d) { if (fs.existsSync(d) && _hbfRecent(d)) _hbForceRecent = true; });
+        } catch(_e8) {}
+        return !_hbForceRecent;
+    } catch(_e4) { return false; }
+}
+
 // P1-1: N值从状态文件读，崩溃重启不跳轮次
 var stateFile = base + "/world/.monitor_state.json";
 var N = 1;
@@ -170,7 +219,8 @@ while (true) {
                 var retireFile = base + "/world/" + roleName + "_talk/" + roleName + "retired_" + Npad;
                 var sleepFile = base + "/world/" + roleName + "_talk/" + roleName + "slept_" + Npad;
                 // 退场文件或休眠文件任一存在即视为已退出（与主逻辑 :123 一致）；4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
-                if (!fs.existsSync(retireFile) && !fs.existsSync(retireFile + ".acked") && !fs.existsSync(sleepFile) && !fs.existsSync(sleepFile + ".acked")) { allDone = false; break; }
+                // 12-30 审计修复（P1-1）：补 hbForce 判据（与主判断五路对齐）——否则主判断 hbForce 放行后自检缺文件 → 收口轮次抖动
+                if (!fs.existsSync(retireFile) && !fs.existsSync(retireFile + ".acked") && !fs.existsSync(sleepFile) && !fs.existsSync(sleepFile + ".acked") && !_hbForceRetired(roleName)) { allDone = false; break; }
             }
         }
     }
@@ -374,7 +424,8 @@ if (!fs.existsSync(boardFile)) {
                 if (roleName === "模式" || roleName === "任务" || roleName === "产出" || roleName === "产出负责人" || roleName === "任务目录" || roleName === "辩论轮数" || roleName.indexOf(":") !== -1 || roleName.indexOf("：") !== -1) continue; // H8 修复：黑名单同时匹配全角冒号
                 var rf = base + "/world/" + roleName + "_talk/" + roleName + "retired_" + String(prevN).padStart(3,"0");
                 var sf = base + "/world/" + roleName + "_talk/" + roleName + "slept_" + String(prevN).padStart(3,"0");
-                if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked")) { allRetired = false; break; } // 4 修复：兼容 .acked
+                // 12-30 审计修复（P1-1）：补 hbForce 判据（与主判断五路对齐）——否则主判断 hbForce 放行后回看缺文件 → DONE→WAIT 抖动
+                if (!fs.existsSync(rf) && !fs.existsSync(rf + ".acked") && !fs.existsSync(sf) && !fs.existsSync(sf + ".acked") && !_hbForceRetired(roleName)) { allRetired = false; break; } // 4 修复：兼容 .acked
                 _retireOk++;
             }
             if (allRetired) { console.log("DONE N=" + prevN + " (回看确认: 收工轮 全员退场 " + _retireOk + "/" + _retireTotal + ")"); logMonitor("DONE N=" + prevN); writeState({ N: prevN + 1, waitSinceN: undefined, waitSince: undefined }); process.exit(0); } // 12-24 摘要；2026-08-22 修复: exit 前持久化状态——原收工轮回看分支不写状态，.monitor_state.json 冻结在首次 WAIT（ecoscope 读 waitSinceN 误判当前轮 + 角色误报心跳超时）
@@ -462,58 +513,8 @@ if (activeRoles.length === 0) {
             // 4 修复：兼容 .acked 后缀（角色归档退场文件后的形态）
             var retireAcked = retireFile + ".acked", sleepAcked = sleepFile + ".acked";
             // 收工轮强制退场：心跳超时角色视为已退场（F 模式放宽：干完即退后心跳停是正常态）
-            var hbFile3 = base + "/world/" + role + "_talk/_heartbeat.txt";
-        var hbForce = false;
-        try {
-          if (fs.existsSync(hbFile3)) {
-            var hbT3 = parseHeartbeat(fs.readFileSync(hbFile3, "utf8"));
-            var hbTimeout3 = (fs.existsSync(base + "/fish/_run_shape.mode") && fs.readFileSync(base + "/fish/_run_shape.mode", "utf8").trim() === "run") ? 10 * 60 * 1000 : 2 * 60 * 1000;
-            if (!isNaN(hbT3) && Date.now() - hbT3 > hbTimeout3) {
-              // A-1 判据同步（2026-08-11 修复 + 2026-08-12 范围统一）：心跳 stale 但窗口内有新文件
-              // （正在写流水账/角色记忆/退场文件/补交产出而心跳没同步）→ 不算死，不强制退场——
-              // 与主心跳检测区 A-1 判据（"心跳不能单独作为死亡证据"）保持一致；
-              // 真死（心跳 stale + 窗口内无任何新产出）才 hbForce，防止收工轮写长文档/补交被误判提前 DONE。
-              // 扫描范围与主区一致：对讲目录 + 产出 + 任务*（补交场景角色写 output/task 区同样算活着）
-              var _hbForceRecent = false;
-              try {
-                var _hbfCut = Date.now() - hbTimeout3;
-                var _hbfDirs = [base + "/world/" + role + "_talk"];
-                try {
-                  var _hbfTaskDirs = fs.readdirSync(base + "/world").filter(function(td) { return /^task\d+/.test(td); });
-                  _hbfTaskDirs.forEach(function(td) { _hbfDirs.push(base + "/world/" + td); });
-                } catch(_htd) {}
-                if (fs.existsSync(base + "/world/output")) _hbfDirs.push(base + "/world/output");
-                function _hbfRecent(dir) {
-                  var entries;
-                  try { entries = fs.readdirSync(dir); } catch(e) { return false; }
-                  return entries.some(function(_f) {
-                    // 排除 monitor 自写文件（仅对讲目录内存在）——它们是 monitor 写的不是角色新产出，
-                    // 不排除会把"monitor 刚写入已死角色目录"误算成"角色在干活" → RETIRE MISS 拖长
-                    if (dir.indexOf("_talk") !== -1 && (_f.indexOf("_wakeup") === 0 || _f.indexOf("fish-reply") === 0 || _f.indexOf("needs-intervention") === 0)) return false;
-                    try {
-                      var _st = fs.statSync(dir + "/" + _f);
-                      if (_st.isDirectory()) return _hbfRecent(dir + "/" + _f);
-                      if (_st.mtimeMs <= _hbfCut) return false;
-                      // 2026-08-12 归属限定：共享区（output/task*）只认 producer 匹配本角色的 .ready——
-                      // 否则角色 A 真死但角色 B 在共享区补交时，A 的 hbForce 永不触发（收工轮 DONE 无限阻塞）；
-                      // 对讲目录是角色自有，任意新文件即算该角色活着
-                      if (dir.indexOf("_talk") === -1) {
-                        if (!_f.endsWith(".ready")) return false;
-                        try {
-                          var _rc = fs.readFileSync(dir + "/" + _f, "utf8");
-                          return _rc.indexOf("producer: " + role) !== -1;
-                        } catch(_e9b) { return false; }
-                      }
-                      return true;
-                    } catch(_e9) { return false; }
-                  });
-                }
-                _hbfDirs.forEach(function(d) { if (fs.existsSync(d) && _hbfRecent(d)) _hbForceRecent = true; });
-              } catch(_e8) {}
-              if (!_hbForceRecent) hbForce = true;
-            }
-          }
-        } catch(_e4) {}
+            // 12-30 审计修复（P1-1）：判据抽为 _hbForceRetired（主判断/自检/回看三处共用；含 P1-3 排除列表对齐）
+            var hbForce = _hbForceRetired(role);
         if (fs.existsSync(retireFile) || fs.existsSync(retireAcked) || fs.existsSync(sleepFile) || fs.existsSync(sleepAcked) || hbForce) {
             console.log("RETIRE " + role + " OK" + (hbForce ? " (force)" : ""));
             // 2026-08-02 优化：流水账覆盖校验——退场角色应有全程总结（≥2 行：至少一轮 + 退场），

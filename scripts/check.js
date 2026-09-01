@@ -254,7 +254,10 @@ function checkClose(root, boards) {
     hasRetireRound = true;
     pb.allRoles.forEach(function(role) {
       var rf = path.join(root, "world", role + "_talk", role + "retired_" + pad3(b.n));
-      if (!(fs.existsSync(rf) || fs.existsSync(rf + ".acked"))) retireOk = false;
+      var sf = path.join(root, "world", role + "_talk", role + "slept_" + pad3(b.n));
+      // 12-30 审计修复（P1-2）：补 slept/slept.acked 两路（对齐 checkRetire 四路与 monitor.js:517 判据）——
+      // 原只查 retired 两路：休眠收场的角色 monitor 判 DONE 成立，checkClose 却报"推断不成立"
+      if (!(fs.existsSync(rf) || fs.existsSync(rf + ".acked") || fs.existsSync(sf) || fs.existsSync(sf + ".acked"))) retireOk = false;
     });
   });
   if (!hasRetireRound) { issues.push("未找到收工轮公告牌——批次未走完收工流程"); return { ok: false, issues: issues, detail: detail }; }
