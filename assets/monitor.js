@@ -1061,7 +1061,14 @@ if (!outputReady && activeRoles.length > 0) {
 // 产出优先检查 + mtime快速复检已在前面完成
 if (outputReady && allRetired) {
     // 12-24 判定摘要：DONE 带完成原因（大鱼不用读源码就懂）
-    var _doneWhy = isRetireRound ? ("全员退场 " + allRoles.length + "/" + allRoles.length) : ("产出就位 " + outputReadyCount + "/" + outputCount);
+    // 12-27 修复：DONE 文案计数改用 outputProgress 聚合——原 outputReadyCount 在"产出负责人:各自 + 目录产出行"
+    //   场景下未正确累加（判定正确、显示错：flow-test-2/3 实弹 DONE N=1/3/5 显示"产出就位 0/1"），
+    //   改为按实际交付数聚合（与 WAIT 的"产出 x/y"同源），"各自"轮显示真实数（如 3/3）
+    var _doneWhy = isRetireRound ? ("全员退场 " + allRoles.length + "/" + allRoles.length) : (function () {
+        var _th = 0, _tn = 0;
+        outputProgress.forEach(function (_p) { _th += _p.ok ? _p.need : 0; _tn += _p.need; });
+        return "产出就位 " + _th + "/" + _tn;
+    })();
     console.log("DONE N=" + N + " (" + _doneWhy + ")"); logMonitor("DONE N=" + N);
     // P1-1: 持久化当前轮次状态
     // 8-3: DONE 时清除 waitSince（轮次完成，卡轮计时归零——否则下轮沿用旧时间戳误报）
