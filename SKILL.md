@@ -77,6 +77,9 @@ Copy-Item <skill路径>/team-notes/team_notes.md <项目根目录>/team_notes.md
 - 必读：`assets/operator-docs/README.md`（索引）+ `board_standard_template.md`（写牌骨架）+ `scripts/templates/README.md`（模板清单）
 - 按需（用才读）：`board_complete_guide.md`（只读「各模式怎么填」「任务目录」节）、`team-notes/team_notes.md`（团队规则）
 - **`startup-guide.md` 不用读**（开项目/启动用的，写牌无关）
+**完成判定是机制内建，写牌不用设计验收流程**：角色交付 = deliver 生成 `.ready` → sign → monitor 按 `.ready` 判轮完成——"完成没完成"由机制判，不用设计验收规则。
+角色怎么执行（交换/打回/收敛协议）由对应玩法文件管（模式字段指向它，scaffold 已分发进角色目录）。
+老渣写牌要定义的是"这轮**产出什么内容** + 放哪"——写进任务描述（含完成标准，如"文档含 xx 节""代码能跑通"），并填对 `产出` / `产出负责人` / `任务目录` 三行即可。
 **任务目录子名用英文/拼音**（如 `task001_req`，不要中文——千问拼路径中文易错）。
 **代码类任务：源码写 `world/src/{角色名}/`（任务描述里写明），产出字段仍是 `world/output/taskNNN_xxx/` 的 .md 验证证据（.ready 判定完成）**——代码是持续演进的，不是一次交付物；monitor 按 src 目录归属追踪角色活跃（详见完全指南「产出路径」节）。
 一次性写完，收工轮标退场。**可选**：用 `scripts/compose.js` + `scripts/templates/` 声明式编排（JSON → 自动生成公告牌+状态矩阵，编译期校验流转，见完全指南「十」第 7 步）。
